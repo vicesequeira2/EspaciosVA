@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Equipo Elite - Valet Parking</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --color-bg: #0a0a1a;
+            --color-card: #1a1a2e;
+            --color-text: #e0e0e0;
+            --color-text-light: #a0a0a0;
+            --success: #D4AF37;
+            --danger: #c62828;
+            --warning: #ff9800;
+            --sombra: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        [data-theme="light"] {
+            --color-bg: #f0f2f5;
+            --color-card: #ffffff;
+            --color-text: #1a1a2e;
+            --color-text-light: #6c757d;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body.kiosco-mode {
+            padding: 0 !important;
+        }
+        body.kiosco-mode .app {
+            max-width: 100% !important;
+            border-radius: 0 !important;
+            min-height: 100vh !important;
+        }
+        body.kiosco-mode .header,
+        body.kiosco-mode .nav,
+        body.kiosco-mode .stats-row,
+        body.kiosco-mode .screen:not(#screen-mapa) {
+            display: none !important;
+        }
+        body.kiosco-mode #screen-mapa {
+            display: block !important;
+            padding: 16px;
+        }
+        body.kiosco-mode .kiosco-exit {
+            display: flex !important;
+        }
+
+        .kiosco-exit {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: var(--success);
+            border: 1px solid var(--success);
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sync-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: var(--success);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(4px);
+        }
+        .sync-status.synced { background: #2E7D32; color: white; }
+        .sync-status.syncing { background: var(--warning); color: #0a0a1a; }
+        .sync-status.error { background: var(--danger); color: white; }
+        .sync-status.realtime { background: #1565C0; color: white; }
+
+        .app {
+            max-width: 650px;
+            margin: 0 auto;
+            background: var(--color-bg);
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .header {
+            background: var(--color-card);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--success);
+            position: relative;
+        }
+        .version-badge {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(212, 175, 55, 0.2);
+            border: 1px solid var(--success);
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--success);
+        }
+        .header-icon { font-size: 48px; color: var(--success); margin-bottom: 8px; }
+        .header h1 { font-size: 28px; font-weight: 800; color: var(--success); text-transform: uppercase; }
+        .reloj { font-size: 22px; font-weight: 700; color: var(--success); margin-top: 8px; font-family: monospace; }
+        .fecha { font-size: 11px; color: var(--color-text-light); margin-top: 4px; }
+        .header-controls { display: flex; justify-content: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+        .btn-kiosco, .theme-toggle, .btn-sync {
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 11px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+        .badge-libres {
+            background: var(--success);
+            color: #0a0a1a;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .toggle-zona-btn {
+            background: rgba(255, 152, 0, 0.15);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .toggle-zona-btn.activo { background: var(--warning); color: #0a0a1a; }
+
+        .nav {
+            display: flex;
+            background: var(--color-card);
+            padding: 8px 16px;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .nav-btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            background: none;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: var(--color-text-light);
+        }
+        .nav-btn.active { background: var(--success); color: #0a0a1a; }
+
+        .screen { display: none; padding: 16px; }
+        .screen.active { display: block; }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: var(--color-card);
+            border-radius: 16px;
+            padding: 14px;
+            text-align: center;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        .stat-num { font-size: 28px; font-weight: 700; color: var(--success); }
+        .stat-label { font-size: 11px; color: var(--color-text-light); margin-top: 4px; }
+
+        .mapa-container {
+            background: var(--color-card);
+            border-radius: 20px;
+            padding: 16px;
+        }
+        .mapa-titulo { font-size: 14px; font-weight: 600; color: var(--success); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid rgba(212,175,55,0.3); }
+        .zona-parqueadero { margin-bottom: 24px; }
+        .zona-titulo { font-size: 12px; font-weight: 600; color: var(--success); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .fila-espacios { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        
+        .espacio-btn {
+            width: 70px;
+            padding: 10px 2px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        .espacio-btn:active { transform: scale(0.95); }
+        .espacio-btn.libre { background: linear-gradient(135deg, #1B5E20, #2E7D32); color: white; border: 1px solid var(--success); }
+        .espacio-btn.ocupado { background: linear-gradient(135deg, #b71c1c, #c62828); color: white; }
+        .espacio-btn.discapacidad { background: linear-gradient(135deg, #0D47A1, #1565C0); color: white; }
+        .espacio-btn.inactivo { background: #555; color: #999; cursor: not-allowed; opacity: 0.6; }
+        .espacio-numero { font-size: 13px; font-weight: 800; }
+        .espacio-placa { font-size: 9px; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 12px; }
+        .espacio-tiempo { font-size: 7px; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 10px; }
+
+        .leyenda { display: flex; justify-content: center; gap: 20px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(212,175,55,0.2); flex-wrap: wrap; }
+        .leyenda-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-text-light); }
+        .leyenda-color { width: 18px; height: 18px; border-radius: 6px; }
+        .leyenda-color.libre { background: #2E7D32; border: 1px solid var(--success); }
+        .leyenda-color.ocupado { background: #c62828; }
+        .leyenda-color.discapacidad { background: #1565C0; }
+        .leyenda-color.inactivo { background: #555; }
+
+        .valet-card {
+            background: var(--color-card);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid var(--success);
+        }
+        .valet-card.descansando { background: rgba(255,152,0,0.15); border-left-color: var(--warning); }
+        .valet-avatar { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; background: linear-gradient(135deg, var(--success), #B8860B); }
+        .valet-info { flex: 1; }
+        .valet-nombre { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .badge-descanso { background: var(--warning); color: white; font-size: 9px; padding: 2px 8px; border-radius: 20px; }
+        .badge-activo { background: var(--success); color: #0a0a1a; font-size: 9px; padding: 2px 8px; border-radius: 20px; }
+        .valet-stats { font-size: 11px; color: var(--color-text-light); margin-top: 4px; }
+        .btn-descanso-small {
+            background: var(--warning);
+            border: none;
+            padding: 6px 10px;
+            border-radius: 20px;
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-descanso-small.volver { background: var(--success); color: #0a0a1a; }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .overlay.open { display: flex; }
+        .modal {
+            background: var(--color-card);
+            border-radius: 28px;
+            padding: 20px;
+            width: 90%;
+            max-width: 360px;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid var(--success);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-title { font-size: 20px; font-weight: 700; color: var(--success); }
+        .modal-badge { padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 600; }
+        .modal-badge.libre { background: #2E7D32; color: white; }
+        .modal-badge.ocupado { background: #c62828; color: white; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label { font-size: 11px; font-weight: 600; color: var(--success); margin-bottom: 4px; display: block; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #333; border-radius: 10px; font-size: 14px; background: var(--color-bg); color: var(--color-text); }
+        .placa-input { text-align: center; font-size: 22px !important; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+        .chofer-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .chofer-btn { 
+            padding: 8px; border: 2px solid #333; border-radius: 10px; background: var(--color-bg); 
+            font-size: 12px; font-weight: 600; cursor: pointer; color: var(--color-text);
+        }
+        .chofer-btn.selected { background: var(--success); border-color: var(--success); color: #0a0a1a; }
+        
+        .respuesta-rapida {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .respuesta-btn {
+            background: rgba(212, 175, 55, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .respuesta-btn:hover {
+            background: var(--success);
+            color: #0a0a1a;
+        }
+
+        .btn-primary, .btn-danger {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-primary { background: var(--success); color: #0a0a1a; }
+        .btn-danger { background: var(--danger); color: white; }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a2e;
+            color: var(--success);
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 13px;
+            display: none;
+            z-index: 1100;
+            border: 1px solid var(--success);
+        }
+        .toast.error { background: var(--danger); color: white; border: none; }
+        .empty-state { text-align: center; padding: 30px; color: var(--color-text-light); }
+    </style>
+</head>
+<body>
+
+<button class="kiosco-exit" onclick="toggleKioscoMode()"><i class="mdi mdi-close-circle"></i> Salir modo Kiosco</button>
+
+<div class="sync-status" id="syncStatus">
+    <i class="mdi mdi-cloud-sync"></i> <span id="syncText">Conectando...</span>
+</div>
+
+<div class="overlay" id="overlay" onclick="cerrarOverlay(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <span class="modal-title" id="modal-title">Espacio</span>
+            <span class="modal-badge" id="modal-badge">Libre</span>
+            <button onclick="closeModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--success);">&times;</button>
+        </div>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="app">
+    <div class="header">
+        <div class="version-badge" id="versionBadge">v2.5.0</div>
+        <div class="header-icon"><i class="mdi mdi-crown"></i></div>
+        <h1>EQUIPO ÉLITE</h1>
+        <div class="reloj" id="reloj">--:--:--</div>
+        <div class="fecha" id="fecha"></div>
+        <div class="header-controls">
+            <button class="btn-kiosco" onclick="toggleKioscoMode()"><i class="mdi mdi-fullscreen"></i> Kiosco</button>
+            <button class="theme-toggle" onclick="toggleTheme()"><i class="mdi mdi-theme-light-dark"></i> Tema</button>
+            <button class="btn-sync" onclick="sincronizarManual()"><i class="mdi mdi-cloud-upload"></i> Sincronizar</button>
+            <span class="badge-libres" id="badge-libres">66 libres</span>
+        </div>
+    </div>
+
+    <nav class="nav">
+        <button class="nav-btn active" onclick="showScreen('mapa',this)"><i class="mdi mdi-map"></i> Mapa</button>
+        <button class="nav-btn" onclick="showScreen('vehiculos',this)"><i class="mdi mdi-car"></i> Vehículos</button>
+        <button class="nav-btn" onclick="showScreen('equipo',this)"><i class="mdi mdi-account-group"></i> Equipo</button>
+        <button class="nav-btn" onclick="showScreen('descansos',this)"><i class="mdi mdi-coffee"></i> Descansos</button>
+    </nav>
+
+    <div id="screen-mapa" class="screen active">
+        <div class="stats-row">
+            <div class="stat-card"><div class="stat-num" id="s-libres">66</div><div class="stat-label">Libres</div></div>
+            <div class="stat-card"><div class="stat-num" id="s-ocup">0</div><div class="stat-label">Ocupados</div></div>
+            <div class="stat-card"><div class="stat-num" id="s-total">66</div><div class="stat-label">Total</div></div>
+        </div>
+        <div class="mapa-container">
+            <div class="mapa-titulo"><i class="mdi mdi-parking"></i> Distribución del Parqueadero</div>
+            <div class="zona-parqueadero"><div class="zona-titulo"><i class="mdi mdi-wheelchair"></i> Zona Discapacidad</div><div class="fila-espacios" id="zona-disc"></div></div>
+            <div class="zona-parqueadero"><div class="zona-titulo"><i class="mdi mdi-arrow-right-bold"></i> Ala Derecha (846 - 865)</div><div class="fila-espacios" id="zona-der"></div></div>
+            <div class="zona-parqueadero"><div class="zona-titulo"><i class="mdi mdi-star"></i> Zona Central (866 - 886)</div><div class="fila-espacios" id="zona-cen"></div></div>
+            <div class="zona-parqueadero">
+                <div class="zona-titulo">
+                    <span><i class="mdi mdi-arrow-left-bold"></i> Ala Izquierda (890 - 910)</span>
+                    <button id="toggleIzquierdaBtn" class="toggle-zona-btn activo" onclick="toggleAlaIzquierda()"><i class="mdi mdi-check-circle"></i> Habilitada</button>
+                </div>
+                <div class="fila-espacios" id="zona-izq"></div>
+                <div id="aviso-izq-inactiva" style="display:none"><i class="mdi mdi-alert"></i> Ala Izquierda deshabilitada</div>
+            </div>
+            <div class="leyenda">
+                <div class="leyenda-item"><div class="leyenda-color libre"></div><span>Libre</span></div>
+                <div class="leyenda-item"><div class="leyenda-color ocupado"></div><span>Ocupado</span></div>
+                <div class="leyenda-item"><div class="leyenda-color discapacidad"></div><span>Discapacidad</span></div>
+                <div class="leyenda-item"><div class="leyenda-color inactivo"></div><span>Deshabilitado</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-vehiculos" class="screen">
+        <div class="mapa-container">
+            <div class="mapa-titulo"><i class="mdi mdi-magnify"></i> Buscar</div>
+            <input type="text" id="searchVehiculo" placeholder="Buscar por placa o quien lo trajo..." oninput="aplicarFiltros()" style="width:100%; padding:10px; border-radius:10px; margin-bottom:16px; background:var(--color-bg); color:var(--color-text); border:1px solid #333;">
+            <div class="mapa-titulo"><i class="mdi mdi-clock-outline"></i> Activos <span id="activeCount"></span></div>
+            <div id="lista-activos"></div>
+            <div class="mapa-titulo" style="margin-top:16px;"><i class="mdi mdi-check"></i> Entregados hoy</div>
+            <div id="lista-entregados"></div>
+        </div>
+    </div>
+
+    <div id="screen-equipo" class="screen">
+        <div class="mapa-container">
+            <div class="mapa-titulo"><i class="mdi mdi-crown"></i> Miembros Activos</div>
+            <div id="lista-valets"></div>
+            <div class="mapa-titulo" style="margin-top:16px;"><i class="mdi mdi-chart-bar"></i> Resumen</div>
+            <div class="stats-row">
+                <div class="stat-card"><div class="stat-num" id="r-ing">0</div><div class="stat-label">Ingresos</div></div>
+                <div class="stat-card"><div class="stat-num" id="r-ent">0</div><div class="stat-label">Entregados</div></div>
+                <div class="stat-card"><div class="stat-num" id="r-act">0</div><div class="stat-label">Activos</div></div>
+            </div>
+            <button class="btn-primary" onclick="showLoginForExport()" style="margin-top:16px;"><i class="mdi mdi-file-excel"></i> Exportar Excel</button>
+        </div>
+    </div>
+
+    <div id="screen-descansos" class="screen">
+        <div class="mapa-container">
+            <div class="mapa-titulo"><i class="mdi mdi-coffee"></i> Historial de descansos</div>
+            <div id="historial-descansos"></div>
+        </div>
+    </div>
+</div>
+
+<div id="loginOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; z-index:2000;">
+    <div style="background:#1a1a2e; border-radius:28px; padding:30px; width:300px; text-align:center; border:1px solid #D4AF37;">
+        <i class="mdi mdi-shield-key" style="font-size:48px; color:#D4AF37;"></i>
+        <h3 style="margin:15px 0; color:#D4AF37;">Acceso Autorizado</h3>
+        <input type="password" id="loginPassword" placeholder="Contraseña" style="width:100%; padding:12px; border-radius:12px; border:1px solid #D4AF37; background:#0a0a1a; color:white;">
+        <button onclick="checkLogin()" class="btn-primary" style="margin:10px 0 0 0;">Acceder</button>
+    </div>
+</div>
+
+<script>
+// ========== VERSIÓN DE LA APLICACIÓN ==========
+const APP_VERSION = "2.5.0";
+const VERSION_DATE = "2024-05-14";
+console.log(`🚀 EQUIPO ÉLITE v${APP_VERSION} (${VERSION_DATE})`);
+
+// ========== CONFIGURACIÓN DE FIREBASE ==========
+const firebaseConfig = {
+    apiKey: "AIzaSyDYnkHNPdB3XPK5zMo5R3JiLAQ6UeGOCKU",
+    authDomain: "espaciosv-6d92e.firebaseapp.com",
+    databaseURL: "https://espaciosv-6d92e-default-rtdb.firebaseio.com",
+    projectId: "espaciosv-6d92e",
+    storageBucket: "espaciosv-6d92e.firebasestorage.app",
+    messagingSenderId: "326267112592",
+    appId: "1:326267112592:web:6826e67fa0a33b0d899c15"
+};
+
+let database = null;
+let firebaseInicializado = false;
+let realtimeListeners = {};
+
+try {
+    if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        database = firebase.database();
+        firebaseInicializado = true;
+        console.log('✅ Firebase inicializado');
+    }
+} catch(e) {
+    console.warn('⚠️ Firebase error:', e.message);
+}
+
+// ========== DATOS DE VALETS ==========
+let valets = [
+    { id: 1, nombre: 'Marlon', avatar: '🦁', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
+    { id: 2, nombre: 'Daniel', avatar: '🐅', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
+    { id: 3, nombre: 'Johan', avatar: '🐺', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
+    { id: 4, nombre: 'Esteban', avatar: '🦅', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
+    { id: 5, nombre: 'Outsourcing', avatar: '🐉', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
+    { id: 6, nombre: 'Joel', avatar: '🦊', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
+    { id: 7, nombre: 'Vicente', avatar: '👑', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
+    { id: 8, nombre: 'Gustavo', avatar: '🐻', enDescanso: false, descansoInicio: null, descansosHistorial: [] }
+];
+
+const NOMBRES_PRINCIPALES = ['Marlon', 'Daniel', 'Johan', 'Esteban', 'Outsourcing'];
+const NOMBRES_RAPIDOS = ['Joel', 'Vicente', 'Gustavo'];
+
+let espacios = {};
+let entregados = [];
+let alaIzquierdaActiva = true;
+let fechaActualRegistro = new Date().toDateString();
+let sincronizando = false;
+
+// ========== INICIALIZAR ESPACIOS ==========
+function initEspacios() {
+    [913, 912, 911].forEach(i => espacios[i] = { id: i, placa: null, quienTrae: null, hora: null, obs: null, disc: true, activo: true });
+    for(let i=846; i<=865; i++) espacios[i] = { id: i, placa: null, quienTrae: null, hora: null, obs: null, disc: false, activo: true };
+    for(let i=866; i<=886; i++) espacios[i] = { id: i, placa: null, quienTrae: null, hora: null, obs: null, disc: false, activo: true };
+    for(let i=890; i<=910; i++) espacios[i] = { id: i, placa: null, quienTrae: null, hora: null, obs: null, disc: false, activo: true };
+}
+initEspacios();
+
+// ========== FUNCIONES DE DESCANSOS ==========
+function iniciarDescanso(nombre) {
+    const valet = valets.find(v => v.nombre === nombre);
+    if(!valet) return;
+    if(valet.enDescanso) {
+        showToast(`⚠️ ${nombre} ya está en descanso`, true);
+        return;
+    }
+    valet.enDescanso = true;
+    valet.descansoInicio = new Date();
+    showToast(`☕ ${nombre} salió a descansar/almuerzo`);
+    renderEquipo();
+    guardarDatos();
+    sincronizarFirebase();
+}
+
+function finalizarDescanso(nombre) {
+    const valet = valets.find(v => v.nombre === nombre);
+    if(!valet || !valet.enDescanso) return;
+    
+    const fin = new Date();
+    const ini = new Date(valet.descansoInicio);
+    const duracion = Math.round((fin - ini) / 60000);
+    
+    valet.descansosHistorial.push({
+        fecha: new Date().toLocaleDateString(),
+        inicio: ini.toLocaleTimeString(),
+        fin: fin.toLocaleTimeString(),
+        duracion: duracion,
+        fechaCompleta: new Date().toISOString()
+    });
+    
+    valet.enDescanso = false;
+    valet.descansoInicio = null;
+    showToast(`✅ ${nombre} regresó de descanso (${duracion} minutos)`);
+    renderEquipo();
+    guardarDatos();
+    sincronizarFirebase();
+}
+
+function getTiempoDescanso(valet) {
+    if(!valet.enDescanso || !valet.descansoInicio) return null;
+    const diff = Math.floor((new Date() - new Date(valet.descansoInicio)) / 60000);
+    if(diff < 60) return `${diff} min`;
+    return `${Math.floor(diff/60)}h ${diff%60} min`;
+}
+
+function getValetsDisponibles() {
+    return valets.filter(v => !v.enDescanso);
+}
+
+// ========== FUNCIONES AUXILIARES ==========
+function ahora() {
+    const d = new Date();
+    return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+}
+
+function tiempoTranscurrido(horaInicio) {
+    if(!horaInicio) return '0m';
+    const [h,m] = horaInicio.split(':');
+    const inicio = new Date();
+    inicio.setHours(parseInt(h), parseInt(m), 0);
+    const diff = Math.floor((new Date() - inicio) / 60000);
+    if(diff < 0) return '0m';
+    if(diff < 60) return `${diff}m`;
+    return `${Math.floor(diff/60)}h ${diff%60}m`;
+}
+
+function showToast(msg, err = false) {
+    const t = document.getElementById('toast');
+    if(!t) return;
+    t.textContent = msg;
+    t.className = 'toast' + (err ? ' error' : '');
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2500);
+}
+
+// ========== RELOJ Y FECHA ==========
+function actualizarReloj() {
+    const ahora = new Date();
+    const horas = ahora.getHours().toString().padStart(2,'0');
+    const minutos = ahora.getMinutes().toString().padStart(2,'0');
+    const segundos = ahora.getSeconds().toString().padStart(2,'0');
+    const relojDiv = document.getElementById('reloj');
+    if(relojDiv) relojDiv.innerHTML = `${horas}:${minutos}:${segundos}`;
+    
+    const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const fechaDiv = document.getElementById('fecha');
+    if(fechaDiv) fechaDiv.innerHTML = ahora.toLocaleDateString('es-ES', opciones);
+    
+    if(ahora.toDateString() !== fechaActualRegistro) {
+        fechaActualRegistro = ahora.toDateString();
+        reiniciarPorNuevoDia();
+    }
+}
+
+function reiniciarPorNuevoDia() {
+    const activos = Object.values(espacios).filter(e => e.placa);
+    if(activos.length > 0) {
+        activos.forEach(e => {
+            entregados.unshift({
+                ...e, horaEnt: e.hora, tiempoEstacionado: tiempoTranscurrido(e.hora),
+                quienRecoge: 'AUTOMÁTICO - CAMBIO DE DÍA'
+            });
+            e.placa = null; e.quienTrae = null; e.hora = null; e.obs = null;
+        });
+        showToast(`🔄 Nuevo día - ${activos.length} vehículos movidos a historial`);
+    }
+    guardarDatos();
+    renderMapa();
+    renderVehiculos();
+    renderEquipo();
+    sincronizarFirebase();
+}
+
+// ========== RENDER MAPA ==========
+function createEspacioBtn(id) {
+    const e = espacios[id];
+    const btn = document.createElement('button');
+    const isActive = e.activo !== false;
+    
+    if(!isActive) {
+        btn.className = 'espacio-btn inactivo';
+        btn.innerHTML = `<span class="espacio-numero">${id}</span><span style="font-size:8px;">🚫</span>`;
+        btn.onclick = () => showToast('Espacio no disponible', true);
+        return btn;
+    }
+    
+    let clase = 'libre';
+    let contenido = `<span class="espacio-numero">${id}</span>`;
+    
+    if(e.placa) {
+        clase = 'ocupado';
+        contenido = `<span class="espacio-numero">${id}</span>
+                     <span class="espacio-placa">${e.placa}</span>
+                     <span class="espacio-tiempo">${tiempoTranscurrido(e.hora)}</span>`;
+    } else if(e.disc) {
+        clase = 'discapacidad';
+        contenido = `<span class="espacio-numero">♿ ${id}</span>`;
+    }
+    
+    btn.className = `espacio-btn ${clase}`;
+    btn.innerHTML = contenido;
+    btn.onclick = () => abrirModal(id);
+    return btn;
+}
+
+function renderMapa() {
+    const zonaDisc = document.getElementById('zona-disc');
+    const zonaDer = document.getElementById('zona-der');
+    const zonaCen = document.getElementById('zona-cen');
+    const zonaIzq = document.getElementById('zona-izq');
+    
+    if(zonaDisc) { zonaDisc.innerHTML = ''; [913,912,911].forEach(id => zonaDisc.appendChild(createEspacioBtn(id))); }
+    if(zonaDer) { zonaDer.innerHTML = ''; for(let i=846; i<=865; i++) zonaDer.appendChild(createEspacioBtn(i)); }
+    if(zonaCen) { zonaCen.innerHTML = ''; for(let i=866; i<=886; i++) zonaCen.appendChild(createEspacioBtn(i)); }
+    if(zonaIzq) { zonaIzq.innerHTML = ''; for(let i=890; i<=910; i++) zonaIzq.appendChild(createEspacioBtn(i)); }
+    
+    const activosTotal = Object.values(espacios).filter(e => e.activo !== false);
+    const ocupados = activosTotal.filter(e => e.placa).length;
+    const total = activosTotal.length;
+    const libres = total - ocupados;
+    
+    const sLibres = document.getElementById('s-libres');
+    const sOcup = document.getElementById('s-ocup');
+    const sTotal = document.getElementById('s-total');
+    const badge = document.getElementById('badge-libres');
+    if(sLibres) sLibres.innerHTML = libres;
+    if(sOcup) sOcup.innerHTML = ocupados;
+    if(sTotal) sTotal.innerHTML = total;
+    if(badge) badge.innerHTML = libres + ' libres';
+}
+
+// ========== TOGGLE ALA IZQUIERDA ==========
+function toggleAlaIzquierda() {
+    alaIzquierdaActiva = !alaIzquierdaActiva;
+    for(let i=890; i<=910; i++) if(espacios[i]) espacios[i].activo = alaIzquierdaActiva;
+    const btn = document.getElementById('toggleIzquierdaBtn');
+    const aviso = document.getElementById('aviso-izq-inactiva');
+    if(btn) {
+        if(alaIzquierdaActiva) {
+            btn.innerHTML = '<i class="mdi mdi-check-circle"></i> Habilitada';
+            btn.classList.add('activo');
+            if(aviso) aviso.style.display = 'none';
+            showToast('✅ Ala Izquierda HABILITADA');
+        } else {
+            btn.innerHTML = '<i class="mdi mdi-close-circle"></i> Deshabilitada';
+            btn.classList.remove('activo');
+            if(aviso) aviso.style.display = 'block';
+            showToast('❌ Ala Izquierda DESHABILITADA');
+        }
+    }
+    renderMapa();
+    guardarDatos();
+    sincronizarFirebase();
+}
+
+// ========== VEHÍCULOS ==========
+function renderVehiculos() {
+    const search = document.getElementById('searchVehiculo');
+    const filtro = search ? search.value.toLowerCase() : '';
+    let activos = Object.values(espacios).filter(e => e.placa);
+    if(filtro) activos = activos.filter(e => e.placa.toLowerCase().includes(filtro) || (e.quienTrae && e.quienTrae.toLowerCase().includes(filtro)));
+    
+    const activeCount = document.getElementById('activeCount');
+    if(activeCount) activeCount.innerHTML = `(${activos.length})`;
+    
+    const listaActivos = document.getElementById('lista-activos');
+    if(listaActivos) {
+        if(activos.length) {
+            listaActivos.innerHTML = activos.map(e => `
+                <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(212,175,55,0.2);">
+                    <div style="width:10px; height:10px; border-radius:50%; background:#D4AF37;"></div>
+                    <div style="font-weight:700; min-width:60px;">${e.placa}</div>
+                    <div style="flex:1;"><strong>🚗 Trajo: ${e.quienTrae || '?'}</strong><br><small>Esp ${e.id} · ${e.hora || '?'}</small></div>
+                    <span style="background:#D4AF37; color:#0a0a1a; padding:4px 8px; border-radius:20px; font-size:11px;">${tiempoTranscurrido(e.hora)}</span>
+                </div>
+            `).join('');
+        } else {
+            listaActivos.innerHTML = '<div class="empty-state">Sin vehículos activos</div>';
+        }
+    }
+    
+    const listaEntregados = document.getElementById('lista-entregados');
+    if(listaEntregados) {
+        if(entregados.length) {
+            listaEntregados.innerHTML = entregados.slice(0,20).map(v => `
+                <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(212,175,55,0.2);">
+                    <div style="width:10px; height:10px; border-radius:50%; background:#666;"></div>
+                    <div style="min-width:60px;">${v.placa}</div>
+                    <div style="flex:1;">
+                        <strong>🚗 Trajo: ${v.quienTrae || '?'}</strong><br>
+                        <small>🔁 Recogió: ${v.quienRecoge || '?'}</small>
+                    </div>
+                    <span style="font-size:11px;">${v.horaEnt || '?'}</span>
+                </div>
+            `).join('');
+        } else {
+            listaEntregados.innerHTML = '<div class="empty-state">Sin entregas aún</div>';
+        }
+    }
+}
+
+// ========== EQUIPO ==========
+function renderEquipo() {
+    const activos = Object.values(espacios).filter(e => e.placa);
+    const counts = {};
+    activos.forEach(e => { if(e.quienTrae) counts[e.quienTrae] = (counts[e.quienTrae] || 0) + 1; });
+    
+    const listaValets = document.getElementById('lista-valets');
+    if(listaValets) {
+        listaValets.innerHTML = valets.map(v => {
+            const total = counts[v.nombre] || 0;
+            const tiempoDesc = getTiempoDescanso(v);
+            return `
+                <div class="valet-card ${v.enDescanso ? 'descansando' : ''}">
+                    <div class="valet-avatar">${v.avatar}</div>
+                    <div class="valet-info">
+                        <div class="valet-nombre">
+                            ${v.nombre}
+                            ${v.enDescanso ? '<span class="badge-descanso">🌙 En descanso</span>' : '<span class="badge-activo">⚡ Activo</span>'}
+                        </div>
+                        <div class="valet-stats">${total} vehículo${total !== 1 ? 's' : ''} traído${total !== 1 ? 's' : ''}</div>
+                        ${v.enDescanso && tiempoDesc ? `<div class="valet-stats">⏱️ Tiempo: ${tiempoDesc}</div>` : ''}
+                    </div>
+                    ${!v.enDescanso ? 
+                        `<button class="btn-descanso-small" onclick="iniciarDescanso('${v.nombre}')"><i class="mdi mdi-coffee"></i> Descanso</button>` :
+                        `<button class="btn-descanso-small volver" onclick="finalizarDescanso('${v.nombre}')"><i class="mdi mdi-sword"></i> Regresar</button>`
+                    }
+                </div>
+            `;
+        }).join('');
+    }
+    
+    const historialDiv = document.getElementById('historial-descansos');
+    if(historialDiv) {
+        let todos = [];
+        valets.forEach(v => {
+            v.descansosHistorial.forEach(d => {
+                todos.push({ ...d, nombre: v.nombre, avatar: v.avatar });
+            });
+        });
+        todos.sort((a,b) => new Date(b.fechaCompleta) - new Date(a.fechaCompleta));
+        if(todos.length) {
+            historialDiv.innerHTML = todos.map(d => `
+                <div style="display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid rgba(212,175,55,0.2);">
+                    <div style="font-size:28px;">${d.avatar}</div>
+                    <div style="flex:1;"><strong>${d.nombre}</strong><br><small>${d.fecha}</small></div>
+                    <div style="text-align:right;"><small>${d.inicio} → ${d.fin}</small><br><small style="color:#D4AF37;">${d.duracion} min</small></div>
+                </div>
+            `).join('');
+        } else {
+            historialDiv.innerHTML = '<div class="empty-state">Sin registros de descansos</div>';
+        }
+    }
+    
+    const activosCount = Object.values(espacios).filter(e => e.activo !== false);
+    const rIng = document.getElementById('r-ing');
+    const rEnt = document.getElementById('r-ent');
+    const rAct = document.getElementById('r-act');
+    if(rIng) rIng.innerHTML = activosCount.filter(e => e.placa).length + entregados.length;
+    if(rEnt) rEnt.innerHTML = entregados.length;
+    if(rAct) rAct.innerHTML = activosCount.filter(e => e.placa).length;
+}
+
+// ========== MODALES ==========
+let modalId = null;
+let quienTraeSel = null;
+let quienRecogeSel = null;
+
+function abrirModal(id) {
+    const e = espacios[id];
+    if(e.activo === false) { showToast('Espacio no disponible', true); return; }
+    modalId = id;
+    const modalTitle = document.getElementById('modal-title');
+    const modalBadge = document.getElementById('modal-badge');
+    const modalBody = document.getElementById('modal-body');
+    if(modalTitle) modalTitle.innerHTML = `Espacio ${id}`;
+    
+    if(e.placa) {
+        if(modalBadge) { modalBadge.className = 'modal-badge ocupado'; modalBadge.innerHTML = 'Ocupado'; }
+        if(modalBody) modalBody.innerHTML = buildRetiroModal(e);
+        initQuienRecogeBtns();
+    } else {
+        if(modalBadge) { modalBadge.className = 'modal-badge libre'; modalBadge.innerHTML = e.disc ? '♿ Discapacidad' : 'Libre'; }
+        if(modalBody) modalBody.innerHTML = buildRegistroModal();
+        initQuienTraeBtns();
+        setTimeout(() => { const p = document.getElementById('m-placa'); if(p) p.focus(); }, 100);
+    }
+    document.getElementById('overlay').classList.add('open');
+}
+
+function buildRegistroModal() {
+    return `
+    <div class="form-group">
+        <label>🚗 Placa del vehículo (4 caracteres: letras o números)</label>
+        <input type="text" id="m-placa" class="placa-input" placeholder="ABCD" maxlength="4" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+        <small style="font-size: 9px; color: var(--color-text-light);">Ejemplo: ABCD, 1234, A1B2</small>
+    </div>
+    <div class="form-group">
+        <label>📋 ¿Quién TRAE el vehículo?</label>
+        <div class="chofer-grid" id="m-quien-trae-grid"></div>
+        <div id="m-trae-otro-wrap" style="display:none; margin-top:6px;">
+            <input type="text" id="m-trae-otro" placeholder="Nombre de quien trae" style="width:100%; padding:10px; border-radius:10px; border:1px solid #333; background:var(--color-bg); color:var(--color-text);">
+            <div class="respuesta-rapida" id="respuesta-rapida-trae" style="display:none;"></div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>📝 Observaciones (daños, notas)</label>
+        <input type="text" id="m-obs" placeholder="Ej: Golpe en puerta, rayón...">
+    </div>
+    <button class="btn-primary" onclick="confirmarIngreso()"><i class="mdi mdi-check"></i> Registrar ingreso</button>`;
+}
+
+function buildRetiroModal(e) {
+    return `
+    <div style="background:rgba(212,175,55,0.1); border-radius:16px; padding:16px; text-align:center; margin-bottom:16px;">
+        <div style="font-size:28px; font-weight:700; color:#D4AF37;">${e.placa}</div>
+        <div style="margin-top:10px; font-size:12px;">
+            <div><i class="mdi mdi-account-tie"></i> <strong>Traído por:</strong> ${e.quienTrae || '?'}</div>
+            <div><i class="mdi mdi-clock-outline"></i> <strong>Ingreso:</strong> ${e.hora || '?'}</div>
+            <div><i class="mdi mdi-timer"></i> <strong>Tiempo:</strong> ${tiempoTranscurrido(e.hora)}</div>
+        </div>
+        ${e.obs ? `<div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:6px; border-radius:8px;">📝 ${e.obs}</div>` : ''}
+    </div>
+    <div class="form-group">
+        <label>🔁 ¿Quién RECOGE el vehículo?</label>
+        <div class="chofer-grid" id="m-quien-recoge-grid"></div>
+        <div id="m-recoge-otro-wrap" style="display:none; margin-top:6px;">
+            <input type="text" id="m-recoge-otro" placeholder="Nombre de quien recoge" style="width:100%; padding:10px; border-radius:10px; border:1px solid #333; background:var(--color-bg); color:var(--color-text);">
+            <div class="respuesta-rapida" id="respuesta-rapida-recoge" style="display:none;"></div>
+        </div>
+    </div>
+    <button class="btn-danger" onclick="confirmarRetiro()"><i class="mdi mdi-arrow-up"></i> Confirmar retiro</button>`;
+}
+
+function initQuienTraeBtns() {
+    const g = document.getElementById('m-quien-trae-grid');
+    if(!g) return;
+    g.innerHTML = '';
+    
+    const disponibles = getValetsDisponibles();
+    const nombresDisponibles = disponibles.map(v => v.nombre);
+    const principalesDisponibles = NOMBRES_PRINCIPALES.filter(n => nombresDisponibles.includes(n));
+    
+    principalesDisponibles.forEach(n => {
+        const b = document.createElement('button');
+        b.className = 'chofer-btn';
+        b.innerHTML = n;
+        b.onclick = () => {
+            document.querySelectorAll('#m-quien-trae-grid .chofer-btn').forEach(x => x.classList.remove('selected'));
+            b.classList.add('selected');
+            quienTraeSel = n;
+            document.getElementById('m-trae-otro-wrap').style.display = 'none';
+        };
+        g.appendChild(b);
+    });
+    
+    const bOtro = document.createElement('button');
+    bOtro.className = 'chofer-btn';
+    bOtro.innerHTML = '✏️ Otro...';
+    bOtro.onclick = () => {
+        document.querySelectorAll('#m-quien-trae-grid .chofer-btn').forEach(x => x.classList.remove('selected'));
+        bOtro.classList.add('selected');
+        quienTraeSel = null;
+        const wrap = document.getElementById('m-trae-otro-wrap');
+        if(wrap) {
+            wrap.style.display = 'block';
+            document.getElementById('m-trae-otro')?.focus();
+            mostrarRespuestaRapida('trae');
+        }
+    };
+    g.appendChild(bOtro);
+    
+    const enDescanso = valets.filter(v => v.enDescanso).map(v => v.nombre);
+    if(enDescanso.length > 0) {
+        const aviso = document.createElement('small');
+        aviso.style.cssText = 'grid-column: span 3; text-align: center; color: #ff9800; font-size: 10px; margin-top: 4px;';
+        aviso.innerHTML = `⏸️ En descanso: ${enDescanso.join(', ')}`;
+        g.appendChild(aviso);
+    }
+}
+
+function initQuienRecogeBtns() {
+    const g = document.getElementById('m-quien-recoge-grid');
+    if(!g) return;
+    g.innerHTML = '';
+    
+    const disponibles = getValetsDisponibles();
+    const nombresDisponibles = disponibles.map(v => v.nombre);
+    const principalesDisponibles = NOMBRES_PRINCIPALES.filter(n => nombresDisponibles.includes(n));
+    
+    principalesDisponibles.forEach(n => {
+        const b = document.createElement('button');
+        b.className = 'chofer-btn';
+        b.innerHTML = n;
+        b.onclick = () => {
+            document.querySelectorAll('#m-quien-recoge-grid .chofer-btn').forEach(x => x.classList.remove('selected'));
+            b.classList.add('selected');
+            quienRecogeSel = n;
+            document.getElementById('m-recoge-otro-wrap').style.display = 'none';
+        };
+        g.appendChild(b);
+    });
+    
+    const bOtro = document.createElement('button');
+    bOtro.className = 'chofer-btn';
+    bOtro.innerHTML = '✏️ Otro...';
+    bOtro.onclick = () => {
+        document.querySelectorAll('#m-quien-recoge-grid .chofer-btn').forEach(x => x.classList.remove('selected'));
+        bOtro.classList.add('selected');
+        quienRecogeSel = null;
+        const wrap = document.getElementById('m-recoge-otro-wrap');
+        if(wrap) {
+            wrap.style.display = 'block';
+            document.getElementById('m-recoge-otro')?.focus();
+            mostrarRespuestaRapida('recoge');
+        }
+    };
+    g.appendChild(bOtro);
+    
+    const enDescanso = valets.filter(v => v.enDescanso).map(v => v.nombre);
+    if(enDescanso.length > 0) {
+        const aviso = document.createElement('small');
+        aviso.style.cssText = 'grid-column: span 3; text-align: center; color: #ff9800; font-size: 10px; margin-top: 4px;';
+        aviso.innerHTML = `⏸️ En descanso: ${enDescanso.join(', ')}`;
+        g.appendChild(aviso);
+    }
+}
+
+function mostrarRespuestaRapida(tipo) {
+    const container = document.getElementById(`respuesta-rapida-${tipo}`);
+    if(!container) return;
+    
+    container.style.display = 'flex';
+    container.innerHTML = '';
+    
+    NOMBRES_RAPIDOS.forEach(n => {
+        const btn = document.createElement('button');
+        btn.className = 'respuesta-btn';
+        btn.innerHTML = n;
+        btn.onclick = () => {
+            const input = document.getElementById(`m-${tipo === 'trae' ? 'trae' : 'recoge'}-otro`);
+            if(input) {
+                input.value = n;
+                container.style.display = 'none';
+            }
+        };
+        container.appendChild(btn);
+    });
+}
+
+function confirmarIngreso() {
+    const placaInput = document.getElementById('m-placa');
+    let placa = placaInput ? placaInput.value.trim().toUpperCase() : '';
+    if(!placa) { showToast('Ingresa la placa', true); return; }
+    if(!/^[A-Z0-9]{4}$/.test(placa)) { 
+        showToast('Placa inválida. Use 4 caracteres (letras o números)', true); 
+        return; 
+    }
+    
+    let quienTrae = quienTraeSel;
+    if(!quienTrae) {
+        const otro = document.getElementById('m-trae-otro')?.value.trim();
+        if(!otro) { showToast('Selecciona o escribe quién trae el vehículo', true); return; }
+        quienTrae = otro;
+    }
+    
+    if(Object.values(espacios).some(e => e.placa === placa)) { showToast('⚠️ Placa ya registrada', true); return; }
+    
+    const e = espacios[modalId];
+    if(!e || e.activo === false) { showToast('Espacio no disponible', true); return; }
+    
+    e.placa = placa;
+    e.quienTrae = quienTrae;
+    e.hora = ahora();
+    e.obs = document.getElementById('m-obs')?.value.trim() || null;
+    
+    closeModal();
+    renderMapa();
+    renderVehiculos();
+    renderEquipo();
+    showToast(`✅ ${placa} registrado - Traído por: ${quienTrae}`);
+    guardarDatos();
+    sincronizarFirebase();
+}
+
+function confirmarRetiro() {
+    const e = espacios[modalId];
+    if(!e || !e.placa) return;
+    if(!confirm(`¿Retirar vehículo ${e.placa}?`)) return;
+    
+    let quienRecoge = quienRecogeSel;
+    if(!quienRecoge) {
+        const otro = document.getElementById('m-recoge-otro')?.value.trim();
+        if(!otro) { showToast('Selecciona o escribe quién recoge el vehículo', true); return; }
+        quienRecoge = otro;
+    }
+    
+    entregados.unshift({
+        placa: e.placa,
+        quienTrae: e.quienTrae,
+        quienRecoge: quienRecoge,
+        hora: e.hora,
+        horaEnt: ahora(),
+        tiempoEstacionado: tiempoTranscurrido(e.hora),
+        obs: e.obs,
+        espacio: e.id
+    });
+    
+    const placa = e.placa;
+    e.placa = null;
+    e.quienTrae = null;
+    e.hora = null;
+    e.obs = null;
+    
+    closeModal();
+    renderMapa();
+    renderVehiculos();
+    renderEquipo();
+    showToast(`✅ ${placa} retirado - Recogido por: ${quienRecoge}`);
+    guardarDatos();
+    sincronizarFirebase();
+}
+
+function aplicarFiltros() {
+    renderVehiculos();
+}
+
+// ========== SINCRONIZACIÓN EN TIEMPO REAL CON FIREBASE ==========
+function setupRealtimeSync() {
+    if(!firebaseInicializado) return;
+    
+    // Escuchar cambios en espacios
+    const espaciosRef = database.ref('valetData/espacios');
+    if(realtimeListeners.espacios) espaciosRef.off('value', realtimeListeners.espacios);
+    
+    realtimeListeners.espacios = espaciosRef.on('value', (snapshot) => {
+        if(snapshot.exists()) {
+            const datosEspacios = snapshot.val();
+            if(Array.isArray(datosEspacios)) {
+                let cambioDetectado = false;
+                datosEspacios.forEach(e => {
+                    if(espacios[e.id]) {
+                        if(JSON.stringify(espacios[e.id]) !== JSON.stringify(e)) {
+                            Object.assign(espacios[e.id], e);
+                            cambioDetectado = true;
+                        }
+                    }
+                });
+                if(cambioDetectado) {
+                    console.log('🔄 Cambios en espacios detectados en tiempo real');
+                    renderMapa();
+                    renderVehiculos();
+                    renderEquipo();
+                    showToast('🔄 Datos actualizados en tiempo real');
+                }
+            }
+        }
+    });
+    
+    // Escuchar cambios en entregados
+    const entregadosRef = database.ref('valetData/entregados');
+    if(realtimeListeners.entregados) entregadosRef.off('value', realtimeListeners.entregados);
+    
+    realtimeListeners.entregados = entregadosRef.on('value', (snapshot) => {
+        if(snapshot.exists()) {
+            const nuevosEntregados = snapshot.val();
+            if(Array.isArray(nuevosEntregados)) {
+                if(JSON.stringify(entregados) !== JSON.stringify(nuevosEntregados)) {
+                    entregados = nuevosEntregados;
+                    console.log('🔄 Cambios en entregados detectados en tiempo real');
+                    renderVehiculos();
+                    renderEquipo();
+                    showToast('🔄 Datos actualizados en tiempo real');
+                }
+            }
+        }
+    });
+    
+    // Escuchar cambios en valets
+    const valetsRef = database.ref('valetData/valets');
+    if(realtimeListeners.valets) valetsRef.off('value', realtimeListeners.valets);
+    
+    realtimeListeners.valets = valetsRef.on('value', (snapshot) => {
+        if(snapshot.exists()) {
+            const datosValets = snapshot.val();
+            if(Array.isArray(datosValets)) {
+                let cambioDetectado = false;
+                datosValets.forEach(v => {
+                    const valet = valets.find(vv => vv.nombre === v.nombre);
+                    if(valet) {
+                        if(valet.enDescanso !== v.enDescanso) {
+                            valet.enDescanso = v.enDescanso;
+                            valet.descansoInicio = v.descansoInicio ? new Date(v.descansoInicio) : null;
+                            valet.descansosHistorial = v.descansosHistorial || [];
+                            cambioDetectado = true;
+                        }
+                    }
+                });
+                if(cambioDetectado) {
+                    console.log('🔄 Cambios en valets detectados en tiempo real');
+                    renderEquipo();
+                    showToast('🔄 Estado de descansos actualizado');
+                }
+            }
+        }
+    });
+    
+    // Escuchar cambios en configuración
+    const configRef = database.ref('valetData/config');
+    if(realtimeListeners.config) configRef.off('value', realtimeListeners.config);
+    
+    realtimeListeners.config = configRef.on('value', (snapshot) => {
+        if(snapshot.exists()) {
+            const config = snapshot.val();
+            if(alaIzquierdaActiva !== config.alaIzquierdaActiva) {
+                alaIzquierdaActiva = config.alaIzquierdaActiva;
+                for(let i=890; i<=910; i++) if(espacios[i]) espacios[i].activo = alaIzquierdaActiva;
+                
+                const btn = document.getElementById('toggleIzquierdaBtn');
+                const aviso = document.getElementById('aviso-izq-inactiva');
+                if(btn && alaIzquierdaActiva) {
+                    btn.innerHTML = '<i class="mdi mdi-check-circle"></i> Habilitada';
+                    btn.classList.add('activo');
+                    if(aviso) aviso.style.display = 'none';
+                } else if(btn) {
+                    btn.innerHTML = '<i class="mdi mdi-close-circle"></i> Deshabilitada';
+                    btn.classList.remove('activo');
+                    if(aviso) aviso.style.display = 'block';
+                }
+                renderMapa();
+                showToast('🔄 Configuración actualizada');
+            }
+        }
+    });
+    
+    actualizarEstadoSync('realtime', 'Tiempo real');
+    console.log('✅ Escuchando cambios en tiempo real desde Firebase');
+}
+
+// ========== SINCRONIZACIÓN FIREBASE ==========
+async function sincronizarFirebase() {
+    if(!firebaseInicializado || sincronizando) return;
+    sincronizando = true;
+    actualizarEstadoSync('syncing', 'Subiendo...');
+    
+    try {
+        const espaciosArray = Object.values(espacios);
+        await database.ref('valetData/espacios').set(espaciosArray);
+        await database.ref('valetData/entregados').set(entregados);
+        await database.ref('valetData/valets').set(valets.map(v => ({
+            nombre: v.nombre, enDescanso: v.enDescanso, descansoInicio: v.descansoInicio ? v.descansoInicio.toISOString() : null,
+            descansosHistorial: v.descansosHistorial
+        })));
+        await database.ref('valetData/config').set({
+            alaIzquierdaActiva: alaIzquierdaActiva,
+            ultimaActualizacion: new Date().toISOString()
+        });
+        actualizarEstadoSync('realtime', 'Tiempo real');
+    } catch(e) {
+        console.error('Error al sincronizar:', e);
+        actualizarEstadoSync('error', 'Error');
+    }
+    sincronizando = false;
+}
+
+async function sincronizarManual() {
+    if(!firebaseInicializado) {
+        showToast('⚠️ Firebase no disponible', true);
+        return;
+    }
+    showToast('🔄 Sincronizando...');
+    await sincronizarFirebase();
+    showToast('✅ Datos sincronizados');
+}
+
+async function cargarDesdeFirebase() {
+    if(!firebaseInicializado) {
+        actualizarEstadoSync('error', 'Offline');
+        return false;
+    }
+    
+    actualizarEstadoSync('syncing', 'Descargando...');
+    
+    try {
+        const snapshotEspacios = await database.ref('valetData/espacios').once('value');
+        if(snapshotEspacios.exists()) {
+            const datosEspacios = snapshotEspacios.val();
+            if(Array.isArray(datosEspacios)) {
+                datosEspacios.forEach(e => {
+                    if(espacios[e.id]) Object.assign(espacios[e.id], e);
+                });
+            }
+        }
+        
+        const snapshotEntregados = await database.ref('valetData/entregados').once('value');
+        if(snapshotEntregados.exists()) {
+            entregados = snapshotEntregados.val();
+            if(!Array.isArray(entregados)) entregados = [];
+        }
+        
+        const snapshotValets = await database.ref('valetData/valets').once('value');
+        if(snapshotValets.exists()) {
+            const datosValets = snapshotValets.val();
+            if(Array.isArray(datosValets)) {
+                datosValets.forEach(v => {
+                    const valet = valets.find(vv => vv.nombre === v.nombre);
+                    if(valet) {
+                        valet.enDescanso = v.enDescanso;
+                        valet.descansoInicio = v.descansoInicio ? new Date(v.descansoInicio) : null;
+                        valet.descansosHistorial = v.descansosHistorial || [];
+                    }
+                });
+            }
+        }
+        
+        const snapshotConfig = await database.ref('valetData/config').once('value');
+        if(snapshotConfig.exists()) {
+            const config = snapshotConfig.val();
+            alaIzquierdaActiva = config.alaIzquierdaActiva;
+            for(let i=890; i<=910; i++) if(espacios[i]) espacios[i].activo = alaIzquierdaActiva;
+            
+            const btn = document.getElementById('toggleIzquierdaBtn');
+            const aviso = document.getElementById('aviso-izq-inactiva');
+            if(btn && alaIzquierdaActiva) {
+                btn.innerHTML = '<i class="mdi mdi-check-circle"></i> Habilitada';
+                btn.classList.add('activo');
+                if(aviso) aviso.style.display = 'none';
+            } else if(btn) {
+                btn.innerHTML = '<i class="mdi mdi-close-circle"></i> Deshabilitada';
+                btn.classList.remove('activo');
+                if(aviso) aviso.style.display = 'block';
+            }
+        }
+        
+        actualizarEstadoSync('realtime', 'Tiempo real');
+        return true;
+    } catch(e) {
+        console.error('Error al cargar:', e);
+        actualizarEstadoSync('error', 'Error');
+        return false;
+    }
+}
+
+function actualizarEstadoSync(estado, texto) {
+    const syncDiv = document.getElementById('syncStatus');
+    const syncText = document.getElementById('syncText');
+    if(!syncDiv) return;
+    syncDiv.className = 'sync-status ' + estado;
+    if(syncText) syncText.textContent = texto;
+}
+
+// ========== GUARDAR LOCAL ==========
+function guardarDatos() {
+    localStorage.setItem('valet_parking_espacios', JSON.stringify(Object.values(espacios)));
+    localStorage.setItem('valet_parking_entregados', JSON.stringify(entregados));
+    localStorage.setItem('valet_parking_valets', JSON.stringify(valets.map(v => ({
+        nombre: v.nombre, enDescanso: v.enDescanso, descansoInicio: v.descansoInicio,
+        descansosHistorial: v.descansosHistorial
+    }))));
+    localStorage.setItem('valet_parking_config', JSON.stringify({ alaIzquierdaActiva: alaIzquierdaActiva }));
+}
+
+function cargarDatosLocales() {
+    const espaciosGuardados = localStorage.getItem('valet_parking_espacios');
+    if(espaciosGuardados) {
+        try {
+            const datos = JSON.parse(espaciosGuardados);
+            datos.forEach(e => { if(espacios[e.id]) Object.assign(espacios[e.id], e); });
+        } catch(e) {}
+    }
+    
+    const entregadosGuardados = localStorage.getItem('valet_parking_entregados');
+    if(entregadosGuardados) {
+        try {
+            entregados = JSON.parse(entregadosGuardados);
+        } catch(e) {}
+    }
+    
+    const valetsGuardados = localStorage.getItem('valet_parking_valets');
+    if(valetsGuardados) {
+        try {
+            const datosValets = JSON.parse(valetsGuardados);
+            datosValets.forEach(v => {
+                const valet = valets.find(vv => vv.nombre === v.nombre);
+                if(valet) {
+                    valet.enDescanso = v.enDescanso;
+                    valet.descansoInicio = v.descansoInicio ? new Date(v.descansoInicio) : null;
+                    valet.descansosHistorial = v.descansosHistorial || [];
+                }
+            });
+        } catch(e) {}
+    }
+    
+    const configGuardado = localStorage.getItem('valet_parking_config');
+    if(configGuardado) {
+        try {
+            const config = JSON.parse(configGuardado);
+            alaIzquierdaActiva = config.alaIzquierdaActiva;
+            for(let i=890; i<=910; i++) if(espacios[i]) espacios[i].activo = alaIzquierdaActiva;
+            
+            const btn = document.getElementById('toggleIzquierdaBtn');
+            const aviso = document.getElementById('aviso-izq-inactiva');
+            if(btn && alaIzquierdaActiva) {
+                btn.innerHTML = '<i class="mdi mdi-check-circle"></i> Habilitada';
+                btn.classList.add('activo');
+                if(aviso) aviso.style.display = 'none';
+            } else if(btn) {
+                btn.innerHTML = '<i class="mdi mdi-close-circle"></i> Deshabilitada';
+                btn.classList.remove('activo');
+                if(aviso) aviso.style.display = 'block';
+            }
+        } catch(e) {}
+    }
+}
+
+// ========== EXPORTAR EXCEL ==========
+function exportToExcel() {
+    const activos = Object.values(espacios).filter(e => e.placa);
+    const data = [
+        [`EQUIPO ÉLITE v${APP_VERSION} - REPORTE`, new Date().toLocaleString()], [],
+        ['ACTIVOS'], ['Placa', 'Quien lo TRAJO', 'Espacio', 'Ingreso', 'Observaciones']
+    ];
+    activos.forEach(e => data.push([e.placa, e.quienTrae, e.id, e.hora, e.obs || '']));
+    data.push([], ['ENTREGADOS'], ['Placa', 'Quien lo TRAJO', 'Quien lo RECOGIÓ', 'Ingreso', 'Entrega', 'Observaciones']);
+    entregados.forEach(e => data.push([e.placa, e.quienTrae, e.quienRecoge, e.hora, e.horaEnt, e.obs || '']));
+    
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+    XLSX.writeFile(wb, `EQUIPO_ELITE_${new Date().toISOString().slice(0,19)}.xlsx`);
+    showToast('✅ Reporte exportado');
+}
+
+// ========== UTILIDADES ==========
+function cerrarOverlay(e) { if(e.target === document.getElementById('overlay')) closeModal(); }
+function closeModal() { document.getElementById('overlay').classList.remove('open'); modalId = null; quienTraeSel = null; quienRecogeSel = null; }
+function showScreen(name, btn) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    if(btn) btn.classList.add('active');
+}
+function toggleTheme() {
+    const html = document.documentElement;
+    if(html.getAttribute('data-theme') === 'light') html.removeAttribute('data-theme');
+    else html.setAttribute('data-theme', 'light');
+}
+function toggleKioscoMode() { document.body.classList.toggle('kiosco-mode'); }
+function showLoginForExport() { document.getElementById('loginOverlay').style.display = 'flex'; }
+function checkLogin() {
+    const pwd = document.getElementById('loginPassword');
+    if(pwd && pwd.value === 'vicente2024') {
+        document.getElementById('loginOverlay').style.display = 'none';
+        exportToExcel();
+    } else showToast('❌ Contraseña incorrecta', true);
+}
+
+// ========== INICIALIZACIÓN ==========
+async function iniciarApp() {
+    // Mostrar versión
+    const versionBadge = document.getElementById('versionBadge');
+    if(versionBadge) versionBadge.innerHTML = `v${APP_VERSION}`;
+    
+    cargarDatosLocales();
+    renderMapa();
+    renderVehiculos();
+    renderEquipo();
+    
+    if(firebaseInicializado) {
+        await cargarDesdeFirebase();
+        setupRealtimeSync(); // Activar escucha en tiempo real
+        renderMapa();
+        renderVehiculos();
+        renderEquipo();
+    }
+    
+    setInterval(actualizarReloj, 1000);
+    actualizarReloj();
+}
+
+iniciarApp();
+</script>
+</body>
+</html>
