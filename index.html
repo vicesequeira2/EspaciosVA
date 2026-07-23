@@ -1,1818 +1,2082 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Equipo Elite - Valet Parking</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        :root {
-            --color-bg: #0a0a1a;
-            --color-card: #1a1a2e;
-            --color-text: #e0e0e0;
-            --color-text-light: #a0a0a0;
-            --success: #D4AF37;
-            --danger: #c62828;
-            --warning: #ff9800;
-            --sombra: 0 4px 12px rgba(0,0,0,0.3);
-            /* MEJORA: variable para transiciones globales */
-            --transition: 0.2s ease;
-        }
-
-        [data-theme="light"] {
-            --color-bg: #f0f2f5;
-            --color-card: #ffffff;
-            --color-text: #1a1a2e;
-            --color-text-light: #6c757d;
-        }
-
-        body {
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
-            min-height: 100vh;
-            padding: 20px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-
-        body.kiosco-mode {
-            padding: 0 !important;
-        }
-        body.kiosco-mode .app {
-            max-width: 100% !important;
-            border-radius: 0 !important;
-            min-height: 100vh !important;
-        }
-        body.kiosco-mode .header,
-        body.kiosco-mode .nav,
-        body.kiosco-mode .stats-row,
-        body.kiosco-mode .screen:not(#screen-mapa) {
-            display: none !important;
-        }
-        body.kiosco-mode #screen-mapa {
-            display: block !important;
-            padding: 16px;
-        }
-        body.kiosco-mode .kiosco-exit {
-            display: flex !important;
-        }
-
-        .kiosco-exit {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            color: var(--success);
-            border: 1px solid var(--success);
-            padding: 12px 20px;
-            border-radius: 30px;
-            font-size: 14px;
-            cursor: pointer;
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .sync-status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            color: var(--success);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: 600;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            backdrop-filter: blur(4px);
-            /* MEJORA: transición suave de estado */
-            transition: background 0.4s ease, color 0.4s ease;
-        }
-        .sync-status.synced { background: #2E7D32; color: white; }
-        .sync-status.syncing { background: var(--warning); color: #0a0a1a; }
-        .sync-status.error { background: var(--danger); color: white; }
-        .sync-status.realtime { background: #1565C0; color: white; }
-
-        /* MEJORA: ícono de sync animado */
-        .sync-status.syncing .mdi-cloud-sync {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .app {
-            max-width: 650px;
-            margin: 0 auto;
-            background: var(--color-bg);
-            border-radius: 28px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-
-        .header {
-            background: var(--color-card);
-            padding: 20px;
-            text-align: center;
-            border-bottom: 2px solid var(--success);
-            position: relative;
-        }
-        .version-badge {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            background: rgba(212, 175, 55, 0.2);
-            border: 1px solid var(--success);
-            border-radius: 20px;
-            padding: 2px 8px;
-            font-size: 9px;
-            font-weight: 600;
-            color: var(--success);
-        }
-        .header-icon { font-size: 48px; color: var(--success); margin-bottom: 8px; }
-        .header h1 { font-size: 28px; font-weight: 800; color: var(--success); text-transform: uppercase; }
-        .reloj { font-size: 22px; font-weight: 700; color: var(--success); margin-top: 8px; font-family: monospace; }
-        .fecha { font-size: 11px; color: var(--color-text-light); margin-top: 4px; }
-        .header-controls { display: flex; justify-content: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-        .btn-kiosco, .theme-toggle, .btn-sync {
-            background: rgba(212, 175, 55, 0.15);
-            border: 1px solid var(--success);
-            color: var(--success);
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 11px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 600;
-            transition: background var(--transition), transform var(--transition);
-        }
-        .btn-kiosco:hover, .theme-toggle:hover, .btn-sync:hover {
-            background: rgba(212, 175, 55, 0.3);
-            transform: scale(1.04);
-        }
-        .badge-libres {
-            background: var(--success);
-            color: #0a0a1a;
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 700;
-            /* MEJORA: transición cuando cambia el número */
-            transition: transform 0.2s ease;
-        }
-        .badge-libres.bounce {
-            animation: bounce 0.3s ease;
-        }
-        @keyframes bounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.15); }
-        }
-        .toggle-zona-btn {
-            background: rgba(255, 152, 0, 0.15);
-            border: 1px solid var(--warning);
-            color: var(--warning);
-            padding: 4px 10px;
-            border-radius: 30px;
-            font-size: 10px;
-            cursor: pointer;
-            transition: background var(--transition);
-        }
-        .toggle-zona-btn.activo { background: var(--warning); color: #0a0a1a; }
-
-        .nav {
-            display: flex;
-            background: var(--color-card);
-            padding: 8px 16px;
-            gap: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .nav-btn {
-            flex: 1;
-            padding: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            background: none;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            color: var(--color-text-light);
-            transition: background var(--transition), color var(--transition);
-        }
-        .nav-btn.active { background: var(--success); color: #0a0a1a; }
-
-        .screen { display: none; padding: 16px; }
-        .screen.active { display: block; }
-
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-        .stat-card {
-            background: var(--color-card);
-            border-radius: 16px;
-            padding: 14px;
-            text-align: center;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            /* MEJORA: transición en hover */
-            transition: transform var(--transition), border-color var(--transition);
-        }
-        .stat-card:hover { transform: translateY(-2px); border-color: var(--success); }
-        .stat-num { font-size: 28px; font-weight: 700; color: var(--success); }
-        .stat-label { font-size: 11px; color: var(--color-text-light); margin-top: 4px; }
-
-        .mapa-container {
-            background: var(--color-card);
-            border-radius: 20px;
-            padding: 16px;
-        }
-        .mapa-titulo { font-size: 14px; font-weight: 600; color: var(--success); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid rgba(212,175,55,0.3); display: flex; align-items: center; gap: 6px; }
-
-        .zona-parqueadero { margin-bottom: 24px; }
-        .zona-titulo { font-size: 12px; font-weight: 600; color: var(--success); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .fila-espacios { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-        
-        .espacio-btn {
-            width: 70px;
-            padding: 10px 2px;
-            border-radius: 12px;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            font-weight: 700;
-            transition: all 0.2s;
-        }
-        .espacio-btn:active { transform: scale(0.95); }
-        /* MEJORA: hover en espacios libres */
-        .espacio-btn.libre:hover { filter: brightness(1.2); transform: translateY(-2px); }
-        .espacio-btn.ocupado:hover { filter: brightness(1.15); transform: translateY(-2px); }
-        .espacio-btn.libre { background: linear-gradient(135deg, #1B5E20, #2E7D32); color: white; border: 1px solid var(--success); }
-        .espacio-btn.ocupado { background: linear-gradient(135deg, #b71c1c, #c62828); color: white; }
-        .espacio-btn.discapacidad { background: linear-gradient(135deg, #0D47A1, #1565C0); color: white; }
-        .espacio-btn.inactivo { background: #555; color: #999; cursor: not-allowed; opacity: 0.6; }
-        .espacio-numero { font-size: 13px; font-weight: 800; }
-        .espacio-placa { font-size: 9px; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 12px; }
-        .espacio-tiempo { font-size: 7px; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 10px; }
-
-        /* MEJORA: highlight cuando un espacio acaba de cambiar */
-        .espacio-btn.recien-ocupado {
-            animation: flash-ocupado 0.6s ease;
-        }
-        .espacio-btn.recien-liberado {
-            animation: flash-libre 0.6s ease;
-        }
-        @keyframes flash-ocupado {
-            0%, 100% { box-shadow: none; }
-            50% { box-shadow: 0 0 16px rgba(198,40,40,0.8); }
-        }
-        @keyframes flash-libre {
-            0%, 100% { box-shadow: none; }
-            50% { box-shadow: 0 0 16px rgba(212,175,55,0.8); }
-        }
-
-        .leyenda { display: flex; justify-content: center; gap: 20px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(212,175,55,0.2); flex-wrap: wrap; }
-        .leyenda-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-text-light); }
-        .leyenda-color { width: 18px; height: 18px; border-radius: 6px; }
-        .leyenda-color.libre { background: #2E7D32; border: 1px solid var(--success); }
-        .leyenda-color.ocupado { background: #c62828; }
-        .leyenda-color.discapacidad { background: #1565C0; }
-        .leyenda-color.inactivo { background: #555; }
-
-        .valet-card {
-            background: var(--color-card);
-            border-radius: 16px;
-            padding: 12px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-left: 4px solid var(--success);
-            transition: transform var(--transition), box-shadow var(--transition);
-        }
-        .valet-card:hover { transform: translateX(4px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
-        .valet-card.descansando { background: rgba(255,152,0,0.15); border-left-color: var(--warning); }
-        .valet-avatar { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; background: linear-gradient(135deg, var(--success), #B8860B); }
-        .valet-info { flex: 1; }
-        .valet-nombre { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .badge-descanso { background: var(--warning); color: white; font-size: 9px; padding: 2px 8px; border-radius: 20px; }
-        .badge-activo { background: var(--success); color: #0a0a1a; font-size: 9px; padding: 2px 8px; border-radius: 20px; }
-        .valet-stats { font-size: 11px; color: var(--color-text-light); margin-top: 4px; }
-        .btn-descanso-small {
-            background: var(--warning);
-            border: none;
-            padding: 6px 10px;
-            border-radius: 20px;
-            color: white;
-            font-size: 10px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            transition: opacity var(--transition), transform var(--transition);
-        }
-        .btn-descanso-small:hover { opacity: 0.85; transform: scale(1.05); }
-        .btn-descanso-small.volver { background: var(--success); color: #0a0a1a; }
-
-        .overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.85);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        .overlay.open { display: flex; }
-        .modal {
-            background: var(--color-card);
-            border-radius: 28px;
-            padding: 20px;
-            width: 90%;
-            max-width: 360px;
-            max-height: 85vh;
-            overflow-y: auto;
-            border: 1px solid var(--success);
-            /* MEJORA: animación de entrada del modal */
-            animation: modal-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        @keyframes modal-in {
-            from { opacity: 0; transform: scale(0.85) translateY(20px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .modal-title { font-size: 20px; font-weight: 700; color: var(--success); }
-        .modal-badge { padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 600; }
-        .modal-badge.libre { background: #2E7D32; color: white; }
-        .modal-badge.ocupado { background: #c62828; color: white; }
-
-        .form-group { margin-bottom: 14px; }
-        .form-group label { font-size: 11px; font-weight: 600; color: var(--success); margin-bottom: 4px; display: block; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #333; border-radius: 10px; font-size: 14px; background: var(--color-bg); color: var(--color-text); transition: border-color var(--transition); }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--success); }
-        .placa-input { text-align: center; font-size: 22px !important; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
-        .chofer-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-        .chofer-btn { 
-            padding: 8px; border: 2px solid #333; border-radius: 10px; background: var(--color-bg); 
-            font-size: 12px; font-weight: 600; cursor: pointer; color: var(--color-text);
-            transition: border-color var(--transition), background var(--transition);
-        }
-        .chofer-btn:hover { border-color: var(--success); }
-        .chofer-btn.selected { background: var(--success); border-color: var(--success); color: #0a0a1a; }
-        
-        .respuesta-rapida {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-            flex-wrap: wrap;
-        }
-        .respuesta-btn {
-            background: rgba(212, 175, 55, 0.2);
-            border: 1px solid var(--success);
-            color: var(--success);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .respuesta-btn:hover {
-            background: var(--success);
-            color: #0a0a1a;
-        }
-
-        .btn-primary, .btn-danger {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 14px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 8px;
-            transition: opacity var(--transition), transform var(--transition);
-        }
-        .btn-primary:hover, .btn-danger:hover { opacity: 0.88; transform: scale(0.99); }
-        .btn-primary { background: var(--success); color: #0a0a1a; }
-        .btn-danger { background: var(--danger); color: white; }
-
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1a1a2e;
-            color: var(--success);
-            padding: 10px 20px;
-            border-radius: 40px;
-            font-size: 13px;
-            display: none;
-            z-index: 1100;
-            border: 1px solid var(--success);
-            /* MEJORA: animación de toast */
-            animation: toast-in 0.3s ease;
-        }
-        @keyframes toast-in {
-            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-        .toast.error { background: var(--danger); color: white; border: none; }
-        .empty-state { text-align: center; padding: 30px; color: var(--color-text-light); }
-
-        /* MEJORA: barra de ocupación visual */
-        .ocupacion-bar {
-            height: 8px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-        .ocupacion-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--success), #B8860B);
-            border-radius: 4px;
-            transition: width 0.5s ease;
-        }
-
-        /* MEJORA: chip de tiempo con colores de alerta */
-        .tiempo-chip {
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .tiempo-chip.normal { background: #D4AF37; color: #0a0a1a; }
-        .tiempo-chip.advertencia { background: var(--warning); color: #0a0a1a; }
-        .tiempo-chip.critico { background: var(--danger); color: white; }
-
-        /* MEJORA: contador de descanso pulsante */
-        .timer-descanso {
-            display: inline-block;
-            animation: pulsar 2s ease-in-out infinite;
-        }
-        @keyframes pulsar {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* MEJORA: scroll personalizado */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.4); border-radius: 4px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Inventario de Parqueo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --asphalt: #24272b;
+    --asphalt-2: #2f3338;
+    --asphalt-3: #3a3f45;
+    --line: #f2c230;
+    --line-dim: #b8912a;
+    --paper: #f4f5f2;
+    --ink: #1b1e21;
+    --muted: #8b9198;
+    --ok: #4caf7d;
+    --danger: #d9553f;
+    --z-avaluo: #4f8fd1;
+    --z-atras: #5fb37a;
+    --z-malla: #a175d4;
+    --z-neon: #e0529c;
+    --z-pge: #e2843a;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .plate{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  header{
+    background: linear-gradient(180deg, var(--asphalt) 0%, var(--asphalt-2) 100%);
+    color: var(--paper);
+    padding: 18px 16px 14px;
+    position: sticky; top:0; z-index: 20;
+    border-bottom: 4px solid var(--line);
+  }
+  header .top-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  header h1{
+    font-size: 1.15rem;
+    margin:0;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+  header h1 .dash{color:var(--line);}
+  .meta{
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top:2px;
+  }
+  #exportBtn{
+    background: var(--line);
+    color: var(--asphalt);
+    border:none;
+    font-weight:700;
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    font-size: 0.74rem;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  #exportBtn:active{transform: translateY(1px);}
+  .headerBtns{
+    display:flex; flex-direction:column; gap:6px; align-items:stretch;
+  }
+  #undoBtn{
+    background: transparent;
+    color: var(--paper);
+    border:1px solid var(--asphalt-3);
+    font-weight:600;
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    font-size: 0.76rem;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  #undoBtn:disabled{
+    opacity:0.35;
+    cursor:default;
+  }
+  #undoBtn:not(:disabled):active{transform: translateY(1px);}
+  .searchWrap{
+    position:relative;
+    margin-top:12px;
+  }
+  #globalSearch{
+    width:100%;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--asphalt-3);
+    background: var(--asphalt-2);
+    color: var(--paper);
+    font-size: 0.95rem;
+  }
+  #globalSearch::placeholder{color:var(--muted);}
+  #globalSearch:focus{outline:2px solid var(--line);}
+  #searchResults{
+    position:absolute;
+    left:0; right:0; top:calc(100% + 4px);
+    background: var(--asphalt-2);
+    border:1px solid var(--asphalt-3);
+    border-radius: var(--radius);
+    max-height: 260px;
+    overflow-y:auto;
+    z-index: 30;
+    display:none;
+  }
+  #searchResults.show{display:block;}
+  .searchItem{
+    padding:9px 14px;
+    display:flex; justify-content:space-between; align-items:center;
+    cursor:pointer;
+    border-bottom:1px solid var(--asphalt-3);
+    color: var(--paper);
+    font-size:0.9rem;
+  }
+  .searchItem:last-child{border-bottom:none;}
+  .searchItem:hover{background:var(--asphalt-3);}
+  .searchItem .tag{font-size:0.72rem; color: var(--muted);}
+  nav#tabs{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding: 12px 12px 0;
+    background: var(--paper);
+    position: sticky; top: 104px; z-index: 15;
+    border-bottom: 1px solid #dfe0dc;
+  }
+  nav#tabs::-webkit-scrollbar{display:none;}
+  .tabBtn{
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    border-radius: 999px 999px 0 0;
+    border: none;
+    background: #e6e7e2;
+    color: var(--ink);
+    font-weight:600;
+    font-size: 0.82rem;
+    cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+    margin-bottom:-1px;
+  }
+  .tabBtn .dot{width:8px;height:8px;border-radius:50%;}
+  .tabBtn.active{
+    background: var(--paper);
+    border: 1px solid #dfe0dc;
+    border-bottom: 3px solid var(--zone-color, var(--line));
+  }
+  .tabBtn .count{
+    background: rgba(0,0,0,0.08);
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size:0.72rem;
+  }
+  main{padding: 16px;}
+  .zonePanel{display:none;}
+  .zonePanel.active{display:block;}
+  .zoneHeadCard{
+    background:white;
+    border-radius: var(--radius);
+    padding:14px 16px;
+    margin-bottom:14px;
+    border-left: 6px solid var(--zone-color);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .zoneHeadCard h2{margin:0 0 2px; font-size:1rem;}
+  .zoneHeadCard .sub{font-size:0.78rem; color:var(--muted);}
+  .occupancyRow{
+    display:flex; align-items:center; gap:8px;
+    margin-top:8px;
+  }
+  .occupancyBar{
+    flex:1;
+    height:7px;
+    border-radius:999px;
+    background:#eceee9;
+    overflow:hidden;
+  }
+  .occupancyBarFill{
+    height:100%;
+    border-radius:999px;
+    background: var(--zone-color);
+  }
+  .occupancyText{
+    font-size:0.74rem;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .capacityEditBtn{
+    background:none;
+    border:none;
+    color: var(--zone-color);
+    font-size:0.74rem;
+    font-weight:700;
+    cursor:pointer;
+    text-decoration:underline;
+    padding:0;
+    white-space:nowrap;
+  }
+  .addRow{
+    display:flex; gap:8px; margin-bottom:10px;
+  }
+  .addRow input.campoInput{
+    width: 84px;
+    flex: 0 0 auto;
+  }
+  .addRow input{
+    padding:10px 12px;
+    border-radius: var(--radius);
+    border:1px solid #d7d8d3;
+    font-size:0.95rem;
+  }
+  .addRow input.plateInputAdd{ flex:1; }
+  .addRow button{
+    background: var(--ink);
+    color:white;
+    border:none;
+    border-radius: var(--radius);
+    padding: 0 16px;
+    font-weight:700;
+    cursor:pointer;
+    font-size:0.85rem;
+  }
+  .addRowSecondary{
+    margin-bottom:8px;
+  }
+  .addRowSecondary input{
+    width:100%;
+    padding:8px 12px;
+    border-radius: var(--radius);
+    border:1px solid #e2e3de;
+    background:#fbfbfa;
+    font-size:0.85rem;
+  }
+  .addRowSecondary input:focus{
+    outline:none;
+    border-color: var(--line-dim);
+    background:white;
+  }
+  .addHint{
+    font-size:0.72rem;
+    color:var(--muted);
+    margin: -4px 0 12px;
+  }
+  .sinAsignarBtn{
+    background:none;
+    border:none;
+    color: var(--zone-color, var(--line-dim));
+    font-size:0.72rem;
+    font-weight:700;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+  .dupWarn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:#fbeee0;
+    color:#8a5a1c;
+    border:1px solid #f0d5b3;
+    border-radius:8px;
+    padding:7px 10px;
+    font-size:0.8rem;
+    font-weight:600;
+    margin: -4px 0 10px;
+  }
+  .dupWarn .dupWarnIcon{flex:0 0 auto; font-size:0.9rem;}
+  details.bulk{
+    margin-bottom:14px;
+  }
+  details.bulk summary{
+    cursor:pointer; font-size:0.82rem; color:var(--muted); font-weight:600;
+    padding: 6px 0;
+  }
+  details.bulk .bulkHint{
+    font-size:0.76rem; color:var(--muted); margin: 2px 0 6px;
+  }
+  details.bulk textarea{
+    width:100%;
+    min-height:80px;
+    border-radius: var(--radius);
+    border:1px solid #d7d8d3;
+    padding:10px 12px;
+    font-family: ui-monospace, monospace;
+    font-size:0.85rem;
+    resize:vertical;
+  }
+  details.bulk .bulkBtn{
+    margin-top:6px;
+    background: var(--zone-color);
+    color:white;
+    border:none;
+    padding:8px 14px;
+    border-radius: var(--radius);
+    font-weight:700;
+    cursor:pointer;
+    font-size:0.82rem;
+  }
+  .campoList{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .campoCard{
+    background:white;
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .campoNum{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:38px;
+    height:26px;
+    padding:0 8px;
+    border-radius:6px;
+    background: var(--zone-color);
+    color:white;
+    font-weight:800;
+    font-size:0.78rem;
+    flex: 0 0 auto;
+    margin-top:2px;
+  }
+  .campoBody{flex:1; min-width:0;}
+  .plateChips{
+    display:flex; flex-wrap:wrap; gap:6px;
+    align-items:flex-start;
+  }
+  .plateChip{
+    display:flex; flex-direction:column;
+    background:#eceee9;
+    border-radius: 7px;
+    padding: 5px 4px 6px 10px;
+    font-size:0.85rem;
+    cursor:pointer;
+  }
+  .plateChip:active{background:#e0e1dc;}
+  .plateChipMain{
+    display:flex; align-items:center; gap:6px;
+  }
+  .plateChip .plateText{
+    min-width: 70px;
+    outline:none;
+  }
+  .plateChip .plateText:focus{background:white; border-radius:4px; padding:0 3px;}
+  .aseguradoraText{
+    outline:none;
+    font-size:0.68rem;
+    color:var(--muted);
+    font-weight:600;
+    margin-top:2px;
+    padding-left:2px;
+    min-width:60px;
+  }
+  .aseguradoraText:empty::before{
+    content: attr(data-placeholder);
+    color:#b4b6b0;
+    font-weight:500;
+  }
+  .aseguradoraText:focus{background:white; border-radius:4px; padding:2px 3px; color:var(--ink);}
+  .orderBadge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#d8d9d4;
+    color:#5a5d61;
+    font-size:0.62rem;
+    font-weight:800;
+    padding:0 3px;
+  }
+  .orderTag{
+    font-size:0.62rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    color:var(--muted);
+    background:#e0e1dc;
+    border-radius:5px;
+    padding:2px 5px;
+  }
+  .orderTag.last{
+    color:var(--asphalt);
+    background: var(--line);
+  }
+  .campoNum{
+    cursor:pointer;
+  }
+  .campoNum:active{opacity:0.8;}
+  .campoNum.sinAsignar{
+    background:transparent;
+    border:1.5px dashed #b4b6b0;
+    color:#6b6e72;
+    font-weight:700;
+    font-size:0.7rem;
+  }
+  .plateChip .chipRm{
+    background:none; border:none; color:var(--danger);
+    cursor:pointer; font-size:0.95rem; padding:2px 6px; line-height:1;
+  }
+  .orderMoveBtns{
+    display:flex; flex-direction:column;
+    line-height:0;
+  }
+  .orderMoveBtns button{
+    background:none; border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:0.6rem;
+    padding:1px 3px;
+    line-height:1;
+  }
+  .orderMoveBtns button:disabled{
+    opacity:0.25;
+    cursor:default;
+  }
+  .orderMoveBtns button:not(:disabled):active{color:var(--ink);}
+  .addPlateToCampoBtn{
+    background:none;
+    border:1px dashed #c7c8c2;
+    color:var(--muted);
+    border-radius:7px;
+    padding:5px 10px;
+    font-size:0.8rem;
+    cursor:pointer;
+  }
+  .campoDeleteBtn{
+    background:none; border:none; color:var(--muted);
+    cursor:pointer; font-size:1rem; padding:4px 6px; flex:0 0 auto;
+  }
+  .emptyState{
+    text-align:center;
+    color:var(--muted);
+    padding: 30px 10px;
+    font-size:0.85rem;
+  }
+  /* Resumen tab */
+  .resumenToolbar{
+    display:flex; gap:10px; margin-bottom:8px; flex-wrap:wrap;
+    align-items:center;
+    background:white;
+    border-radius: var(--radius);
+    padding:12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    border:1px solid #eceee9;
+  }
+  .filterField{
+    position:relative;
+    flex:1;
+    min-width:170px;
+  }
+  .filterField .filterIcon{
+    position:absolute;
+    left:11px; top:50%; transform:translateY(-50%);
+    width:15px; height:15px;
+    color:var(--muted);
+    pointer-events:none;
+  }
+  .resumenToolbar input{
+    width:100%;
+    padding:9px 12px 9px 34px;
+    border-radius:8px;
+    border:1px solid #d7d8d3;
+    background:#fbfbfa;
+    font-size:0.9rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .resumenToolbar input:focus{
+    outline:none;
+    border-color: var(--line-dim);
+    background:white;
+  }
+  .selectField{ flex: 0 1 190px; min-width:150px; }
+  .resumenToolbar select{
+    width:100%;
+    padding:9px 30px 9px 12px;
+    border-radius:8px;
+    border:1px solid #d7d8d3;
+    background:#fbfbfa;
+    font-size:0.9rem;
+    appearance:none;
+    -webkit-appearance:none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238b9198'><path d='M5.5 7.5l4.5 5 4.5-5z'/></svg>");
+    background-repeat:no-repeat;
+    background-position: right 8px center;
+    background-size:16px;
+    cursor:pointer;
+  }
+  .resumenToolbar select:focus{
+    outline:none;
+    border-color: var(--line-dim);
+    background-color:white;
+  }
+  .clearFilterBtn{
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-size:0.78rem;
+    font-weight:600;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:6px 2px;
+    white-space:nowrap;
+  }
+  .resultsCount{
+    font-size:0.74rem;
+    color:var(--muted);
+    margin: 0 2px 12px;
+  }
+  .zoneChips{
+    display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;
+  }
+  .chip{
+    display:flex; align-items:center; gap:6px;
+    padding:5px 10px;
+    border-radius:999px;
+    background:white;
+    font-size:0.75rem;
+    font-weight:600;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .chip .dot{width:8px;height:8px;border-radius:50%;}
+  table{
+    width:100%;
+    border-collapse: collapse;
+    background:white;
+    border-radius: var(--radius);
+    overflow:hidden;
+  }
+  thead th{
+    text-align:left;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color: var(--muted);
+    padding:8px 10px;
+    border-bottom:2px solid #eceee9;
+  }
+  tbody td{
+    padding:9px 10px;
+    border-bottom:1px solid #f0f1ed;
+    font-size:0.92rem;
+    vertical-align:top;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  .resumenRow{cursor:pointer;}
+  .resumenRow:active{background:#f0f1ed;}
+  .spotNum{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:30px;
+    height:22px;
+    padding:0 6px;
+    border-radius:6px;
+    color:white;
+    font-weight:700;
+    font-size:0.72rem;
+  }
+  .spotNum.sinAsignar{
+    background:transparent !important;
+    border:1.5px dashed #b4b6b0;
+    color:#6b6e72;
+  }
+  .toast{
+    position:fixed;
+    bottom:16px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color:white;
+    padding:10px 18px;
+    border-radius: 14px;
+    font-size:0.8rem;
+    max-width: min(90vw, 420px);
+    text-align:center;
+    line-height:1.4;
+    opacity:0;
+    transition: all 0.25s ease;
+    pointer-events:none;
+    z-index:50;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+  .modalOverlay{
+    position:fixed; inset:0;
+    background: rgba(27,30,33,0.55);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:60;
+    padding:20px;
+  }
+  .modalOverlay.show{display:flex;}
+  .modalCard{
+    background:white;
+    border-radius: 14px;
+    max-width: 360px;
+    width:100%;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  }
+  .modalCard h3{margin:0 0 8px; font-size:1rem;}
+  .modalCard p{margin:0 0 16px; font-size:0.88rem; color:var(--muted); line-height:1.4;}
+  .modalCard .modalActions{display:flex; gap:8px; flex-direction:column;}
+  .modalCard button{
+    border:none; border-radius: var(--radius);
+    padding:11px 14px; font-weight:700; font-size:0.88rem; cursor:pointer;
+  }
+  .modalCard .primaryBtn{background: var(--ink); color:white;}
+  .modalCard .secondaryBtn{background:#eceee9; color:var(--ink);}
+  .modalCard .dangerBtn{background:none; color:var(--danger); text-decoration:underline; padding:8px 0;}
+  .modalCard label{
+    display:block; font-size:0.76rem; font-weight:700; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.03em; margin: 12px 0 4px;
+  }
+  .modalCard select, .modalCard input[type=text]{
+    width:100%;
+    padding:10px 12px;
+    border-radius: var(--radius);
+    border:1px solid #d7d8d3;
+    font-size:0.95rem;
+  }
+  @media (max-width:480px){
+    header h1{font-size:1rem;}
+  }
+  .authGate{
+    position:fixed; inset:0;
+    background: linear-gradient(180deg, var(--asphalt) 0%, var(--asphalt-2) 100%);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .authCard{
+    background:white;
+    border-radius:14px;
+    max-width:360px;
+    width:100%;
+    padding:28px 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .authTitle{
+    font-size:1.15rem;
+    font-weight:800;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .authTitle .dash{color:var(--line-dim);}
+  .authSub{
+    font-size:0.82rem;
+    color:var(--muted);
+    margin:0 0 16px;
+    line-height:1.4;
+  }
+  .authGate label{
+    display:block; font-size:0.76rem; font-weight:700; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.03em; margin: 12px 0 4px;
+  }
+  .authGate input{
+    width:100%;
+    padding:10px 12px;
+    border-radius: var(--radius);
+    border:1px solid #d7d8d3;
+    font-size:0.95rem;
+  }
+  .authBtn{ width:100%; margin-top:18px; padding:11px 14px; }
+  .authError{
+    color:var(--danger);
+    font-size:0.78rem;
+    font-weight:600;
+    margin: 10px 0 0;
+    min-height:0;
+  }
+  .authError:empty{ margin:0; }
+  #authChecking{ display:none; }
+  .userChip{
+    color: var(--paper);
+    font-size:0.76rem;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    padding: 0 2px;
+    white-space:nowrap;
+  }
+  #usersBtn{
+    background: transparent;
+    color: var(--paper);
+    border:1px solid var(--asphalt-3);
+    font-weight:600;
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    font-size: 0.76rem;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .usersList{
+    display:flex; flex-direction:column; gap:6px;
+    max-height:200px; overflow-y:auto;
+  }
+  .userRow{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#f4f5f2; border-radius:8px; padding:8px 10px;
+    font-size:0.85rem;
+  }
+  .userRow .userRowName{ font-weight:600; }
+  .userRow .userRowMe{ color:var(--muted); font-size:0.72rem; font-weight:500; }
+  .userRow button{
+    background:none; border:none; color:var(--danger);
+    cursor:pointer; font-size:0.78rem; font-weight:600;
+  }
+</style>
 </head>
 <body>
 
-<button class="kiosco-exit" onclick="toggleKioscoMode()"><i class="mdi mdi-close-circle"></i> Salir modo Kiosco</button>
+<div class="authGate" id="authGate">
+  <div class="authCard">
+    <h1 class="authTitle">Inventario <span class="dash">·</span> Parqueo</h1>
 
-<div class="sync-status" id="syncStatus">
-    <i class="mdi mdi-cloud-sync"></i> <span id="syncText">Conectando...</span>
+    <div id="authSetup" style="display:none;">
+      <p class="authSub">No hay usuarios configurados todavía. Creá la primera cuenta para empezar.</p>
+      <label for="setupUser">Usuario</label>
+      <input type="text" id="setupUser" autocomplete="username">
+      <label for="setupPass">Contraseña</label>
+      <input type="password" id="setupPass" autocomplete="new-password">
+      <label for="setupPass2">Confirmar contraseña</label>
+      <input type="password" id="setupPass2" autocomplete="new-password">
+      <p class="authError" id="setupError"></p>
+      <button class="primaryBtn authBtn" id="setupBtn">Crear cuenta</button>
+    </div>
+
+    <div id="authLogin" style="display:none;">
+      <p class="authSub">Ingresá tu usuario y contraseña para continuar.</p>
+      <label for="loginUser">Usuario</label>
+      <input type="text" id="loginUser" autocomplete="username">
+      <label for="loginPass">Contraseña</label>
+      <input type="password" id="loginPass" autocomplete="current-password">
+      <p class="authError" id="loginError"></p>
+      <button class="primaryBtn authBtn" id="loginBtn">Entrar</button>
+    </div>
+
+    <div id="authChecking">
+      <p class="authSub">Verificando acceso…</p>
+    </div>
+  </div>
 </div>
 
-<div class="overlay" id="overlay" onclick="cerrarOverlay(event)">
-    <div class="modal" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <span class="modal-title" id="modal-title">Espacio</span>
-            <span class="modal-badge" id="modal-badge">Libre</span>
-            <button onclick="closeModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--success);">&times;</button>
-        </div>
-        <div id="modal-body"></div>
+<div id="appRoot" style="display:none;">
+
+<header>
+  <div class="top-row">
+    <div>
+      <h1>Inventario <span class="dash">·</span> Parqueo</h1>
+      <div class="meta" id="metaLine">cargando…</div>
     </div>
+    <div class="headerBtns">
+      <span class="userChip" id="userChip"></span>
+      <button id="usersBtn">Usuarios</button>
+      <button id="undoBtn" disabled>Deshacer</button>
+      <button id="exportBtn">Exportar a Excel</button>
+    </div>
+  </div>
+  <div class="searchWrap">
+    <input id="globalSearch" type="text" placeholder="Buscar placa en todas las zonas…" autocomplete="off">
+    <div id="searchResults"></div>
+  </div>
+</header>
+
+<nav id="tabs"></nav>
+
+<main id="mainArea"></main>
+
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast">Guardado</div>
 
-<div class="app">
-    <div class="header">
-        <div class="version-badge" id="versionBadge">v2.7.0</div>
-        <div class="header-icon"><i class="mdi mdi-crown"></i></div>
-        <h1>EQUIPO ÉLITE</h1>
-        <div class="reloj" id="reloj">--:--:--</div>
-        <div class="fecha" id="fecha"></div>
-        <div class="header-controls">
-            <button class="btn-kiosco" onclick="toggleKioscoMode()"><i class="mdi mdi-fullscreen"></i> Kiosco</button>
-            <button class="theme-toggle" onclick="toggleTheme()"><i class="mdi mdi-theme-light-dark"></i> Tema</button>
-            <button class="btn-sync" onclick="sincronizarManual()"><i class="mdi mdi-cloud-upload"></i> Sincronizar</button>
-            <span class="badge-libres" id="badge-libres">66 libres</span>
-        </div>
+<div class="modalOverlay" id="usersModal">
+  <div class="modalCard">
+    <h3>Usuarios con acceso</h3>
+    <div id="usersList" class="usersList"></div>
+    <label for="newUserName" style="margin-top:14px;">Agregar usuario</label>
+    <input type="text" id="newUserName" autocomplete="off" placeholder="Usuario">
+    <label for="newUserPass">Contraseña</label>
+    <input type="password" id="newUserPass" autocomplete="new-password">
+    <p class="authError" id="usersError"></p>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="primaryBtn" id="addUserBtn">Agregar usuario</button>
+      <button class="secondaryBtn" id="usersCloseBtn">Cerrar</button>
+      <button class="dangerBtn" id="logoutBtn">Cerrar sesión</button>
     </div>
-
-    <nav class="nav">
-        <button class="nav-btn active" onclick="showScreen('mapa',this)"><i class="mdi mdi-map"></i> Mapa</button>
-        <button class="nav-btn" onclick="showScreen('vehiculos',this)"><i class="mdi mdi-car"></i> Vehículos</button>
-        <button class="nav-btn" onclick="showScreen('equipo',this)"><i class="mdi mdi-account-group"></i> Equipo</button>
-        <button class="nav-btn" onclick="showScreen('descansos',this)"><i class="mdi mdi-coffee"></i> Descansos</button>
-    </nav>
-
-    <div id="screen-mapa" class="screen active">
-        <div class="stats-row">
-            <div class="stat-card"><div class="stat-num" id="s-libres">66</div><div class="stat-label">Libres</div></div>
-            <div class="stat-card"><div class="stat-num" id="s-ocup">0</div><div class="stat-label">Ocupados</div></div>
-            <div class="stat-card"><div class="stat-num" id="s-total">66</div><div class="stat-label">Total</div></div>
-        </div>
-        <!-- MEJORA: barra de ocupación visual -->
-        <div style="padding: 0 4px 16px;">
-            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--color-text-light); margin-bottom:4px;">
-                <span>Ocupación</span>
-                <span id="pct-ocupacion">0%</span>
-            </div>
-            <div class="ocupacion-bar">
-                <div class="ocupacion-fill" id="barra-ocupacion" style="width:0%"></div>
-            </div>
-        </div>
-        <div class="mapa-container">
-            <div class="mapa-titulo"><i class="mdi mdi-parking"></i> Distribución del Parqueadero</div>
-            <div class="zona-parqueadero"><div class="zona-titulo"><i class="mdi mdi-wheelchair"></i> Zona Discapacidad</div><div class="fila-espacios" id="zona-disc"></div></div>
-            <div class="zona-parqueadero"><div class="zona-titulo"><i class="mdi mdi-arrow-right-bold"></i> Ala Derecha (846 - 865)</div><div class="fila-espacios" id="zona-der"></div></div>
-            <div class="zona-parqueadero"><div class="zona-titulo"><i class="mdi mdi-star"></i> Zona Central (866 - 886)</div><div class="fila-espacios" id="zona-cen"></div></div>
-            <div class="zona-parqueadero">
-                <div class="zona-titulo">
-                    <span><i class="mdi mdi-arrow-left-bold"></i> Ala Izquierda (890 - 910)</span>
-                    <button id="toggleIzquierdaBtn" class="toggle-zona-btn activo" onclick="toggleAlaIzquierda()"><i class="mdi mdi-check-circle"></i> Habilitada</button>
-                </div>
-                <div class="fila-espacios" id="zona-izq"></div>
-                <div id="aviso-izq-inactiva" style="display:none; color:var(--warning); font-size:11px; padding:8px 0;"><i class="mdi mdi-alert"></i> Ala Izquierda deshabilitada</div>
-            </div>
-            <div class="leyenda">
-                <div class="leyenda-item"><div class="leyenda-color libre"></div><span>Libre</span></div>
-                <div class="leyenda-item"><div class="leyenda-color ocupado"></div><span>Ocupado</span></div>
-                <div class="leyenda-item"><div class="leyenda-color discapacidad"></div><span>Discapacidad</span></div>
-                <div class="leyenda-item"><div class="leyenda-color inactivo"></div><span>Deshabilitado</span></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="screen-vehiculos" class="screen">
-        <div class="mapa-container">
-            <div class="mapa-titulo"><i class="mdi mdi-magnify"></i> Buscar</div>
-            <!-- MEJORA: el filtro de búsqueda ahora también filtra entregados -->
-            <input type="text" id="searchVehiculo" placeholder="Buscar por placa, quien trajo o recogió..." oninput="aplicarFiltros()" style="width:100%; padding:10px; border-radius:10px; margin-bottom:16px; background:var(--color-bg); color:var(--color-text); border:1px solid #333; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--success)'" onblur="this.style.borderColor='#333'">
-            <div class="mapa-titulo"><i class="mdi mdi-clock-outline"></i> Activos <span id="activeCount"></span></div>
-            <div id="lista-activos"></div>
-            <div class="mapa-titulo" style="margin-top:16px;"><i class="mdi mdi-check"></i> Entregados hoy <span id="entregadosCount"></span></div>
-            <div id="lista-entregados"></div>
-        </div>
-    </div>
-
-    <div id="screen-equipo" class="screen">
-        <div class="mapa-container">
-            <div class="mapa-titulo"><i class="mdi mdi-crown"></i> Miembros Activos</div>
-            <div id="lista-valets"></div>
-            <div class="mapa-titulo" style="margin-top:16px;"><i class="mdi mdi-chart-bar"></i> Resumen del Turno</div>
-            <div class="stats-row">
-                <div class="stat-card"><div class="stat-num" id="r-ing">0</div><div class="stat-label">Ingresos</div></div>
-                <div class="stat-card"><div class="stat-num" id="r-ent">0</div><div class="stat-label">Entregados</div></div>
-                <div class="stat-card"><div class="stat-num" id="r-act">0</div><div class="stat-label">Activos</div></div>
-            </div>
-            <!-- MEJORA: ranking de valets por vehículos traídos -->
-            <div class="mapa-titulo" style="margin-top:16px;"><i class="mdi mdi-trophy"></i> Ranking del día</div>
-            <div id="ranking-valets"></div>
-            <button class="btn-primary" onclick="showLoginForExport()" style="margin-top:16px;"><i class="mdi mdi-file-excel"></i> Exportar Excel</button>
-        </div>
-    </div>
-
-    <div id="screen-descansos" class="screen">
-        <div class="mapa-container">
-            <div class="mapa-titulo"><i class="mdi mdi-coffee"></i> Historial de descansos</div>
-            <div id="historial-descansos"></div>
-        </div>
-    </div>
+  </div>
 </div>
 
-<!-- MEJORA: modal de login con campo de contraseña mejorado -->
-<div id="loginOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; z-index:2000;">
-    <div style="background:#1a1a2e; border-radius:28px; padding:30px; width:300px; text-align:center; border:1px solid #D4AF37;">
-        <i class="mdi mdi-shield-key" style="font-size:48px; color:#D4AF37;"></i>
-        <h3 style="margin:15px 0; color:#D4AF37;">Acceso Autorizado</h3>
-        <div style="position:relative;">
-            <input type="password" id="loginPassword" placeholder="Contraseña" 
-                   style="width:100%; padding:12px; border-radius:12px; border:1px solid #D4AF37; background:#0a0a1a; color:white; padding-right:40px;"
-                   onkeydown="if(event.key==='Enter') checkLogin()">
-            <!-- MEJORA: botón para mostrar/ocultar contraseña -->
-            <button onclick="togglePasswordVisibility()" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#D4AF37; cursor:pointer; font-size:18px;">
-                <i class="mdi mdi-eye" id="eye-icon"></i>
-            </button>
-        </div>
-        <div style="display:flex; gap:8px; margin-top:10px;">
-            <button onclick="document.getElementById('loginOverlay').style.display='none'" style="flex:1; padding:12px; border-radius:12px; border:1px solid #555; background:none; color:#aaa; cursor:pointer;">Cancelar</button>
-            <button onclick="checkLogin()" class="btn-primary" style="flex:2; margin:0;">Acceder</button>
-        </div>
+<div class="modalOverlay" id="dupModal">
+  <div class="modalCard">
+    <h3 id="dupModalTitle">Placa ya registrada</h3>
+    <p id="dupModalMsg"></p>
+    <div class="modalActions">
+      <button class="primaryBtn" id="dupModalMove">Mover aquí</button>
+      <button class="secondaryBtn" id="dupModalCancel">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="editLocModal">
+  <div class="modalCard">
+    <h3 id="editLocTitle">Editar vehículo</h3>
+    <p id="editLocSub"></p>
+    <label for="editLocPlaca">Placa</label>
+    <input type="text" id="editLocPlaca" class="plate">
+    <label for="editLocZone">Zona</label>
+    <select id="editLocZone"></select>
+    <label for="editLocCampo">Campo</label>
+    <input type="text" id="editLocCampo" class="plate">
+    <button type="button" class="sinAsignarBtn" id="editLocSinAsignarBtn" style="margin-top:6px;">Marcar como sin asignar</button>
+    <label for="editLocAseguradora">Aseguradora</label>
+    <input type="text" id="editLocAseguradora" placeholder="Ej: INS, Mapfre…">
+    <div class="modalActions" style="margin-top:16px;">
+      <button class="primaryBtn" id="editLocSave">Guardar</button>
+      <button class="secondaryBtn" id="editLocCancel">Cancelar</button>
+      <button class="dangerBtn" id="editLocDelete">Eliminar esta placa</button>
+    </div>
+  </div>
 </div>
 
 <script>
-// ========== VERSIÓN DE LA APLICACIÓN ==========
-// CORRECCIÓN: versión actualizada a 2.7.0 por correcciones y mejoras
-const APP_VERSION = "2.7.0";
-console.log(`🚀 EQUIPO ÉLITE v${APP_VERSION}`);
+(function(){
 
-// ========== CONFIGURACIÓN DE FIREBASE ==========
-const firebaseConfig = {
-    apiKey: "AIzaSyDYnkHNPdB3XPK5zMo5R3JiLAQ6UeGOCKU",
-    authDomain: "espaciosv-6d92e.firebaseapp.com",
-    databaseURL: "https://espaciosv-6d92e-default-rtdb.firebaseio.com",
-    projectId: "espaciosv-6d92e",
-    storageBucket: "espaciosv-6d92e.firebasestorage.app",
-    messagingSenderId: "326267112592",
-    appId: "1:326267112592:web:6826e67fa0a33b0d899c15"
-};
+  const ZONES = [
+    { key: "Avaluo", label: "Avalúo", abbr: "AV", color: "var(--z-avaluo)", hex: "4F8FD1" },
+    { key: "Atras", label: "Atrás", abbr: "AT", color: "var(--z-atras)", hex: "5FB37A" },
+    { key: "Malla", label: "Malla", abbr: "ML", color: "var(--z-malla)", hex: "A175D4" },
+    { key: "Neon Nieto", label: "Neon Nieto", abbr: "NN", color: "var(--z-neon)", hex: "E0529C" },
+    { key: "Parqueo Gash Externo", label: "Parqueo Gash Externo", abbr: "PGE", color: "var(--z-pge)", hex: "E2843A" }
+  ];
 
-let database = null;
-let firebaseInicializado = false;
-// MEJORA: flag para evitar que sincronización remota dispare escrituras redundantes
-let recibiendoDatosRemotos = false;
+  // Semilla: campo (columna/posición real del Excel) -> lista de placas en ese campo
+  const SEED_DATA = {"Avaluo": {"1": ["CL338850", "BRT285"], "2": ["FBJ328"], "3": ["BZL006", "AGV9124"], "4": ["CL323859", "BVW241", "ABJ612"], "5": ["BXN690", "CBX388"], "6": ["PE000330", "BYS474"], "7": ["3494", "BWR660"], "8": ["Cl379044", "Prado blanco", "cbk888"], "9": ["Cl307033", "Cl534001", "mkv090"], "10": ["C174570", "bwc311"], "11": ["Cl497008", "Acc081", "Abq540"], "12": ["BJR486", "Aak047"], "13": ["kph192", "Mpg156", "Cl371394"], "14": ["Bsx981", "Cl325517", "MYM683"], "15": ["Tacoma gris", "BWH531"], "16": ["Toyota cross blanco", "881301"], "17": ["FSC307", "BTS859", "Rxj668"], "18": ["Cl481636", "ACY439"], "19": ["Ste108", "Bsv193"], "20": ["Gsp100"], "21": ["Raptor blanco", "Bwc095"], "22": ["BYD323", "BWW252"], "23": ["MRm888", "Krn999"], "24": ["MPR299"], "25": ["Fede"], "27": ["BRF346"], "30": ["CL358702"], "31": ["CL367086", "ADM978"], "33": ["Cl319435"], "34": ["MHV018", "ccn680"], "35": ["Ccg040", "Brb334"], "36": ["Cbg019"], "37": ["GNZ212", "CL775954", "Lnx772"], "38": ["Hmr826"]}, "Atras": {"1": ["CL790798", "ADL148"], "2": ["AAA758", "FSD538"], "3": ["ABL259", "BXB968", "MPZ017"], "4": ["ACF765"], "5": ["BXM699", "FRD026", "MIQ718"], "6": ["CCF126", "BPL587", "NXH359"], "7": ["CL788404"], "8": ["CBD113", "CCH330", "BGJ960"], "9": ["CL357110", "AAM264", "AAH587"], "10": ["Ford-AGV215", "DRY100", "BVY106"], "11": ["GMK430", "ABF372", "FRS091"], "12": ["CROSSBLANCO", "BXJ037", "CL345354"], "13": ["FMD168", "301-000487", "RV4-Agv355"], "14": ["CL352560", "LSZ923", "CBV769"], "15": ["CBS904"], "16": ["BGH379"], "17": ["EAQ028", "PRADOBRONCE"], "18": ["BRT639", "CBL919"], "19": ["CCH663", "CD5718"], "20": ["CBM411", "CCJ147", "BZB750"], "21": ["KTJ929", "AAQ007", "CL357983"], "22": ["CL351523", "MTW019", "VNT028"], "23": ["ACE318", "CBD698", "RVT847"], "24": ["4RUNNERGRIS", "BXW488", "ABJ630"], "25": ["AAN112", "BVX068", "BWQ949"], "26": ["PSB176", "BXY408", "BYK739"], "27": ["CL347413", "BSW458"], "28": ["BXM221", "BWY262", "RBK512"], "29": ["WFQ168", "JPV451", "AAZ775"], "30": ["ABV667"], "33": ["CBZ669", "CL359800", "RVC429"], "34": ["CL347474", "2558", "GKM521"], "35": ["CMM291", "BXZ260"], "36": ["CRC1594", "CL375840", "ABE829", "4Runnerblanca"]}, "Malla": {"SN2": ["CL347468"], "SN3": ["BXL048"], "SN4": ["AAG828", "SM8253"], "SN5": ["AAA672", "PE6-1409"], "SN6": ["ambulancia 0003247"], "SN7": ["BYC412", "BWK142"], "SN9": ["AAG998"], "SN10": ["CBR906"], "SN11": ["AAC559"], "SN12": ["BVZ663"], "66": ["BWB803"], "67": ["BZQ358"], "68": ["BSF310"], "69": ["ABQ118"], "70": ["BQZ676"], "71": ["Cbp169"], "72": ["Raptorblanco"], "73": ["CCL699"], "74": ["YYJ192"], "75": ["BXD917"], "76": ["FAN210"], "1": ["ADp327"], "2": ["Toyota cross/Blanco"], "3": ["BWZ304"], "4": ["MEB007"], "5": ["Fjs248"], "6": ["BWy867"], "7": ["Bwl929"], "8": ["Yariscrossgris/AGv"], "9": ["Ccb551"], "10": ["Gxg097"], "11": ["Cl285553"], "12": ["Cl318237"], "13": ["Qyq511"], "14": ["Clg555"], "15": ["Bxk510"], "16": ["Cl809024"], "17": ["LCY210"], "18": ["AAM260"], "19": ["AAA757"]}, "Neon Nieto": {"8": ["LVD213"], "9": ["BXQ950"], "12": ["JRN010"], "13": ["CL368974"], "14": ["LNX095"], "15": ["BYN180"], "16": ["BLJ217"], "17": ["Raptor azul"], "19": ["PE17 328"]}, "Parqueo Gash Externo": {"1": ["BYB182"], "2": ["BZT815", "BYS479"], "5": ["BQC463"], "6": ["881301", "BRY000"], "7": ["RBK512"], "8": ["ACF277"], "10": ["ABQ926"], "11": ["WTF916"], "12": ["BJK099"], "13": ["BBP042", "BYS802"], "14": ["BKS153"], "15": ["CL337788", "BZJ669"], "16": ["CMM914", "CBS242"], "17": ["BJR852"], "18": ["BFB581", "GJR127"], "19": ["CAJON", "CL284691"], "20": ["DKD581"], "21": ["BTN258"], "23": ["CL534317", "BVP908"], "24": ["ABP277"], "25": ["CCG417"], "26": ["LSH115", "AAH079"], "27": ["ABR935"], "28": ["Carroceria"], "29": ["LYL015"]}};
 
-try {
-    if (typeof firebase !== 'undefined') {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        database = firebase.database();
-        firebaseInicializado = true;
-        console.log('✅ Firebase inicializado');
-    }
-} catch(e) {
-    console.warn('⚠️ Firebase error:', e.message);
-}
+  const STORAGE_KEY = "inventario_parqueo_v4";
+  const LEGACY_CAMPOS_KEY = "inventario_parqueo_v3"; // versión anterior (campos con placas como texto simple)
+  const LEGACY_FLAT_KEY = "inventario_parqueo_v1"; // versión anterior (lista plana)
+  const USERS_KEY = "inventario_parqueo_users_v1";
+  const SESSION_KEY = "inventario_parqueo_session_v1"; // guardado personal (por navegador), solo el nombre de usuario
+  let state = null; // { zones: { zoneKey: [ {campo, plates:[]}, ... ] }, capacities:{zoneKey:number}, updatedAt }
+  let activeTab = ZONES[0].key;
+  let storageAvailable = true;
+  let storageWarned = false;
+  let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
+  const undoStack = []; // snapshots de state.zones (deep clone), máx 10
+  const UNDO_LIMIT = 10;
 
-// ========== DATOS DE VALETS ==========
-let valets = [
-    { id: 1, nombre: 'Marlon', avatar: '🦁', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
-    { id: 2, nombre: 'Daniel', avatar: '🐅', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
-    { id: 3, nombre: 'Johan', avatar: '🐺', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
-    { id: 4, nombre: 'Esteban', avatar: '🦅', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
-    { id: 5, nombre: 'Outsourcing', avatar: '🐉', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
-    { id: 6, nombre: 'Joel', avatar: '🦊', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
-    { id: 7, nombre: 'Vicente', avatar: '👑', enDescanso: false, descansoInicio: null, descansosHistorial: [] },
-    { id: 8, nombre: 'Gustavo', avatar: '🐻', enDescanso: false, descansoInicio: null, descansosHistorial: [] }
-];
+  function snapshotZones(){
+    return JSON.parse(JSON.stringify(state.zones));
+  }
+  function pushUndo(snapshot){
+    undoStack.push(snapshot);
+    if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+    updateUndoBtn();
+  }
+  function updateUndoBtn(){
+    const btn = document.getElementById("undoBtn");
+    if(btn) btn.disabled = undoStack.length === 0;
+  }
+  async function doUndo(){
+    if(undoStack.length === 0) return;
+    const prev = undoStack.pop();
+    state.zones = prev;
+    updateUndoBtn();
+    await saveState(true);
+    renderAll();
+    showToast("Cambio deshecho");
+  }
 
-const NOMBRES_PRINCIPALES = ['Marlon', 'Daniel', 'Johan', 'Esteban', 'Outsourcing'];
-const NOMBRES_RAPIDOS = ['Joel', 'Vicente', 'Gustavo'];
+  function zoneInfo(key){ return ZONES.find(z => z.key === key); }
+  function normalizePlate(v){ return String(v).trim().toUpperCase(); }
+  function normalizeCampo(v){ return String(v).trim(); }
 
-let espacios = {};
-let entregados = [];
-let alaIzquierdaActiva = true;
-let fechaActualRegistro = new Date().toDateString();
-let sincronizando = false;
+  const SIN_ASIGNAR = "Sin asignar";
 
-// ========== INICIALIZAR ESPACIOS ==========
-function initEspacios() {
-    [913, 912, 911].forEach(i => espacios[i] = { id: i, placa: null, quienTrae: null, hora: null, obs: null, disc: true, activo: true });
-    for(let i=846; i<=865; i++) espacios[i] = { id: i, placa: null, quienTrae: null, hora: null, obs: null, disc: false, activo: true };
-    for(let i=866; i<=886; i++) espacios[i] = { id: i, placa: null, quienTrae: null, hora: null, obs: null, disc: false, activo: true };
-    for(let i=890; i<=910; i++) espacios[i] = { id: i, placa: null, quienTrae: null, hora: null, obs: null, disc: false, activo: true };
-}
-initEspacios();
-
-// ========== FUNCIONES DE DESCANSOS ==========
-function iniciarDescanso(nombre) {
-    const valet = valets.find(v => v.nombre === nombre);
-    if(!valet) return;
-    if(valet.enDescanso) {
-        showToast(`⚠️ ${nombre} ya está en descanso`, true);
-        return;
-    }
-    valet.enDescanso = true;
-    valet.descansoInicio = new Date();
-    showToast(`☕ ${nombre} salió a descansar/almuerzo`);
-    renderEquipo();
-    guardarDatos();
-    sincronizarFirebase();
-}
-
-function finalizarDescanso(nombre) {
-    const valet = valets.find(v => v.nombre === nombre);
-    if(!valet || !valet.enDescanso) return;
-    
-    const fin = new Date();
-    const ini = new Date(valet.descansoInicio);
-    const duracion = Math.round((fin - ini) / 60000);
-    
-    valet.descansosHistorial.push({
-        fecha: new Date().toLocaleDateString(),
-        inicio: ini.toLocaleTimeString(),
-        fin: fin.toLocaleTimeString(),
-        duracion: duracion,
-        fechaCompleta: new Date().toISOString()
+  function campoSortValue(c){
+    const n = parseFloat(c);
+    return isNaN(n) ? Infinity : n;
+  }
+  function sortCampos(arr){
+    arr.sort((a,b)=>{
+      if(a.campo === SIN_ASIGNAR && b.campo !== SIN_ASIGNAR) return 1;
+      if(b.campo === SIN_ASIGNAR && a.campo !== SIN_ASIGNAR) return -1;
+      const av = campoSortValue(a.campo), bv = campoSortValue(b.campo);
+      if(av !== bv) return av - bv;
+      return String(a.campo).localeCompare(String(b.campo));
     });
-    
-    valet.enDescanso = false;
-    valet.descansoInicio = null;
-    showToast(`✅ ${nombre} regresó de descanso (${duracion} minutos)`);
-    renderEquipo();
-    guardarDatos();
-    sincronizarFirebase();
-}
+  }
 
-function getTiempoDescanso(valet) {
-    if(!valet.enDescanso || !valet.descansoInicio) return null;
-    const diff = Math.floor((new Date() - new Date(valet.descansoInicio)) / 60000);
-    if(diff < 60) return `${diff} min`;
-    return `${Math.floor(diff/60)}h ${diff%60} min`;
-}
+  function seedZonesFromScratch(){
+    const zones = {};
+    ZONES.forEach(z=>{
+      const src = SEED_DATA[z.key] || {};
+      const arr = Object.keys(src).map(campo => ({
+        campo,
+        plates: src[campo].map(p => ({ plate: p, aseguradora: "" }))
+      }));
+      sortCampos(arr);
+      zones[z.key] = arr;
+    });
+    return zones;
+  }
 
-function getValetsDisponibles() {
-    return valets.filter(v => !v.enDescanso);
-}
+  // Convierte el formato plano de la versión anterior (lista de placas por
+  // zona) al modelo de campos, asignando un campo secuencial a cada placa.
+  function migrateFlatToCampos(flatZones){
+    const zones = {};
+    ZONES.forEach(z=>{
+      const list = flatZones[z.key] || [];
+      zones[z.key] = list.map((plate, idx) => ({ campo: String(idx+1), plates: [{ plate, aseguradora: "" }] }));
+    });
+    return zones;
+  }
 
-// ========== FUNCIONES AUXILIARES ==========
-function ahora() {
-    const d = new Date();
-    return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
-}
+  // Convierte campos cuyas placas todavía sean strings (formato v3, sin
+  // aseguradora) al modelo de objetos {plate, aseguradora}.
+  function migrateCamposToPlateObjects(zones){
+    ZONES.forEach(z=>{
+      const arr = zones[z.key] || [];
+      arr.forEach(c=>{
+        c.plates = (c.plates || []).map(p => (typeof p === "string") ? { plate: p, aseguradora: "" } : p);
+      });
+    });
+    return zones;
+  }
 
-// CORRECCIÓN #2: tiempoTranscurrido ahora maneja correctamente el cruce de medianoche
-function tiempoTranscurrido(horaInicio) {
-    if(!horaInicio) return '0m';
-    const [h, m] = horaInicio.split(':').map(Number);
-    const ahora = new Date();
-    
-    // Construir la fecha de inicio asumiendo que es el mismo día
-    const inicio = new Date(ahora);
-    inicio.setHours(h, m, 0, 0);
-    
-    // Si el resultado es futuro (cruce de medianoche: el vehículo entró antes de medianoche)
-    // restamos un día para obtener el tiempo correcto
-    let diff = Math.floor((ahora - inicio) / 60000);
-    if(diff < 0) diff += 24 * 60; // sumar 24h en minutos
-    
-    if(diff < 60) return `${diff}m`;
-    return `${Math.floor(diff/60)}h ${diff%60}m`;
-}
+  function showToast(msg, duration){
+    const t = document.getElementById("toast");
+    t.textContent = msg || "Guardado";
+    t.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=> t.classList.remove("show"), duration || 1600);
+  }
 
-// MEJORA: función para obtener minutos transcurridos (para colores de alerta)
-function minutosTranscurridos(horaInicio) {
-    if(!horaInicio) return 0;
-    const [h, m] = horaInicio.split(':').map(Number);
-    const ahora = new Date();
-    const inicio = new Date(ahora);
-    inicio.setHours(h, m, 0, 0);
-    let diff = Math.floor((ahora - inicio) / 60000);
-    if(diff < 0) diff += 24 * 60;
-    return diff;
-}
+  function showStorageBanner(){
+    if(document.getElementById("storageBanner")) return;
+    const b = document.createElement("div");
+    b.id = "storageBanner";
+    b.style.cssText = "background:#3a2a12;color:#f2c230;font-size:0.78rem;padding:8px 16px;text-align:center;";
+    b.textContent = "No se pudo activar el guardado automático en este navegador — los cambios se mantienen mientras la pestaña esté abierta. Exportá a Excel antes de cerrar para no perder nada.";
+    document.body.insertBefore(b, document.querySelector("nav#tabs"));
+  }
 
-// MEJORA: clase CSS para el chip de tiempo según urgencia
-function claseChipTiempo(horaInicio) {
-    const minutos = minutosTranscurridos(horaInicio);
-    if(minutos > 120) return 'critico';
-    if(minutos > 60) return 'advertencia';
-    return 'normal';
-}
-
-function showToast(msg, err = false) {
-    const t = document.getElementById('toast');
-    if(!t) return;
-    t.textContent = msg;
-    t.className = 'toast' + (err ? ' error' : '');
-    t.style.display = 'block';
-    // Reiniciar animación
-    t.style.animation = 'none';
-    t.offsetHeight; // reflow
-    t.style.animation = '';
-    setTimeout(() => t.style.display = 'none', 2800);
-}
-
-// ========== RELOJ Y FECHA ==========
-function actualizarReloj() {
-    const ahora = new Date();
-    const horas = ahora.getHours().toString().padStart(2,'0');
-    const minutos = ahora.getMinutes().toString().padStart(2,'0');
-    const segundos = ahora.getSeconds().toString().padStart(2,'0');
-    const relojDiv = document.getElementById('reloj');
-    if(relojDiv) relojDiv.innerHTML = `${horas}:${minutos}:${segundos}`;
-    
-    const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const fechaDiv = document.getElementById('fecha');
-    if(fechaDiv) fechaDiv.innerHTML = ahora.toLocaleDateString('es-ES', opciones);
-    
-    if(ahora.toDateString() !== fechaActualRegistro) {
-        fechaActualRegistro = ahora.toDateString();
-        reiniciarPorNuevoDia();
+  async function checkStorageAvailable(){
+    if(!window.storage || typeof window.storage.set !== "function" || typeof window.storage.get !== "function"){
+      return false;
     }
-}
-
-function reiniciarPorNuevoDia() {
-    const activos = Object.values(espacios).filter(e => e.placa);
-    if(activos.length > 0) {
-        activos.forEach(e => {
-            entregados.unshift({
-                ...e, horaEnt: e.hora, tiempoEstacionado: tiempoTranscurrido(e.hora),
-                quienRecoge: 'AUTOMÁTICO - CAMBIO DE DÍA'
-            });
-            e.placa = null; e.quienTrae = null; e.hora = null; e.obs = null;
-        });
-        showToast(`🔄 Nuevo día - ${activos.length} vehículos movidos a historial`);
+    try{
+      const probe = await window.storage.set("__probe__", "1", true);
+      if(!probe || typeof probe !== "object") return false;
+      return true;
+    }catch(e){
+      return false;
     }
-    guardarDatos();
-    renderMapa();
-    renderVehiculos();
-    renderEquipo();
-    sincronizarFirebase();
-}
+  }
 
-// ========== RENDER MAPA ==========
-function createEspacioBtn(id) {
-    const e = espacios[id];
-    const btn = document.createElement('button');
-    const isActive = e.activo !== false;
-    
-    if(!isActive) {
-        btn.className = 'espacio-btn inactivo';
-        btn.innerHTML = `<span class="espacio-numero">${id}</span><span style="font-size:8px;">🚫</span>`;
-        btn.onclick = () => showToast('Espacio no disponible', true);
-        return btn;
-    }
-    
-    let clase = 'libre';
-    let contenido = `<span class="espacio-numero">${id}</span>`;
-    
-    if(e.placa) {
-        clase = 'ocupado';
-        contenido = `<span class="espacio-numero">${id}</span>
-                     <span class="espacio-placa">${e.placa}</span>
-                     <span class="espacio-tiempo">${tiempoTranscurrido(e.hora)}</span>`;
-    } else if(e.disc) {
-        clase = 'discapacidad';
-        contenido = `<span class="espacio-numero">♿ ${id}</span>`;
-    }
-    
-    btn.className = `espacio-btn ${clase}`;
-    btn.innerHTML = contenido;
-    btn.onclick = () => abrirModal(id);
-    return btn;
-}
+  async function loadState(){
+    storageAvailable = await checkStorageAvailable();
 
-function renderMapa() {
-    const zonaDisc = document.getElementById('zona-disc');
-    const zonaDer = document.getElementById('zona-der');
-    const zonaCen = document.getElementById('zona-cen');
-    const zonaIzq = document.getElementById('zona-izq');
-    
-    if(zonaDisc) { zonaDisc.innerHTML = ''; [913,912,911].forEach(id => zonaDisc.appendChild(createEspacioBtn(id))); }
-    if(zonaDer) { zonaDer.innerHTML = ''; for(let i=846; i<=865; i++) zonaDer.appendChild(createEspacioBtn(i)); }
-    if(zonaCen) { zonaCen.innerHTML = ''; for(let i=866; i<=886; i++) zonaCen.appendChild(createEspacioBtn(i)); }
-    if(zonaIzq) { zonaIzq.innerHTML = ''; for(let i=890; i<=910; i++) zonaIzq.appendChild(createEspacioBtn(i)); }
-    
-    const activosTotal = Object.values(espacios).filter(e => e.activo !== false);
-    const ocupados = activosTotal.filter(e => e.placa).length;
-    const total = activosTotal.length;
-    const libres = total - ocupados;
-    const pct = total > 0 ? Math.round((ocupados / total) * 100) : 0;
-    
-    const sLibres = document.getElementById('s-libres');
-    const sOcup = document.getElementById('s-ocup');
-    const sTotal = document.getElementById('s-total');
-    const badge = document.getElementById('badge-libres');
-    if(sLibres) sLibres.innerHTML = libres;
-    if(sOcup) sOcup.innerHTML = ocupados;
-    if(sTotal) sTotal.innerHTML = total;
-    if(badge) {
-        badge.innerHTML = libres + ' libres';
-        // MEJORA: animar badge cuando cambia
-        badge.classList.remove('bounce');
-        void badge.offsetWidth;
-        badge.classList.add('bounce');
-    }
-    
-    // MEJORA: actualizar barra de ocupación
-    const barraOcupacion = document.getElementById('barra-ocupacion');
-    const pctOcupacion = document.getElementById('pct-ocupacion');
-    if(barraOcupacion) barraOcupacion.style.width = pct + '%';
-    if(pctOcupacion) pctOcupacion.textContent = pct + '%';
-}
-
-// ========== TOGGLE ALA IZQUIERDA ==========
-function toggleAlaIzquierda() {
-    alaIzquierdaActiva = !alaIzquierdaActiva;
-    for(let i=890; i<=910; i++) if(espacios[i]) espacios[i].activo = alaIzquierdaActiva;
-    const btn = document.getElementById('toggleIzquierdaBtn');
-    const aviso = document.getElementById('aviso-izq-inactiva');
-    if(btn) {
-        if(alaIzquierdaActiva) {
-            btn.innerHTML = '<i class="mdi mdi-check-circle"></i> Habilitada';
-            btn.classList.add('activo');
-            if(aviso) aviso.style.display = 'none';
-            showToast('✅ Ala Izquierda HABILITADA');
-        } else {
-            btn.innerHTML = '<i class="mdi mdi-close-circle"></i> Deshabilitada';
-            btn.classList.remove('activo');
-            if(aviso) aviso.style.display = 'block';
-            showToast('❌ Ala Izquierda DESHABILITADA');
+    if(storageAvailable){
+      // 1) dato compartido ya en el formato actual (v4, con aseguradora)
+      try{
+        const shared = await window.storage.get(STORAGE_KEY, true);
+        if(shared && shared.value){
+          state = JSON.parse(shared.value);
+          if(!state.capacities) state.capacities = {};
+          return;
         }
-    }
-    renderMapa();
-    guardarDatos();
-    sincronizarFirebase();
-}
+      }catch(e){ /* no existe todavía */ }
 
-// ========== VEHÍCULOS ==========
-function renderVehiculos() {
-    const search = document.getElementById('searchVehiculo');
-    const filtro = search ? search.value.toLowerCase().trim() : '';
-    let activos = Object.values(espacios).filter(e => e.placa);
-    
-    if(filtro) {
-        activos = activos.filter(e =>
-            e.placa.toLowerCase().includes(filtro) ||
-            (e.quienTrae && e.quienTrae.toLowerCase().includes(filtro))
-        );
-    }
-    
-    const activeCount = document.getElementById('activeCount');
-    if(activeCount) activeCount.innerHTML = `(${activos.length})`;
-    
-    const listaActivos = document.getElementById('lista-activos');
-    if(listaActivos) {
-        if(activos.length) {
-            listaActivos.innerHTML = activos.map(e => `
-                <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(212,175,55,0.2);">
-                    <div style="width:10px; height:10px; border-radius:50%; background:#D4AF37; flex-shrink:0;"></div>
-                    <div style="font-weight:700; min-width:60px;">${e.placa}</div>
-                    <div style="flex:1;"><strong>🚗 Trajo: ${e.quienTrae || '?'}</strong><br><small>Esp ${e.id} · ${e.hora || '?'}</small></div>
-                    <!-- MEJORA: chip de tiempo con color de alerta -->
-                    <span class="tiempo-chip ${claseChipTiempo(e.hora)}">${tiempoTranscurrido(e.hora)}</span>
-                </div>
-            `).join('');
-        } else {
-            listaActivos.innerHTML = '<div class="empty-state"><i class="mdi mdi-car-off" style="font-size:32px; display:block; margin-bottom:8px;"></i>Sin vehículos activos</div>';
+      // 1b) versión anterior (v3: campos con placas como texto simple, sin aseguradora) -> migrar
+      try{
+        const legacyCampos = await window.storage.get(LEGACY_CAMPOS_KEY, true);
+        if(legacyCampos && legacyCampos.value){
+          const old = JSON.parse(legacyCampos.value);
+          state = {
+            zones: migrateCamposToPlateObjects(old.zones || {}),
+            capacities: old.capacities || {},
+            updatedAt: new Date().toISOString()
+          };
+          await saveState(true);
+          return;
         }
-    }
-    
-    // CORRECCIÓN #4: filtro también aplica a entregados
-    let filtrados = entregados;
-    if(filtro) {
-        filtrados = entregados.filter(v =>
-            (v.placa && v.placa.toLowerCase().includes(filtro)) ||
-            (v.quienTrae && v.quienTrae.toLowerCase().includes(filtro)) ||
-            (v.quienRecoge && v.quienRecoge.toLowerCase().includes(filtro))
-        );
-    }
+      }catch(e){ /* nada */ }
 
-    const entregadosCount = document.getElementById('entregadosCount');
-    if(entregadosCount) entregadosCount.innerHTML = `(${filtrados.length})`;
-    
-    const listaEntregados = document.getElementById('lista-entregados');
-    if(listaEntregados) {
-        if(filtrados.length) {
-            listaEntregados.innerHTML = filtrados.slice(0, 20).map(v => `
-                <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(212,175,55,0.2);">
-                    <div style="width:10px; height:10px; border-radius:50%; background:#666; flex-shrink:0;"></div>
-                    <div style="min-width:60px;">${v.placa}</div>
-                    <div style="flex:1;">
-                        <strong>🚗 Trajo: ${v.quienTrae || '?'}</strong><br>
-                        <small>🔁 Recogió: ${v.quienRecoge || '?'}</small>
-                    </div>
-                    <span style="font-size:11px; color:var(--color-text-light);">${v.horaEnt || '?'}</span>
-                </div>
-            `).join('');
-        } else {
-            listaEntregados.innerHTML = `<div class="empty-state">${filtro ? 'Sin coincidencias' : '<i class="mdi mdi-check-all" style="font-size:32px; display:block; margin-bottom:8px;"></i>Sin entregas aún'}</div>`;
+      // 2) versión anterior (lista plana) guardada como compartida -> migrar
+      try{
+        const legacyShared = await window.storage.get(LEGACY_FLAT_KEY, true);
+        if(legacyShared && legacyShared.value){
+          const old = JSON.parse(legacyShared.value);
+          state = { zones: migrateFlatToCampos(old.zones || {}), capacities: {}, updatedAt: new Date().toISOString() };
+          await saveState(true);
+          return;
         }
-    }
-}
+      }catch(e){ /* nada */ }
 
-// ========== EQUIPO ==========
-function renderEquipo() {
-    const activos = Object.values(espacios).filter(e => e.placa);
-    const counts = {};
-    activos.forEach(e => { if(e.quienTrae) counts[e.quienTrae] = (counts[e.quienTrae] || 0) + 1; });
-    
-    // Contar también los entregados del día para el ranking
-    const countsTotal = { ...counts };
-    entregados.forEach(e => { if(e.quienTrae) countsTotal[e.quienTrae] = (countsTotal[e.quienTrae] || 0) + 1; });
-    
-    const listaValets = document.getElementById('lista-valets');
-    if(listaValets) {
-        listaValets.innerHTML = valets.map(v => {
-            const total = counts[v.nombre] || 0;
-            const tiempoDesc = getTiempoDescanso(v);
-            return `
-                <div class="valet-card ${v.enDescanso ? 'descansando' : ''}">
-                    <div class="valet-avatar">${v.avatar}</div>
-                    <div class="valet-info">
-                        <div class="valet-nombre">
-                            ${v.nombre}
-                            ${v.enDescanso ? '<span class="badge-descanso">🌙 En descanso</span>' : '<span class="badge-activo">⚡ Activo</span>'}
-                        </div>
-                        <div class="valet-stats">${total} vehículo${total !== 1 ? 's' : ''} traído${total !== 1 ? 's' : ''} ahora</div>
-                        ${v.enDescanso && tiempoDesc ? `<div class="valet-stats"><span class="timer-descanso">⏱️ Tiempo en descanso: ${tiempoDesc}</span></div>` : ''}
-                    </div>
-                    ${!v.enDescanso ? 
-                        `<button class="btn-descanso-small" onclick="iniciarDescanso('${v.nombre}')"><i class="mdi mdi-coffee"></i> Descanso</button>` :
-                        `<button class="btn-descanso-small volver" onclick="finalizarDescanso('${v.nombre}')"><i class="mdi mdi-sword"></i> Regresar</button>`
-                    }
-                </div>
-            `;
-        }).join('');
-    }
-    
-    const historialDiv = document.getElementById('historial-descansos');
-    if(historialDiv) {
-        let todos = [];
-        valets.forEach(v => {
-            v.descansosHistorial.forEach(d => {
-                todos.push({ ...d, nombre: v.nombre, avatar: v.avatar });
-            });
-        });
-        todos.sort((a,b) => new Date(b.fechaCompleta) - new Date(a.fechaCompleta));
-        if(todos.length) {
-            historialDiv.innerHTML = todos.map(d => `
-                <div style="display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid rgba(212,175,55,0.2);">
-                    <div style="font-size:28px;">${d.avatar}</div>
-                    <div style="flex:1;"><strong>${d.nombre}</strong><br><small>${d.fecha}</small></div>
-                    <div style="text-align:right;"><small>${d.inicio} → ${d.fin}</small><br><small style="color:#D4AF37;">${d.duracion} min</small></div>
-                </div>
-            `).join('');
-        } else {
-            historialDiv.innerHTML = '<div class="empty-state">Sin registros de descansos</div>';
+      // 3) versión anterior guardada en modo personal -> migrar también
+      try{
+        const legacyPersonal = await window.storage.get(LEGACY_FLAT_KEY, false);
+        if(legacyPersonal && legacyPersonal.value){
+          const old = JSON.parse(legacyPersonal.value);
+          state = { zones: migrateFlatToCampos(old.zones || {}), capacities: {}, updatedAt: new Date().toISOString() };
+          await saveState(true);
+          return;
         }
+      }catch(e){ /* nada */ }
     }
-    
-    const activosCount = Object.values(espacios).filter(e => e.activo !== false);
-    const rIng = document.getElementById('r-ing');
-    const rEnt = document.getElementById('r-ent');
-    const rAct = document.getElementById('r-act');
-    if(rIng) rIng.innerHTML = activosCount.filter(e => e.placa).length + entregados.length;
-    if(rEnt) rEnt.innerHTML = entregados.length;
-    if(rAct) rAct.innerHTML = activosCount.filter(e => e.placa).length;
 
-    // MEJORA: Ranking de valets por total del día
-    const rankingDiv = document.getElementById('ranking-valets');
-    if(rankingDiv) {
-        const medalas = ['🥇','🥈','🥉'];
-        const rankingData = valets
-            .map(v => ({ nombre: v.nombre, avatar: v.avatar, total: countsTotal[v.nombre] || 0 }))
-            .filter(v => v.total > 0)
-            .sort((a, b) => b.total - a.total);
-        
-        if(rankingData.length === 0) {
-            rankingDiv.innerHTML = '<div class="empty-state" style="padding:12px;">Sin movimientos aún</div>';
-        } else {
-            rankingDiv.innerHTML = rankingData.map((v, i) => `
-                <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:12px; background:rgba(212,175,55,0.08); margin-bottom:6px;">
-                    <span style="font-size:20px; width:28px; text-align:center;">${medalas[i] || (i+1)+'°'}</span>
-                    <span style="font-size:20px;">${v.avatar}</span>
-                    <span style="flex:1; font-weight:600; font-size:13px;">${v.nombre}</span>
-                    <span style="background:var(--success); color:#0a0a1a; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:700;">${v.total} 🚗</span>
-                </div>
-            `).join('');
+    // primera vez, o sin almacenamiento disponible: sembrar con los datos reales del Excel
+    state = { zones: seedZonesFromScratch(), capacities: {}, updatedAt: new Date().toISOString() };
+    await saveState(true);
+  }
+
+  async function saveState(silent){
+    state.updatedAt = new Date().toISOString();
+
+    if(!storageAvailable){
+      if(!storageWarned){ storageWarned = true; showStorageBanner(); }
+      renderMeta();
+      return;
+    }
+
+    try{
+      const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+      if(!result || typeof result !== "object"){
+        throw new Error("Unexpected response type");
+      }
+      if(!silent) showToast("Guardado");
+    }catch(e){
+      console.error("Error guardando", e);
+      storageAvailable = false;
+      if(!storageWarned){ storageWarned = true; showStorageBanner(); }
+    }
+    renderMeta();
+  }
+
+  function renderMeta(){
+    let totalVeh = 0, totalCampos = 0;
+    ZONES.forEach(z=>{
+      const arr = state.zones[z.key] || [];
+      totalCampos += arr.length;
+      arr.forEach(c => totalVeh += c.plates.length);
+    });
+    const d = new Date(state.updatedAt);
+    const fecha = d.toLocaleDateString("es-CR", {day:"2-digit", month:"short", year:"numeric"});
+    const hora = d.toLocaleTimeString("es-CR", {hour:"2-digit", minute:"2-digit"});
+    document.getElementById("metaLine").textContent = `${totalVeh} vehículos en ${totalCampos} campos · actualizado ${fecha}, ${hora}`;
+  }
+
+  function renderTabs(){
+    const nav = document.getElementById("tabs");
+    nav.innerHTML = "";
+    ZONES.forEach(z=>{
+      const btn = document.createElement("button");
+      btn.className = "tabBtn" + (activeTab===z.key ? " active" : "");
+      btn.style.setProperty("--zone-color", z.color);
+      const count = (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0);
+      btn.innerHTML = `<span class="dot" style="background:${z.color}"></span> ${z.label} <span class="count">${count}</span>`;
+      btn.onclick = ()=>{ activeTab = z.key; renderAll(); };
+      nav.appendChild(btn);
+    });
+    const btn = document.createElement("button");
+    btn.className = "tabBtn" + (activeTab==="__resumen__" ? " active" : "");
+    btn.style.setProperty("--zone-color", "var(--line-dim)");
+    const totalCount = ZONES.reduce((a,z)=>a + (state.zones[z.key]||[]).reduce((aa,c)=>aa+c.plates.length,0), 0);
+    btn.innerHTML = `Resumen general <span class="count">${totalCount}</span>`;
+    btn.onclick = ()=>{ activeTab = "__resumen__"; renderAll(); };
+    nav.appendChild(btn);
+  }
+
+  function escapeAttr(s){
+    return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  }
+  function escapeHtml(s){
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  // Busca una placa en todas las zonas/campos. Devuelve {zoneKey, campoIdx, plateIdx} o null.
+  function findPlate(plateUpper, excludeZone, excludeCampoIdx, excludePlateIdx){
+    for(const z of ZONES){
+      const arr = state.zones[z.key] || [];
+      for(let ci=0; ci<arr.length; ci++){
+        const plates = arr[ci].plates;
+        for(let pi=0; pi<plates.length; pi++){
+          if(z.key===excludeZone && ci===excludeCampoIdx && pi===excludePlateIdx) continue;
+          if((plates[pi].plate||"").toUpperCase() === plateUpper){
+            return { zoneKey: z.key, campoIdx: ci, plateIdx: pi };
+          }
         }
+      }
     }
-}
+    return null;
+  }
 
-// ========== MODALES ==========
-let modalId = null;
-let quienTraeSel = null;
-let quienRecogeSel = null;
+  function askMoveOrCancel(plate, fromZoneLabel, fromCampo, toZoneLabel, toCampo){
+    return new Promise((resolve)=>{
+      const overlay = document.getElementById("dupModal");
+      const msg = document.getElementById("dupModalMsg");
+      msg.textContent = `${plate} ya está registrada en ${fromZoneLabel}, campo ${fromCampo}. ¿Se movió a ${toZoneLabel} (campo ${toCampo}), o fue un error al escribir la placa?`;
+      overlay.classList.add("show");
+      const moveBtn = document.getElementById("dupModalMove");
+      const cancelBtn = document.getElementById("dupModalCancel");
+      function cleanup(result){
+        overlay.classList.remove("show");
+        moveBtn.removeEventListener("click", onMove);
+        cancelBtn.removeEventListener("click", onCancel);
+        resolve(result);
+      }
+      function onMove(){ cleanup("move"); }
+      function onCancel(){ cleanup("cancel"); }
+      moveBtn.addEventListener("click", onMove);
+      cancelBtn.addEventListener("click", onCancel);
+    });
+  }
 
-function abrirModal(id) {
-    const e = espacios[id];
-    if(e.activo === false) { showToast('Espacio no disponible', true); return; }
-    modalId = id;
-    const modalTitle = document.getElementById('modal-title');
-    const modalBadge = document.getElementById('modal-badge');
-    const modalBody = document.getElementById('modal-body');
-    if(modalTitle) modalTitle.innerHTML = `Espacio ${id}`;
-    
-    if(e.placa) {
-        if(modalBadge) { modalBadge.className = 'modal-badge ocupado'; modalBadge.innerHTML = 'Ocupado'; }
-        if(modalBody) modalBody.innerHTML = buildRetiroModal(e);
-        initQuienRecogeBtns();
+  // Quita una placa de donde esté (por índice) y limpia el campo si queda vacío.
+  function removePlateAt(zoneKey, campoIdx, plateIdx){
+    const arr = state.zones[zoneKey];
+    arr[campoIdx].plates.splice(plateIdx, 1);
+    if(arr[campoIdx].plates.length === 0){
+      arr.splice(campoIdx, 1);
+    }
+  }
+
+  // Modal para editar la zona y el campo donde está una placa, abierto
+  // desde una fila del Resumen (filtro por placa).
+  // Quita una entrada de placa por identidad de objeto (evita bugs de
+  // índices desfasados cuando se remueven dos placas en la misma operación).
+  function removePlateEntryByRef(zoneKey, campoObj, entryObj){
+    const idx = campoObj.plates.indexOf(entryObj);
+    if(idx === -1) return;
+    campoObj.plates.splice(idx, 1);
+    if(campoObj.plates.length === 0){
+      const arr = state.zones[zoneKey];
+      const cIdx = arr.indexOf(campoObj);
+      if(cIdx !== -1) arr.splice(cIdx, 1);
+    }
+  }
+
+  function openEditLocModal(zoneKey, ci, pi){
+    const arr = state.zones[zoneKey];
+    if(!arr || !arr[ci] || pi >= arr[ci].plates.length){
+      showToast("Esa placa ya cambió de lugar, actualizá la búsqueda");
+      return;
+    }
+    const targetCampoObj = arr[ci];
+    const targetEntry = targetCampoObj.plates[pi];
+    const plate = targetEntry.plate;
+    const currentCampo = targetCampoObj.campo;
+
+    const overlay = document.getElementById("editLocModal");
+    const sub = document.getElementById("editLocSub");
+    const placaInput = document.getElementById("editLocPlaca");
+    const zoneSelect = document.getElementById("editLocZone");
+    const campoInput = document.getElementById("editLocCampo");
+    const aseguradoraInput = document.getElementById("editLocAseguradora");
+    const saveBtn = document.getElementById("editLocSave");
+    const cancelBtn = document.getElementById("editLocCancel");
+    const deleteBtn = document.getElementById("editLocDelete");
+    const sinAsignarBtn = document.getElementById("editLocSinAsignarBtn");
+
+    sub.textContent = `Actualmente en ${zoneInfo(zoneKey).label}, campo ${currentCampo}`;
+    placaInput.value = plate;
+    zoneSelect.innerHTML = ZONES.map(z=>`<option value="${z.key}" ${z.key===zoneKey?"selected":""}>${z.label}</option>`).join("");
+    campoInput.value = currentCampo;
+    aseguradoraInput.value = targetEntry.aseguradora || "";
+
+    overlay.classList.add("show");
+
+    function cleanup(){
+      overlay.classList.remove("show");
+      saveBtn.removeEventListener("click", onSave);
+      cancelBtn.removeEventListener("click", onCancel);
+      deleteBtn.removeEventListener("click", onDelete);
+      sinAsignarBtn.removeEventListener("click", onSinAsignar);
+    }
+    function onCancel(){ cleanup(); }
+    function onSinAsignar(){ campoInput.value = SIN_ASIGNAR; campoInput.focus(); }
+    async function onSave(){
+      const newZone = zoneSelect.value;
+      const newCampo = normalizeCampo(campoInput.value);
+      const newPlate = normalizePlate(placaInput.value);
+      const newAseguradora = aseguradoraInput.value.trim();
+      if(!newCampo){ showToast("Ingresá un campo válido"); return; }
+      if(!newPlate){ showToast("Ingresá una placa válida"); return; }
+
+      const sameLocation = (newZone === zoneKey && newCampo === currentCampo);
+      const samePlate = (newPlate === normalizePlate(plate));
+
+      // Caso simple: no cambia ni la ubicación ni la placa -> solo actualizar
+      // la aseguradora en el mismo lugar, sin tocar el orden de llegada.
+      if(sameLocation && samePlate){
+        if(newAseguradora === (targetEntry.aseguradora || "")){ cleanup(); return; }
+        const snap = snapshotZones();
+        targetEntry.aseguradora = newAseguradora;
+        pushUndo(snap);
+        cleanup();
+        await saveState();
+        renderAll();
+        return;
+      }
+
+      // Si la placa cambió (o se mueve), verificar que no choque con otra
+      // placa existente en cualquier otro lugar del inventario.
+      if(!samePlate){
+        const dup = findPlate(newPlate, zoneKey, ci, pi);
+        if(dup){
+          const dupInfo = zoneInfo(dup.zoneKey);
+          const dupCampoObj = state.zones[dup.zoneKey][dup.campoIdx];
+          const dupEntry = dupCampoObj.plates[dup.plateIdx];
+          const choice = await askMoveOrCancel(newPlate, dupInfo.label, dupCampoObj.campo, zoneInfo(newZone).label, newCampo);
+          if(choice !== "move") return;
+          const snap = snapshotZones();
+          removePlateEntryByRef(dup.zoneKey, dupCampoObj, dupEntry);
+          removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
+          getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora });
+          pushUndo(snap);
+          cleanup();
+          await saveState();
+          pendingResumenFilter = newPlate;
+          renderAll();
+          return;
+        }
+      } else if(!sameLocation) {
+        // misma placa, solo cambia de ubicación: verificar que el destino
+        // no tenga ya esta placa (caso raro, por seguridad).
+        const destArr = state.zones[newZone];
+        const destCampo = destArr.find(c => c.campo === newCampo);
+        if(destCampo && destCampo.plates.some(p => p.plate.toUpperCase() === newPlate.toUpperCase())){
+          showToast(`${newPlate} ya está en ${zoneInfo(newZone).label}, campo ${newCampo}`);
+          return;
+        }
+      }
+
+      const snap = snapshotZones();
+      removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
+      getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora });
+      pushUndo(snap);
+      cleanup();
+      await saveState();
+      pendingResumenFilter = newPlate;
+      renderAll();
+    }
+    async function onDelete(){
+      if(!confirm(`¿Eliminar ${plate} del inventario?`)) return;
+      const snap = snapshotZones();
+      removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
+      pushUndo(snap);
+      cleanup();
+      await saveState();
+      renderAll();
+    }
+    saveBtn.addEventListener("click", onSave);
+    cancelBtn.addEventListener("click", onCancel);
+    deleteBtn.addEventListener("click", onDelete);
+    sinAsignarBtn.addEventListener("click", onSinAsignar);
+  }
+
+  function getOrCreateCampo(zoneKey, campoLabel){
+    const arr = state.zones[zoneKey];
+    let entry = arr.find(c => c.campo === campoLabel);
+    if(!entry){
+      entry = { campo: campoLabel, plates: [] };
+      arr.push(entry);
+      sortCampos(arr);
+    }
+    return entry;
+  }
+
+  function nextAutoCampo(zoneKey){
+    const arr = state.zones[zoneKey];
+    let max = 0;
+    arr.forEach(c=>{ const n = parseInt(c.campo,10); if(!isNaN(n) && n>max) max = n; });
+    return String(max+1);
+  }
+
+  // Intenta agregar `plate` al `campoLabel` de `zoneKey`. Maneja duplicados
+  // preguntando si se debe mover. Devuelve true si finalmente se agregó.
+  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw){
+    const plate = normalizePlate(plateRaw);
+    if(!plate) return false;
+    const aseguradora = (aseguradoraRaw || "").trim();
+    const info = zoneInfo(zoneKey);
+    const campo = campoLabel ? normalizeCampo(campoLabel) : nextAutoCampo(zoneKey);
+
+    const dup = findPlate(plate);
+    if(dup){
+      if(dup.zoneKey === zoneKey && state.zones[zoneKey][dup.campoIdx].campo === campo){
+        showToast(`${plate} ya está en el campo ${campo} de esta zona`);
+        return false;
+      }
+      const dupInfo = zoneInfo(dup.zoneKey);
+      const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
+      const choice = await askMoveOrCancel(plate, dupInfo.label, dupCampo, info.label, campo);
+      if(choice !== "move") return false;
+      removePlateAt(dup.zoneKey, dup.campoIdx, dup.plateIdx);
+    }
+
+    getOrCreateCampo(zoneKey, campo).plates.push({ plate, aseguradora });
+    return true;
+  }
+
+  function occupancyHtml(zoneKey, campoCount, color){
+    const cap = state.capacities[zoneKey];
+    if(cap && cap > 0){
+      const pct = Math.min(100, Math.round((campoCount / cap) * 100));
+      return `
+        <div class="occupancyRow">
+          <div class="occupancyBar"><div class="occupancyBarFill" style="width:${pct}%; background:${color};"></div></div>
+          <span class="occupancyText">${campoCount}/${cap} campos (${pct}%)</span>
+          <button class="capacityEditBtn" id="capEdit">editar</button>
+        </div>
+      `;
+    }
+    return `
+      <div class="occupancyRow">
+        <span class="occupancyText">${campoCount} campo(s) ocupados</span>
+        <button class="capacityEditBtn" id="capEdit">definir capacidad</button>
+      </div>
+    `;
+  }
+
+  function renderZonePanel(zone){
+    const info = zoneInfo(zone.key);
+    const campos = state.zones[zone.key] || [];
+    const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
+    const wrap = document.createElement("div");
+    wrap.className = "zonePanel active";
+    wrap.style.setProperty("--zone-color", info.color);
+
+    wrap.innerHTML = `
+      <div class="zoneHeadCard">
+        <h2>${info.label}</h2>
+        <div class="sub">${totalVeh} vehículo(s) en ${campos.length} campo(s)</div>
+        ${occupancyHtml(zone.key, campos.filter(c => c.campo !== SIN_ASIGNAR).length, info.color)}
+      </div>
+      <div class="addRow">
+        <input type="text" id="campoInput_${info.abbr}" class="campoInput" placeholder="Campo">
+        <input type="text" id="addInput_${info.abbr}" class="plate plateInputAdd" placeholder="Placa">
+        <button id="addBtn_${info.abbr}">Agregar</button>
+      </div>
+      <div class="addRowSecondary">
+        <input type="text" id="aseguradoraInput_${info.abbr}" placeholder="Aseguradora (opcional)">
+      </div>
+      <div class="dupWarn" id="dupWarn_${info.abbr}" style="display:none;"></div>
+      <div class="addHint">Dejá "Campo" vacío para asignar el siguiente número disponible, o <button type="button" class="sinAsignarBtn" id="sinAsignarBtn_${info.abbr}">marcá como sin asignar</button>. Si el campo ya existe, la placa se suma a las que ya tiene.</div>
+      <details class="bulk">
+        <summary>Pegar varias placas a la vez</summary>
+        <div class="bulkHint">Una por línea, formato "campo placa" (ej: 42 CL338850). Si solo ponés la placa, se le asigna un campo nuevo. La aseguradora se agrega después, editando cada placa.</div>
+        <textarea id="bulkArea_${info.abbr}" placeholder="42 CL338850&#10;42 BQZ203&#10;AAA758"></textarea>
+        <button class="bulkBtn" id="bulkBtn_${info.abbr}">Agregar todas</button>
+      </details>
+      <div class="campoList" id="campoList_${info.abbr}"></div>
+      <div id="empty_${info.abbr}"></div>
+    `;
+
+    document.getElementById("mainArea").appendChild(wrap);
+
+    wrap.querySelector("#capEdit").addEventListener("click", ()=>{
+      const current = state.capacities[zone.key] || "";
+      const input = prompt(`Capacidad total de espacios en ${info.label} (dejá vacío para quitarla):`, current);
+      if(input === null) return;
+      const trimmed = input.trim();
+      if(trimmed === ""){
+        delete state.capacities[zone.key];
+      } else {
+        const n = parseInt(trimmed, 10);
+        if(isNaN(n) || n <= 0){ showToast("Ingresá un número válido"); return; }
+        state.capacities[zone.key] = n;
+      }
+      saveState();
+      renderAll();
+    });
+
+
+    const list = wrap.querySelector(`#campoList_${info.abbr}`);
+    if(campos.length === 0){
+      wrap.querySelector(`#empty_${info.abbr}`).innerHTML = `<div class="emptyState">Sin vehículos registrados en esta zona todavía.</div>`;
     } else {
-        if(modalBadge) { modalBadge.className = 'modal-badge libre'; modalBadge.innerHTML = e.disc ? '♿ Discapacidad' : 'Libre'; }
-        if(modalBody) modalBody.innerHTML = buildRegistroModal();
-        initQuienTraeBtns();
-        setTimeout(() => { const p = document.getElementById('m-placa'); if(p) p.focus(); }, 100);
-    }
-    document.getElementById('overlay').classList.add('open');
-}
-
-function buildRegistroModal() {
-    return `
-    <div class="form-group">
-        <label>🚗 Placa del vehículo (4 caracteres: letras o números)</label>
-        <input type="text" id="m-placa" class="placa-input" placeholder="ABCD" maxlength="4" 
-               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
-               onkeydown="if(event.key==='Enter') confirmarIngreso()">
-        <small style="font-size: 9px; color: var(--color-text-light);">Ejemplo: ABCD, 1234, A1B2</small>
-    </div>
-    <div class="form-group">
-        <label>📋 ¿Quién TRAE el vehículo?</label>
-        <div class="chofer-grid" id="m-quien-trae-grid"></div>
-        <div id="m-trae-otro-wrap" style="display:none; margin-top:6px;">
-            <input type="text" id="m-trae-otro" placeholder="Nombre de quien trae" style="width:100%; padding:10px; border-radius:10px; border:1px solid #333; background:var(--color-bg); color:var(--color-text);">
-            <div class="respuesta-rapida" id="respuesta-rapida-trae" style="display:none;"></div>
-        </div>
-    </div>
-    <div class="form-group">
-        <label>📝 Observaciones (daños, notas)</label>
-        <input type="text" id="m-obs" placeholder="Ej: Golpe en puerta, rayón...">
-    </div>
-    <button class="btn-primary" onclick="confirmarIngreso()"><i class="mdi mdi-check"></i> Registrar ingreso</button>`;
-}
-
-function buildRetiroModal(e) {
-    return `
-    <div style="background:rgba(212,175,55,0.1); border-radius:16px; padding:16px; text-align:center; margin-bottom:16px;">
-        <div style="font-size:28px; font-weight:700; color:#D4AF37;">${e.placa}</div>
-        <div style="margin-top:10px; font-size:12px;">
-            <div><i class="mdi mdi-account-tie"></i> <strong>Traído por:</strong> ${e.quienTrae || '?'}</div>
-            <div><i class="mdi mdi-clock-outline"></i> <strong>Ingreso:</strong> ${e.hora || '?'}</div>
-            <div><i class="mdi mdi-timer"></i> <strong>Tiempo:</strong> <span class="tiempo-chip ${claseChipTiempo(e.hora)}" style="display:inline-block; margin-left:4px;">${tiempoTranscurrido(e.hora)}</span></div>
-        </div>
-        ${e.obs ? `<div style="margin-top:10px; background:rgba(0,0,0,0.2); padding:6px; border-radius:8px; font-size:12px;">📝 ${e.obs}</div>` : ''}
-    </div>
-    <div class="form-group">
-        <label>🔁 ¿Quién RECOGE el vehículo?</label>
-        <div class="chofer-grid" id="m-quien-recoge-grid"></div>
-        <div id="m-recoge-otro-wrap" style="display:none; margin-top:6px;">
-            <input type="text" id="m-recoge-otro" placeholder="Nombre de quien recoge" style="width:100%; padding:10px; border-radius:10px; border:1px solid #333; background:var(--color-bg); color:var(--color-text);">
-            <div class="respuesta-rapida" id="respuesta-rapida-recoge" style="display:none;"></div>
-        </div>
-    </div>
-    <button class="btn-danger" onclick="confirmarRetiro()"><i class="mdi mdi-arrow-up"></i> Confirmar retiro</button>`;
-}
-
-function initQuienTraeBtns() {
-    const g = document.getElementById('m-quien-trae-grid');
-    if(!g) return;
-    g.innerHTML = '';
-    
-    const disponibles = getValetsDisponibles();
-    const nombresDisponibles = disponibles.map(v => v.nombre);
-    const principalesDisponibles = NOMBRES_PRINCIPALES.filter(n => nombresDisponibles.includes(n));
-    
-    principalesDisponibles.forEach(n => {
-        const b = document.createElement('button');
-        b.className = 'chofer-btn';
-        b.innerHTML = n;
-        b.onclick = () => {
-            document.querySelectorAll('#m-quien-trae-grid .chofer-btn').forEach(x => x.classList.remove('selected'));
-            b.classList.add('selected');
-            quienTraeSel = n;
-            document.getElementById('m-trae-otro-wrap').style.display = 'none';
-        };
-        g.appendChild(b);
-    });
-    
-    const bOtro = document.createElement('button');
-    bOtro.className = 'chofer-btn';
-    bOtro.innerHTML = '✏️ Otro...';
-    bOtro.onclick = () => {
-        document.querySelectorAll('#m-quien-trae-grid .chofer-btn').forEach(x => x.classList.remove('selected'));
-        bOtro.classList.add('selected');
-        quienTraeSel = null;
-        const wrap = document.getElementById('m-trae-otro-wrap');
-        if(wrap) {
-            wrap.style.display = 'block';
-            document.getElementById('m-trae-otro')?.focus();
-            mostrarRespuestaRapida('trae');
-        }
-    };
-    g.appendChild(bOtro);
-    
-    const enDescanso = valets.filter(v => v.enDescanso).map(v => v.nombre);
-    if(enDescanso.length > 0) {
-        const aviso = document.createElement('small');
-        aviso.style.cssText = 'grid-column: span 3; text-align: center; color: #ff9800; font-size: 10px; margin-top: 4px;';
-        aviso.innerHTML = `⏸️ En descanso: ${enDescanso.join(', ')}`;
-        g.appendChild(aviso);
-    }
-}
-
-function initQuienRecogeBtns() {
-    const g = document.getElementById('m-quien-recoge-grid');
-    if(!g) return;
-    g.innerHTML = '';
-    
-    const disponibles = getValetsDisponibles();
-    const nombresDisponibles = disponibles.map(v => v.nombre);
-    const principalesDisponibles = NOMBRES_PRINCIPALES.filter(n => nombresDisponibles.includes(n));
-    
-    principalesDisponibles.forEach(n => {
-        const b = document.createElement('button');
-        b.className = 'chofer-btn';
-        b.innerHTML = n;
-        b.onclick = () => {
-            document.querySelectorAll('#m-quien-recoge-grid .chofer-btn').forEach(x => x.classList.remove('selected'));
-            b.classList.add('selected');
-            quienRecogeSel = n;
-            document.getElementById('m-recoge-otro-wrap').style.display = 'none';
-        };
-        g.appendChild(b);
-    });
-    
-    const bOtro = document.createElement('button');
-    bOtro.className = 'chofer-btn';
-    bOtro.innerHTML = '✏️ Otro...';
-    bOtro.onclick = () => {
-        document.querySelectorAll('#m-quien-recoge-grid .chofer-btn').forEach(x => x.classList.remove('selected'));
-        bOtro.classList.add('selected');
-        quienRecogeSel = null;
-        const wrap = document.getElementById('m-recoge-otro-wrap');
-        if(wrap) {
-            wrap.style.display = 'block';
-            document.getElementById('m-recoge-otro')?.focus();
-            mostrarRespuestaRapida('recoge');
-        }
-    };
-    g.appendChild(bOtro);
-    
-    const enDescanso = valets.filter(v => v.enDescanso).map(v => v.nombre);
-    if(enDescanso.length > 0) {
-        const aviso = document.createElement('small');
-        aviso.style.cssText = 'grid-column: span 3; text-align: center; color: #ff9800; font-size: 10px; margin-top: 4px;';
-        aviso.innerHTML = `⏸️ En descanso: ${enDescanso.join(', ')}`;
-        g.appendChild(aviso);
-    }
-}
-
-function mostrarRespuestaRapida(tipo) {
-    const container = document.getElementById(`respuesta-rapida-${tipo}`);
-    if(!container) return;
-    
-    container.style.display = 'flex';
-    container.innerHTML = '';
-    
-    NOMBRES_RAPIDOS.forEach(n => {
-        const btn = document.createElement('button');
-        btn.className = 'respuesta-btn';
-        btn.innerHTML = n;
-        btn.onclick = () => {
-            const input = document.getElementById(`m-${tipo === 'trae' ? 'trae' : 'recoge'}-otro`);
-            if(input) {
-                input.value = n;
-                container.style.display = 'none';
-            }
-        };
-        container.appendChild(btn);
-    });
-}
-
-function confirmarIngreso() {
-    const placaInput = document.getElementById('m-placa');
-    let placa = placaInput ? placaInput.value.trim().toUpperCase() : '';
-    if(!placa) { showToast('Ingresa la placa', true); return; }
-    if(!/^[A-Z0-9]{4}$/.test(placa)) { 
-        showToast('Placa inválida. Use 4 caracteres (letras o números)', true); 
-        return; 
-    }
-    
-    let quienTrae = quienTraeSel;
-    if(!quienTrae) {
-        const otro = document.getElementById('m-trae-otro')?.value.trim();
-        if(!otro) { showToast('Selecciona o escribe quién trae el vehículo', true); return; }
-        quienTrae = otro;
-    }
-    
-    if(Object.values(espacios).some(e => e.placa === placa)) { showToast('⚠️ Placa ya registrada', true); return; }
-    
-    const e = espacios[modalId];
-    if(!e || e.activo === false) { showToast('Espacio no disponible', true); return; }
-    
-    e.placa = placa;
-    e.quienTrae = quienTrae;
-    e.hora = ahora();
-    e.obs = document.getElementById('m-obs')?.value.trim() || null;
-    
-    closeModal();
-    renderMapa();
-    renderVehiculos();
-    renderEquipo();
-    showToast(`✅ ${placa} registrado - Traído por: ${quienTrae}`);
-    guardarDatos();
-    sincronizarFirebase();
-}
-
-function confirmarRetiro() {
-    const e = espacios[modalId];
-    if(!e || !e.placa) return;
-    
-    // CORRECCIÓN #1: guardar la placa ANTES de limpiar el espacio
-    const placaRetiro = e.placa;
-    
-    if(!confirm(`¿Retirar vehículo ${placaRetiro}?`)) return;
-    
-    let quienRecoge = quienRecogeSel;
-    if(!quienRecoge) {
-        const otro = document.getElementById('m-recoge-otro')?.value.trim();
-        if(!otro) { showToast('Selecciona o escribe quién recoge el vehículo', true); return; }
-        quienRecoge = otro;
-    }
-    
-    // Guardar en historial de entregados
-    entregados.unshift({
-        placa: e.placa,
-        quienTrae: e.quienTrae,
-        quienRecoge: quienRecoge,
-        hora: e.hora,
-        horaEnt: ahora(),
-        tiempoEstacionado: tiempoTranscurrido(e.hora),
-        obs: e.obs,
-        espacio: e.id
-    });
-    
-    // LIMPIAR el espacio
-    e.placa = null;
-    e.quienTrae = null;
-    e.hora = null;
-    e.obs = null;
-    
-    closeModal();
-    renderMapa();
-    renderVehiculos();
-    renderEquipo();
-    // CORRECCIÓN #1: usar la variable guardada, no e.placa (que ya es null)
-    showToast(`✅ ${placaRetiro} retirado - Recogido por: ${quienRecoge}`);
-    guardarDatos();
-    sincronizarFirebase();
-}
-
-function aplicarFiltros() {
-    renderVehiculos();
-}
-
-// ========== SINCRONIZACIÓN EN TIEMPO REAL CON FIREBASE ==========
-function setupRealtimeSync() {
-    if(!firebaseInicializado) return;
-    
-    console.log('🔄 Configurando escucha en tiempo real...');
-    
-    // CORRECCIÓN SYNC RETIRO: Firebase elimina las keys con valor null al guardar,
-    // por lo que Object.assign no las restaura en los otros dispositivos.
-    // Solución: normalizar cada espacio recibido rellenando explícitamente los campos
-    // que puedan faltar (placa, quienTrae, hora, obs) con null antes de aplicar.
-    const espaciosRef = database.ref('valetData/espacios');
-    espaciosRef.on('value', (snapshot) => {
-        if(sincronizando) return; // no procesar si nosotros mismos estamos escribiendo
-        if(snapshot.exists()) {
-            const datosEspacios = snapshot.val();
-            if(Array.isArray(datosEspacios)) {
-                let cambioDetectado = false;
-                datosEspacios.forEach(remoto => {
-                    if(espacios[remoto.id]) {
-                        // Normalizar: garantizar que los campos opcionales existan como null
-                        // si Firebase los omitió por ser null al momento de guardar
-                        const normalizado = {
-                            id:        remoto.id,
-                            placa:     remoto.placa      ?? null,
-                            quienTrae: remoto.quienTrae  ?? null,
-                            hora:      remoto.hora       ?? null,
-                            obs:       remoto.obs        ?? null,
-                            disc:      remoto.disc       ?? false,
-                            activo:    remoto.activo     ?? true,
-                        };
-                        if(JSON.stringify(espacios[remoto.id]) !== JSON.stringify(normalizado)) {
-                            Object.assign(espacios[remoto.id], normalizado);
-                            cambioDetectado = true;
-                        }
-                    }
-                });
-                if(cambioDetectado) {
-                    console.log('🔄 Cambios en espacios detectados (incluyendo retiros)');
-                    renderMapa();
-                    renderVehiculos();
-                    renderEquipo();
-                    guardarDatosLocal();
-                }
-            }
-        }
-    });
-    
-    const entregadosRef = database.ref('valetData/entregados');
-    entregadosRef.on('value', (snapshot) => {
-        if(sincronizando) return;
-        if(snapshot.exists()) {
-            const nuevosEntregados = snapshot.val();
-            if(Array.isArray(nuevosEntregados)) {
-                if(JSON.stringify(entregados) !== JSON.stringify(nuevosEntregados)) {
-                    entregados = nuevosEntregados;
-                    console.log('🔄 Cambios en entregados detectados en tiempo real');
-                    renderVehiculos();
-                    renderEquipo();
-                    guardarDatosLocal();
-                }
-            }
-        }
-    });
-    
-    const valetsRef = database.ref('valetData/valets');
-    valetsRef.on('value', (snapshot) => {
-        if(sincronizando) return;
-        if(snapshot.exists()) {
-            const datosValets = snapshot.val();
-            if(Array.isArray(datosValets)) {
-                let cambioDetectado = false;
-                datosValets.forEach(v => {
-                    const valet = valets.find(vv => vv.nombre === v.nombre);
-                    if(valet) {
-                        if(valet.enDescanso !== v.enDescanso) {
-                            valet.enDescanso = v.enDescanso;
-                            valet.descansoInicio = v.descansoInicio ? new Date(v.descansoInicio) : null;
-                            valet.descansosHistorial = v.descansosHistorial || [];
-                            cambioDetectado = true;
-                        }
-                    }
-                });
-                if(cambioDetectado) {
-                    console.log('🔄 Cambios en valets detectados en tiempo real');
-                    renderEquipo();
-                    guardarDatosLocal();
-                }
-            }
-        }
-    });
-    
-    const configRef = database.ref('valetData/config');
-    configRef.on('value', (snapshot) => {
-        if(sincronizando) return;
-        if(snapshot.exists()) {
-            const config = snapshot.val();
-            if(alaIzquierdaActiva !== config.alaIzquierdaActiva) {
-                alaIzquierdaActiva = config.alaIzquierdaActiva;
-                for(let i=890; i<=910; i++) if(espacios[i]) espacios[i].activo = alaIzquierdaActiva;
-                
-                const btn = document.getElementById('toggleIzquierdaBtn');
-                const aviso = document.getElementById('aviso-izq-inactiva');
-                if(btn && alaIzquierdaActiva) {
-                    btn.innerHTML = '<i class="mdi mdi-check-circle"></i> Habilitada';
-                    btn.classList.add('activo');
-                    if(aviso) aviso.style.display = 'none';
-                } else if(btn) {
-                    btn.innerHTML = '<i class="mdi mdi-close-circle"></i> Deshabilitada';
-                    btn.classList.remove('activo');
-                    if(aviso) aviso.style.display = 'block';
-                }
-                renderMapa();
-            }
-        }
-    });
-    
-    actualizarEstadoSync('realtime', 'Tiempo real');
-    console.log('✅ Escuchando cambios en tiempo real');
-}
-
-// ========== SINCRONIZACIÓN FIREBASE ==========
-async function sincronizarFirebase() {
-    if(!firebaseInicializado || sincronizando) return;
-    sincronizando = true;
-    actualizarEstadoSync('syncing', 'Subiendo...');
-    
-    try {
-        const espaciosArray = Object.values(espacios);
-        await database.ref('valetData/espacios').set(espaciosArray);
-        await database.ref('valetData/entregados').set(entregados);
-        await database.ref('valetData/valets').set(valets.map(v => ({
-            nombre: v.nombre, enDescanso: v.enDescanso, descansoInicio: v.descansoInicio ? v.descansoInicio.toISOString() : null,
-            descansosHistorial: v.descansosHistorial
-        })));
-        await database.ref('valetData/config').set({
-            alaIzquierdaActiva: alaIzquierdaActiva,
-            ultimaActualizacion: new Date().toISOString()
+      campos.forEach((c, ci)=>{
+        const card = document.createElement("div");
+        card.className = "campoCard";
+        const isSinAsignar = c.campo === SIN_ASIGNAR;
+        card.innerHTML = `
+          <span class="campoNum${isSinAsignar ? " sinAsignar" : ""}" ${isSinAsignar ? "" : `style="background:${info.color}"`} data-ci="${ci}" title="Tocá para renombrar el campo">${escapeHtml(c.campo)}</span>
+          <div class="campoBody">
+            <div class="plateChips" data-ci="${ci}"></div>
+          </div>
+          <button class="campoDeleteBtn" data-ci="${ci}" title="Eliminar campo completo">✕</button>
+        `;
+        const chipsWrap = card.querySelector(".plateChips");
+        c.plates.forEach((entry, pi)=>{
+          const chip = document.createElement("span");
+          chip.className = "plateChip";
+          chip.dataset.ci = ci;
+          chip.dataset.pi = pi;
+          chip.title = "Tocá para editar placa, campo, zona o aseguradora";
+          const isFirst = pi === 0;
+          const isLast = pi === c.plates.length - 1 && c.plates.length > 1;
+          const multi = c.plates.length > 1;
+          chip.innerHTML = `
+            <div class="plateChipMain">
+              ${multi ? `<span class="orderMoveBtns">
+                <button class="orderUp" data-ci="${ci}" data-pi="${pi}" title="Mover antes" ${isFirst ? "disabled" : ""}>▲</button>
+                <button class="orderDown" data-ci="${ci}" data-pi="${pi}" title="Mover después" ${isLast ? "disabled" : ""}>▼</button>
+              </span>` : ``}
+              <span class="orderBadge" title="Orden de llegada">${pi+1}</span>
+              <span class="plateText plate">${escapeHtml(entry.plate)}</span>
+              ${isFirst ? '<span class="orderTag">primero</span>' : ''}
+              ${isLast ? '<span class="orderTag last">último</span>' : ''}
+              <button class="chipRm" data-ci="${ci}" data-pi="${pi}" title="Eliminar rápido">✕</button>
+            </div>
+            <div class="aseguradoraText" data-placeholder="sin aseguradora">${entry.aseguradora ? escapeHtml(entry.aseguradora) : ""}</div>
+          `;
+          chip.addEventListener("click", (e)=>{
+            if(e.target.closest("button")) return;
+            openEditLocModal(zone.key, ci, pi);
+          });
+          chipsWrap.appendChild(chip);
         });
-        actualizarEstadoSync('realtime', 'Tiempo real');
-        console.log('✅ Datos sincronizados con Firebase');
-    } catch(e) {
-        console.error('Error al sincronizar:', e);
-        actualizarEstadoSync('error', 'Error sync');
+        const addBtn = document.createElement("button");
+        addBtn.className = "addPlateToCampoBtn";
+        addBtn.dataset.ci = ci;
+        addBtn.textContent = "+ vehículo";
+        chipsWrap.appendChild(addBtn);
+        list.appendChild(card);
+      });
     }
-    sincronizando = false;
-}
 
-async function sincronizarManual() {
-    if(!firebaseInicializado) {
-        showToast('⚠️ Firebase no disponible', true);
-        return;
-    }
-    showToast('🔄 Sincronizando...');
-    await sincronizarFirebase();
-    showToast('✅ Datos sincronizados');
-}
+    // --- eventos: renombrar el número de campo ---
+    list.querySelectorAll(".campoNum").forEach(span=>{
+      span.addEventListener("click", ()=>{
+        const ci = parseInt(span.getAttribute("data-ci"),10);
+        const current = state.zones[zone.key][ci].campo;
+        const input = prompt("Nuevo número/nombre de campo:", current);
+        if(input === null) return;
+        const newCampo = normalizeCampo(input);
+        if(!newCampo || newCampo === current) return;
 
-async function cargarDesdeFirebase() {
-    if(!firebaseInicializado) {
-        actualizarEstadoSync('error', 'Offline');
-        return false;
-    }
-    
-    actualizarEstadoSync('syncing', 'Descargando...');
-    
-    try {
-        const snapshotEspacios = await database.ref('valetData/espacios').once('value');
-        if(snapshotEspacios.exists()) {
-            const datosEspacios = snapshotEspacios.val();
-            if(Array.isArray(datosEspacios)) {
-                // Fix: Firebase omite keys null, hay que normalizarlas explícitamente
-                datosEspacios.forEach(remoto => {
-                    if(espacios[remoto.id]) {
-                        Object.assign(espacios[remoto.id], {
-                            id:        remoto.id,
-                            placa:     remoto.placa      ?? null,
-                            quienTrae: remoto.quienTrae  ?? null,
-                            hora:      remoto.hora       ?? null,
-                            obs:       remoto.obs        ?? null,
-                            disc:      remoto.disc       ?? false,
-                            activo:    remoto.activo     ?? true,
-                        });
-                    }
-                });
-            }
+        const existing = state.zones[zone.key].find(c => c.campo === newCampo);
+        const snap = snapshotZones();
+        if(existing){
+          if(!confirm(`Ya existe el campo ${newCampo} en esta zona con ${existing.plates.length} vehículo(s). ¿Fusionar los vehículos de ${current} ahí?`)) return;
+          existing.plates.push(...state.zones[zone.key][ci].plates);
+          state.zones[zone.key].splice(ci,1);
+        } else {
+          state.zones[zone.key][ci].campo = newCampo;
         }
-        
-        const snapshotEntregados = await database.ref('valetData/entregados').once('value');
-        if(snapshotEntregados.exists()) {
-            entregados = snapshotEntregados.val();
-            if(!Array.isArray(entregados)) entregados = [];
+        sortCampos(state.zones[zone.key]);
+        pushUndo(snap);
+        saveState();
+        renderAll();
+      });
+    });
+
+    // --- eventos: reordenar manualmente el orden de llegada ---
+    function movePlate(zoneKey, ci, pi, dir){
+      const plates = state.zones[zoneKey][ci].plates;
+      const target = pi + dir;
+      if(target < 0 || target >= plates.length) return;
+      const snap = snapshotZones();
+      [plates[pi], plates[target]] = [plates[target], plates[pi]];
+      pushUndo(snap);
+      saveState();
+      renderAll();
+    }
+    list.querySelectorAll(".orderUp").forEach(b=>{
+      b.addEventListener("click", (e)=>{
+        const ci = parseInt(e.target.getAttribute("data-ci"),10);
+        const pi = parseInt(e.target.getAttribute("data-pi"),10);
+        movePlate(zone.key, ci, pi, -1);
+      });
+    });
+    list.querySelectorAll(".orderDown").forEach(b=>{
+      b.addEventListener("click", (e)=>{
+        const ci = parseInt(e.target.getAttribute("data-ci"),10);
+        const pi = parseInt(e.target.getAttribute("data-pi"),10);
+        movePlate(zone.key, ci, pi, 1);
+      });
+    });
+
+    // --- eventos: eliminar placa individual ---
+    list.querySelectorAll(".chipRm").forEach(b=>{
+      b.addEventListener("click", (e)=>{
+        const ci = parseInt(e.target.getAttribute("data-ci"),10);
+        const pi = parseInt(e.target.getAttribute("data-pi"),10);
+        const snap = snapshotZones();
+        removePlateAt(zone.key, ci, pi);
+        pushUndo(snap);
+        saveState();
+        renderAll();
+      });
+    });
+
+    // --- eventos: agregar vehículo a un campo existente ---
+    list.querySelectorAll(".addPlateToCampoBtn").forEach(b=>{
+      b.addEventListener("click", async ()=>{
+        const ci = parseInt(b.getAttribute("data-ci"),10);
+        const campoLabel = state.zones[zone.key][ci].campo;
+        const plate = prompt(`Nueva placa para el campo ${campoLabel}:`);
+        if(plate === null) return;
+        const snap = snapshotZones();
+        const ok = await addPlateToZone(zone.key, campoLabel, plate);
+        if(ok){ pushUndo(snap); saveState(); renderAll(); }
+      });
+    });
+
+    // --- eventos: eliminar campo completo ---
+    list.querySelectorAll(".campoDeleteBtn").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        const ci = parseInt(b.getAttribute("data-ci"),10);
+        const c = state.zones[zone.key][ci];
+        if(c.plates.length > 1 && !confirm(`El campo ${c.campo} tiene ${c.plates.length} vehículos. ¿Eliminar todo el campo?`)) return;
+        const snap = snapshotZones();
+        state.zones[zone.key].splice(ci,1);
+        pushUndo(snap);
+        saveState();
+        renderAll();
+      });
+    });
+
+    // --- agregar (fila superior) ---
+    const campoInput = wrap.querySelector(`#campoInput_${info.abbr}`);
+    const addInput = wrap.querySelector(`#addInput_${info.abbr}`);
+    const aseguradoraInput = wrap.querySelector(`#aseguradoraInput_${info.abbr}`);
+    const addBtn = wrap.querySelector(`#addBtn_${info.abbr}`);
+    const dupWarn = wrap.querySelector(`#dupWarn_${info.abbr}`);
+    const sinAsignarBtn = wrap.querySelector(`#sinAsignarBtn_${info.abbr}`);
+
+    sinAsignarBtn.addEventListener("click", ()=>{
+      campoInput.value = SIN_ASIGNAR;
+      addInput.focus();
+    });
+
+    function checkLiveDup(){
+      const v = normalizePlate(addInput.value);
+      if(!v){ dupWarn.style.display = "none"; return; }
+      const dup = findPlate(v);
+      if(dup){
+        const dupInfo = zoneInfo(dup.zoneKey);
+        const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
+        const mismaZona = dup.zoneKey === zone.key;
+        dupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya está registrada en ${mismaZona ? "esta zona" : dupInfo.label}, campo ${dupCampo}`;
+        dupWarn.style.display = "flex";
+      } else {
+        dupWarn.style.display = "none";
+      }
+    }
+    addInput.addEventListener("input", checkLiveDup);
+    addInput.addEventListener("keyup", checkLiveDup);
+
+    async function doAdd(){
+      const plate = addInput.value;
+      if(!normalizePlate(plate)) return;
+      const snap = snapshotZones();
+      const ok = await addPlateToZone(zone.key, campoInput.value, plate, aseguradoraInput.value);
+      if(ok){
+        pushUndo(snap);
+        campoInput.value = "";
+        addInput.value = "";
+        aseguradoraInput.value = "";
+        dupWarn.style.display = "none";
+        saveState();
+        renderAll();
+      }
+    }
+    addBtn.addEventListener("click", doAdd);
+    addInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") doAdd(); });
+    campoInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") addInput.focus(); });
+    aseguradoraInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") doAdd(); });
+
+    // --- pegado masivo ---
+    const bulkBtn = wrap.querySelector(`#bulkBtn_${info.abbr}`);
+    const bulkArea = wrap.querySelector(`#bulkArea_${info.abbr}`);
+    bulkBtn.addEventListener("click", async ()=>{
+      const lines = bulkArea.value.split("\n").map(l=>l.trim()).filter(Boolean);
+      if(lines.length===0) return;
+      const snap = snapshotZones();
+      let added = 0, skipped = 0;
+      for(const line of lines){
+        const parts = line.split(/\s+/);
+        let campoLabel = null, plate;
+        if(parts.length >= 2 && /^[0-9A-Za-z\-]+$/.test(parts[0]) && !isNaN(parseFloat(parts[0]))){
+          campoLabel = parts[0];
+          plate = parts.slice(1).join(" ");
+        } else {
+          plate = line;
         }
-        
-        const snapshotValets = await database.ref('valetData/valets').once('value');
-        if(snapshotValets.exists()) {
-            const datosValets = snapshotValets.val();
-            if(Array.isArray(datosValets)) {
-                datosValets.forEach(v => {
-                    const valet = valets.find(vv => vv.nombre === v.nombre);
-                    if(valet) {
-                        valet.enDescanso = v.enDescanso;
-                        valet.descansoInicio = v.descansoInicio ? new Date(v.descansoInicio) : null;
-                        valet.descansosHistorial = v.descansosHistorial || [];
-                    }
-                });
-            }
-        }
-        
-        const snapshotConfig = await database.ref('valetData/config').once('value');
-        if(snapshotConfig.exists()) {
-            const config = snapshotConfig.val();
-            alaIzquierdaActiva = config.alaIzquierdaActiva;
-            for(let i=890; i<=910; i++) if(espacios[i]) espacios[i].activo = alaIzquierdaActiva;
-            
-            const btn = document.getElementById('toggleIzquierdaBtn');
-            const aviso = document.getElementById('aviso-izq-inactiva');
-            if(btn && alaIzquierdaActiva) {
-                btn.innerHTML = '<i class="mdi mdi-check-circle"></i> Habilitada';
-                btn.classList.add('activo');
-                if(aviso) aviso.style.display = 'none';
-            } else if(btn) {
-                btn.innerHTML = '<i class="mdi mdi-close-circle"></i> Deshabilitada';
-                btn.classList.remove('activo');
-                if(aviso) aviso.style.display = 'block';
-            }
-        }
-        
-        actualizarEstadoSync('realtime', 'Tiempo real');
-        return true;
-    } catch(e) {
-        console.error('Error al cargar:', e);
-        actualizarEstadoSync('error', 'Error');
-        return false;
-    }
-}
+        const ok = await addPlateToZone(zone.key, campoLabel, plate);
+        if(ok) added++; else skipped++;
+      }
+      if(added > 0) pushUndo(snap);
+      bulkArea.value = "";
+      saveState();
+      renderAll();
+      showToast(skipped===0 ? `${added} placa(s) agregada(s)` : `${added} agregada(s), ${skipped} omitida(s) (duplicadas o canceladas)`, 3200);
+    });
 
-function actualizarEstadoSync(estado, texto) {
-    const syncDiv = document.getElementById('syncStatus');
-    const syncText = document.getElementById('syncText');
-    if(!syncDiv) return;
-    syncDiv.className = 'sync-status ' + estado;
-    if(syncText) syncText.textContent = texto;
-}
+    return wrap;
+  }
 
-// ========== GUARDAR LOCAL ==========
-// CORRECCIÓN #5: separar guardarDatos (Firebase + local) de guardarDatosLocal (solo local)
-// para que el listener de tiempo real no dispare escrituras en Firebase innecesariamente
-function guardarDatosLocal() {
-    try {
-        localStorage.setItem('valet_parking_espacios', JSON.stringify(Object.values(espacios)));
-        localStorage.setItem('valet_parking_entregados', JSON.stringify(entregados));
-        localStorage.setItem('valet_parking_valets', JSON.stringify(valets.map(v => ({
-            nombre: v.nombre, enDescanso: v.enDescanso, descansoInicio: v.descansoInicio,
-            descansosHistorial: v.descansosHistorial
-        }))));
-        localStorage.setItem('valet_parking_config', JSON.stringify({ alaIzquierdaActiva: alaIzquierdaActiva }));
-    } catch(e) {
-        console.warn('Error al guardar localmente:', e);
-    }
-}
+  function buildResumenRows(){
+    const rows = [];
+    ZONES.forEach(z=>{
+      (state.zones[z.key]||[]).forEach((c, ci)=>{
+        c.plates.forEach((entry, pi)=>{
+          rows.push({ zoneKey: z.key, zoneLabel: z.label, color: z.color, campo: c.campo, placa: entry.plate, aseguradora: entry.aseguradora || "", ci, pi });
+        });
+      });
+    });
+    return rows;
+  }
 
-function guardarDatos() {
-    guardarDatosLocal();
-    // La sincronización con Firebase se llama por separado en cada acción
-}
+  function renderResumenPanel(){
+    const wrap = document.createElement("div");
+    wrap.className = "zonePanel active";
 
-function cargarDatosLocales() {
-    const espaciosGuardados = localStorage.getItem('valet_parking_espacios');
-    if(espaciosGuardados) {
-        try {
-            const datos = JSON.parse(espaciosGuardados);
-            datos.forEach(remoto => {
-                if(espacios[remoto.id]) {
-                    Object.assign(espacios[remoto.id], {
-                        id:        remoto.id,
-                        placa:     remoto.placa      ?? null,
-                        quienTrae: remoto.quienTrae  ?? null,
-                        hora:      remoto.hora       ?? null,
-                        obs:       remoto.obs        ?? null,
-                        disc:      remoto.disc       ?? false,
-                        activo:    remoto.activo     ?? true,
-                    });
-                }
-            });
-        } catch(e) {}
-    }
-    
-    const entregadosGuardados = localStorage.getItem('valet_parking_entregados');
-    if(entregadosGuardados) {
-        try {
-            entregados = JSON.parse(entregadosGuardados);
-        } catch(e) {}
-    }
-    
-    const valetsGuardados = localStorage.getItem('valet_parking_valets');
-    if(valetsGuardados) {
-        try {
-            const datosValets = JSON.parse(valetsGuardados);
-            datosValets.forEach(v => {
-                const valet = valets.find(vv => vv.nombre === v.nombre);
-                if(valet) {
-                    valet.enDescanso = v.enDescanso;
-                    valet.descansoInicio = v.descansoInicio ? new Date(v.descansoInicio) : null;
-                    valet.descansosHistorial = v.descansosHistorial || [];
-                }
-            });
-        } catch(e) {}
-    }
-    
-    const configGuardado = localStorage.getItem('valet_parking_config');
-    if(configGuardado) {
-        try {
-            const config = JSON.parse(configGuardado);
-            alaIzquierdaActiva = config.alaIzquierdaActiva;
-            for(let i=890; i<=910; i++) if(espacios[i]) espacios[i].activo = alaIzquierdaActiva;
-            
-            const btn = document.getElementById('toggleIzquierdaBtn');
-            const aviso = document.getElementById('aviso-izq-inactiva');
-            if(btn && alaIzquierdaActiva) {
-                btn.innerHTML = '<i class="mdi mdi-check-circle"></i> Habilitada';
-                btn.classList.add('activo');
-                if(aviso) aviso.style.display = 'none';
-            } else if(btn) {
-                btn.innerHTML = '<i class="mdi mdi-close-circle"></i> Deshabilitada';
-                btn.classList.remove('activo');
-                if(aviso) aviso.style.display = 'block';
-            }
-        } catch(e) {}
-    }
-}
+    const chips = ZONES.map(z=>{
+      const camposCount = (state.zones[z.key]||[]).filter(c => c.campo !== SIN_ASIGNAR).length;
+      const vehCount = (state.zones[z.key]||[]).reduce((a,cc)=>a+cc.plates.length,0);
+      const cap = state.capacities[z.key];
+      const occ = (cap && cap > 0) ? ` · ${camposCount}/${cap} campos` : ``;
+      return `<div class="chip"><span class="dot" style="background:${z.color}"></span>${z.label}: ${vehCount} veh${occ}</div>`;
+    }).join("");
 
-// ========== EXPORTAR EXCEL ==========
-function exportToExcel() {
-    const activos = Object.values(espacios).filter(e => e.placa);
-    const data = [
-        [`EQUIPO ÉLITE v${APP_VERSION} - REPORTE`, new Date().toLocaleString()], [],
-        ['ACTIVOS'], ['Placa', 'Quien lo TRAJO', 'Espacio', 'Ingreso', 'Tiempo', 'Observaciones']
-    ];
-    // MEJORA: incluir tiempo en el Excel de activos
-    activos.forEach(e => data.push([e.placa, e.quienTrae, e.id, e.hora, tiempoTranscurrido(e.hora), e.obs || '']));
-    data.push([], ['ENTREGADOS'], ['Placa', 'Quien lo TRAJO', 'Quien lo RECOGIÓ', 'Ingreso', 'Entrega', 'Tiempo Estacionado', 'Observaciones']);
-    entregados.forEach(e => data.push([e.placa, e.quienTrae, e.quienRecoge, e.hora, e.horaEnt, e.tiempoEstacionado || '', e.obs || '']));
+    wrap.innerHTML = `
+      <div class="zoneChips">${chips}</div>
+      <div class="resumenToolbar">
+        <div class="filterField">
+          <svg class="filterIcon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="6"/><line x1="13.5" y1="13.5" x2="18" y2="18"/></svg>
+          <input type="text" id="resumenFilter" placeholder="Buscar por placa o campo…" class="plate" autocomplete="off">
+        </div>
+        <div class="filterField selectField">
+          <select id="resumenZoneFilter">
+            <option value="">Todas las zonas</option>
+            ${ZONES.map(z=>`<option value="${z.key}">${z.label}</option>`).join("")}
+          </select>
+        </div>
+        <button class="clearFilterBtn" id="resumenClear" style="display:none;">Limpiar filtros</button>
+      </div>
+      <div class="resultsCount" id="resultsCount"></div>
+      <table>
+        <thead><tr><th style="width:70px;">Campo</th><th>Placa</th><th>Zona</th><th>Aseguradora</th></tr></thead>
+        <tbody id="resumenTbody"></tbody>
+      </table>
+      <div id="resumenEmpty"></div>
+    `;
+    document.getElementById("mainArea").appendChild(wrap);
 
-    // MEJORA: agregar hoja de resumen por valet
-    const resumenData = [['RESUMEN POR VALET'], ['Nombre', 'Vehículos traídos (activos + entregados)']];
-    const countsResumen = {};
-    activos.forEach(e => { if(e.quienTrae) countsResumen[e.quienTrae] = (countsResumen[e.quienTrae] || 0) + 1; });
-    entregados.forEach(e => { if(e.quienTrae) countsResumen[e.quienTrae] = (countsResumen[e.quienTrae] || 0) + 1; });
-    Object.entries(countsResumen).sort((a,b) => b[1]-a[1]).forEach(([n, c]) => resumenData.push([n, c]));
-    
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+    if(pendingResumenFilter){
+      wrap.querySelector("#resumenFilter").value = pendingResumenFilter;
+      pendingResumenFilter = "";
+    }
+
+    const filterInput = wrap.querySelector("#resumenFilter");
+    const zoneSelect = wrap.querySelector("#resumenZoneFilter");
+    const clearBtn = wrap.querySelector("#resumenClear");
+
+    function draw(){
+      const filterText = filterInput.value.trim().toUpperCase();
+      const filterZone = zoneSelect.value;
+      clearBtn.style.display = (filterText || filterZone) ? "inline-block" : "none";
+
+      let rows = buildResumenRows();
+      const totalCount = rows.length;
+      if(filterZone) rows = rows.filter(r=>r.zoneKey===filterZone);
+      if(filterText) rows = rows.filter(r=> r.placa.toUpperCase().includes(filterText) || String(r.campo).toUpperCase().includes(filterText) || (r.aseguradora||"").toUpperCase().includes(filterText));
+
+      const countEl = wrap.querySelector("#resultsCount");
+      countEl.textContent = (filterText || filterZone)
+        ? `${rows.length} de ${totalCount} vehículo(s)`
+        : `${totalCount} vehículo(s) en total`;
+
+      const tbody = wrap.querySelector("#resumenTbody");
+      tbody.innerHTML = "";
+      if(rows.length===0){
+        wrap.querySelector("#resumenEmpty").innerHTML = `<div class="emptyState">No hay resultados.</div>`;
+      } else {
+        wrap.querySelector("#resumenEmpty").innerHTML = "";
+        rows.forEach(r=>{
+          const tr = document.createElement("tr");
+          tr.className = "resumenRow";
+          tr.dataset.zone = r.zoneKey;
+          tr.dataset.ci = r.ci;
+          tr.dataset.pi = r.pi;
+          tr.innerHTML = `
+            <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${escapeHtml(r.campo)}</span></td>
+            <td class="plate">${escapeHtml(r.placa)}</td>
+            <td>${r.zoneLabel}</td>
+            <td>${r.aseguradora ? escapeHtml(r.aseguradora) : '<span style="color:var(--muted);">—</span>'}</td>
+          `;
+          tr.addEventListener("click", ()=>{
+            openEditLocModal(r.zoneKey, r.ci, r.pi);
+          });
+          tbody.appendChild(tr);
+        });
+      }
+    }
+    filterInput.addEventListener("input", draw);
+    filterInput.addEventListener("keyup", draw);
+    filterInput.addEventListener("change", draw);
+    zoneSelect.addEventListener("change", draw);
+    clearBtn.addEventListener("click", ()=>{
+      filterInput.value = "";
+      zoneSelect.value = "";
+      draw();
+      filterInput.focus();
+    });
+    draw();
+  }
+
+  function renderAll(){
+    renderTabs();
+    const main = document.getElementById("mainArea");
+    main.innerHTML = "";
+    if(activeTab === "__resumen__"){
+      renderResumenPanel();
+    } else {
+      renderZonePanel(zoneInfo(activeTab));
+    }
+    renderMeta();
+  }
+
+  // ---- Global search ----
+  const searchInput = document.getElementById("globalSearch");
+  const searchResults = document.getElementById("searchResults");
+
+  function runSearch(q){
+    q = q.trim().toUpperCase();
+    if(!q){ searchResults.classList.remove("show"); searchResults.innerHTML=""; return; }
+    const rows = buildResumenRows().filter(r=>r.placa.toUpperCase().includes(q));
+    if(rows.length===0){
+      searchResults.innerHTML = `<div class="searchItem" style="cursor:default;">Sin coincidencias</div>`;
+    } else {
+      searchResults.innerHTML = rows.slice(0,25).map(r=>`
+        <div class="searchItem" data-zone="${r.zoneKey}">
+          <span class="plate">${escapeHtml(r.placa)}</span>
+          <span class="tag">${r.zoneLabel} · campo ${escapeHtml(r.campo)}</span>
+        </div>
+      `).join("");
+      searchResults.querySelectorAll(".searchItem").forEach(el=>{
+        el.addEventListener("click", ()=>{
+          const zone = el.getAttribute("data-zone");
+          const placaTexto = el.querySelector(".plate") ? el.querySelector(".plate").textContent : "";
+          pendingResumenFilter = placaTexto;
+          activeTab = "__resumen__";
+          searchInput.value = "";
+          searchResults.classList.remove("show");
+          renderAll();
+        });
+      });
+    }
+    searchResults.classList.add("show");
+  }
+  searchInput.addEventListener("input", (e)=> runSearch(e.target.value));
+  searchInput.addEventListener("keyup", (e)=> runSearch(e.target.value));
+  searchInput.addEventListener("blur", ()=> setTimeout(()=>searchResults.classList.remove("show"), 150));
+  searchInput.addEventListener("focus", (e)=> { if(e.target.value) runSearch(e.target.value); });
+  searchInput.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter"){
+      e.preventDefault();
+      const q = searchInput.value.trim();
+      if(!q) return;
+      pendingResumenFilter = q;
+      activeTab = "__resumen__";
+      searchInput.value = "";
+      searchResults.classList.remove("show");
+      renderAll();
+    }
+  });
+
+  // ---- Export ----
+  document.getElementById("exportBtn").addEventListener("click", ()=>{
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
-    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen Valets');
-    XLSX.writeFile(wb, `EQUIPO_ELITE_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.xlsx`);
-    showToast('✅ Reporte exportado');
-}
+    const now = new Date();
+    const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
+    const horaLarga = now.toLocaleTimeString("es-CR", {hour:"2-digit", minute:"2-digit"});
 
-// ========== UTILIDADES ==========
-function cerrarOverlay(e) { if(e.target === document.getElementById('overlay')) closeModal(); }
-function closeModal() {
-    document.getElementById('overlay').classList.remove('open');
-    modalId = null;
-    quienTraeSel = null;
-    quienRecogeSel = null;
-}
-function showScreen(name, btn) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('screen-' + name).classList.add('active');
-    if(btn) btn.classList.add('active');
-}
-function toggleTheme() {
-    const html = document.documentElement;
-    if(html.getAttribute('data-theme') === 'light') html.removeAttribute('data-theme');
-    else html.setAttribute('data-theme', 'light');
-}
-function toggleKioscoMode() { document.body.classList.toggle('kiosco-mode'); }
-function showLoginForExport() {
-    const overlay = document.getElementById('loginOverlay');
-    overlay.style.display = 'flex';
-    // MEJORA: limpiar campo cada vez que se abre
-    const pwd = document.getElementById('loginPassword');
-    if(pwd) { pwd.value = ''; setTimeout(() => pwd.focus(), 100); }
-}
+    ZONES.forEach(z=>{
+      const campos = state.zones[z.key] || [];
+      const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
+      const cap = state.capacities[z.key];
+      const capTxt = (cap && cap>0) ? ` · ${campos.length}/${cap} campos ocupados` : ``;
 
-// MEJORA: toggle visibilidad de contraseña
-function togglePasswordVisibility() {
-    const pwd = document.getElementById('loginPassword');
-    const icon = document.getElementById('eye-icon');
-    if(pwd && icon) {
-        if(pwd.type === 'password') {
-            pwd.type = 'text';
-            icon.className = 'mdi mdi-eye-off';
-        } else {
-            pwd.type = 'password';
-            icon.className = 'mdi mdi-eye';
-        }
+      const data = [
+        [`${z.label} — Inventario de Parqueo`, "", ""],
+        [`Generado ${fechaLarga}, ${horaLarga} · ${totalVeh} vehículo(s) en ${campos.length} campo(s)${capTxt}`, "", ""],
+        [],
+        ["Campo","Placa","Aseguradora"]
+      ];
+      campos.forEach(c => c.plates.forEach(p => data.push([c.campo, p.plate, p.aseguradora || ""])));
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      ws["!merges"] = [
+        { s:{r:0,c:0}, e:{r:0,c:2} },
+        { s:{r:1,c:0}, e:{r:1,c:2} }
+      ];
+      ws["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 20 }];
+      if(data.length > 4){
+        ws["!autofilter"] = { ref: `A4:C${data.length}` };
+      }
+      XLSX.utils.book_append_sheet(wb, ws, z.label.substring(0,31));
+    });
+
+    const resumenRows = buildResumenRows();
+    const resumenData = [
+      ["Resumen general — Inventario de Parqueo", "", "", ""],
+      [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", ""],
+      [],
+      ["Campo","Placa","Zona","Aseguradora"]
+    ];
+    resumenRows.forEach(r=> resumenData.push([r.campo, r.placa, r.zoneLabel, r.aseguradora || ""]));
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+    wsResumen["!merges"] = [
+      { s:{r:0,c:0}, e:{r:0,c:3} },
+      { s:{r:1,c:0}, e:{r:1,c:3} }
+    ];
+    wsResumen["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 24 }, { wch: 20 }];
+    if(resumenData.length > 4){
+      wsResumen["!autofilter"] = { ref: `A4:D${resumenData.length}` };
     }
-}
+    XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
 
-function checkLogin() {
-    const pwd = document.getElementById('loginPassword');
-    // CORRECCIÓN #6: hash simple para evitar contraseña en texto plano visible
-    // La contraseña sigue siendo 'vicente2024' pero se compara con su hash
-    const hash = pwd ? simpleHash(pwd.value) : '';
-    if(hash === simpleHash('vicente2024')) {
-        document.getElementById('loginOverlay').style.display = 'none';
-        exportToExcel();
-    } else {
-        showToast('❌ Contraseña incorrecta', true);
-        if(pwd) { pwd.value = ''; pwd.focus(); }
+    const fecha = now.toISOString().slice(0,10);
+    XLSX.writeFile(wb, `Inventario_Parqueo_${fecha}.xlsx`);
+    showToast("Excel generado");
+  });
+
+  // ==================== Control de acceso ====================
+  // Aviso: esto es un candado simple del lado del cliente para evitar
+  // que cualquiera entre sin saber usuario/clave. No es seguridad de
+  // nivel empresarial: el código de esta app es visible para quien
+  // inspeccione el archivo. Las contraseñas se guardan como hash
+  // (no en texto plano), pero esto no reemplaza un sistema con servidor.
+
+  let currentUser = null; // { username }
+
+  async function loadUsers(){
+    try{
+      const res = await window.storage.get(USERS_KEY, true);
+      if(res && res.value) return JSON.parse(res.value);
+    }catch(e){ /* no existe todavía */ }
+    return [];
+  }
+  async function saveUsers(list){
+    try{
+      const result = await window.storage.set(USERS_KEY, JSON.stringify(list), true);
+      return !!(result && typeof result === "object");
+    }catch(e){
+      console.error("Error guardando usuarios", e);
+      return false;
     }
-}
+  }
+  async function hashPassword(username, password){
+    const enc = new TextEncoder();
+    const data = enc.encode(String(username).trim().toLowerCase() + "::" + password);
+    const buf = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+  async function getSessionUsername(){
+    try{
+      const res = await window.storage.get(SESSION_KEY, false);
+      if(res && res.value) return res.value;
+    }catch(e){ /* no hay sesión guardada */ }
+    return null;
+  }
+  async function setSessionUsername(username){
+    try{ await window.storage.set(SESSION_KEY, username, false); }catch(e){ /* no crítico */ }
+  }
+  async function clearSession(){
+    try{ await window.storage.delete(SESSION_KEY, false); }catch(e){ /* no crítico */ }
+  }
 
-// MEJORA: hash simple para ofuscar la contraseña en el código fuente
-function simpleHash(str) {
-    let hash = 0;
-    for(let i = 0; i < str.length; i++) {
-        const chr = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + chr;
-        hash |= 0;
+  function showSetupScreen(onSubmit){
+    document.getElementById("authChecking").style.display = "none";
+    document.getElementById("authLogin").style.display = "none";
+    document.getElementById("authSetup").style.display = "block";
+    const userInput = document.getElementById("setupUser");
+    const passInput = document.getElementById("setupPass");
+    const pass2Input = document.getElementById("setupPass2");
+    const errorP = document.getElementById("setupError");
+    const btn = document.getElementById("setupBtn");
+    async function submit(){
+      const u = userInput.value.trim();
+      const p = passInput.value;
+      const p2 = pass2Input.value;
+      errorP.textContent = "";
+      if(!u){ errorP.textContent = "Ingresá un nombre de usuario."; return; }
+      if(p.length < 4){ errorP.textContent = "La contraseña debe tener al menos 4 caracteres."; return; }
+      if(p !== p2){ errorP.textContent = "Las contraseñas no coinciden."; return; }
+      btn.disabled = true;
+      await onSubmit(u, p);
     }
-    return hash.toString(16);
-}
+    btn.addEventListener("click", submit);
+    [userInput, passInput, pass2Input].forEach(inp=> inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") submit(); }));
+    userInput.focus();
+  }
 
-// ========== INICIALIZACIÓN ==========
-async function iniciarApp() {
-    const versionBadge = document.getElementById('versionBadge');
-    if(versionBadge) versionBadge.innerHTML = `v${APP_VERSION}`;
-    
-    cargarDatosLocales();
-    renderMapa();
-    renderVehiculos();
-    renderEquipo();
-    
-    if(firebaseInicializado) {
-        await cargarDesdeFirebase();
-        setupRealtimeSync();
-        renderMapa();
-        renderVehiculos();
-        renderEquipo();
+  function showLoginScreen(onSubmit){
+    document.getElementById("authChecking").style.display = "none";
+    document.getElementById("authSetup").style.display = "none";
+    document.getElementById("authLogin").style.display = "block";
+    const userInput = document.getElementById("loginUser");
+    const passInput = document.getElementById("loginPass");
+    const errorP = document.getElementById("loginError");
+    const btn = document.getElementById("loginBtn");
+    async function submit(){
+      const u = userInput.value.trim();
+      const p = passInput.value;
+      errorP.textContent = "";
+      if(!u || !p){ errorP.textContent = "Ingresá usuario y contraseña."; return; }
+      btn.disabled = true;
+      const ok = await onSubmit(u, p);
+      btn.disabled = false;
+      if(!ok){
+        errorP.textContent = "Usuario o contraseña incorrectos.";
+        passInput.value = "";
+        passInput.focus();
+      }
     }
-    
-    setInterval(actualizarReloj, 1000);
-    actualizarReloj();
-    
-    // MEJORA: actualizar chips de tiempo cada minuto sin re-renderizar todo el mapa
-    setInterval(() => {
-        renderVehiculos();
-    }, 60000);
-}
+    btn.addEventListener("click", submit);
+    [userInput, passInput].forEach(inp=> inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") submit(); }));
+    userInput.focus();
+  }
 
-iniciarApp();
+  function revealApp(){
+    document.getElementById("authGate").style.display = "none";
+    document.getElementById("appRoot").style.display = "block";
+    const chip = document.getElementById("userChip");
+    if(chip) chip.textContent = currentUser ? currentUser.username : "";
+    (async function(){
+      await loadState();
+      renderAll();
+      updateUndoBtn();
+    })();
+  }
+
+  async function runAuthGate(){
+    const authAvailable = await checkStorageAvailable();
+    if(!authAvailable){
+      showToast("No se pudo activar el control de acceso en este navegador", 3800);
+      revealApp();
+      return;
+    }
+
+    const users = await loadUsers();
+
+    if(users.length === 0){
+      showSetupScreen(async (username, password)=>{
+        const hash = await hashPassword(username, password);
+        await saveUsers([{ username, hash }]);
+        currentUser = { username };
+        await setSessionUsername(username);
+        revealApp();
+      });
+      return;
+    }
+
+    const sessionUser = await getSessionUsername();
+    if(sessionUser){
+      const found = users.find(u => u.username.toLowerCase() === sessionUser.toLowerCase());
+      if(found){
+        currentUser = { username: found.username };
+        revealApp();
+        return;
+      }
+    }
+
+    showLoginScreen(async (username, password)=>{
+      const users2 = await loadUsers(); // por si otro usuario se agregó mientras tanto
+      const found = users2.find(u => u.username.toLowerCase() === username.toLowerCase());
+      if(!found) return false;
+      const hash = await hashPassword(found.username, password);
+      if(hash !== found.hash) return false;
+      currentUser = { username: found.username };
+      await setSessionUsername(found.username);
+      revealApp();
+      return true;
+    });
+  }
+
+  async function openUsersModal(){
+    const overlay = document.getElementById("usersModal");
+    const listEl = document.getElementById("usersList");
+    const errorP = document.getElementById("usersError");
+    const newUserName = document.getElementById("newUserName");
+    const newUserPass = document.getElementById("newUserPass");
+    errorP.textContent = "";
+    newUserName.value = "";
+    newUserPass.value = "";
+
+    let users = await loadUsers();
+
+    function draw(){
+      listEl.innerHTML = users.map(u => `
+        <div class="userRow">
+          <span class="userRowName">${escapeHtml(u.username)} ${currentUser && u.username.toLowerCase()===currentUser.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
+          <button class="userRemoveBtn" data-username="${escapeAttr(u.username)}" ${users.length<=1 ? "disabled title=\"Debe quedar al menos un usuario\"" : ""}>Quitar</button>
+        </div>
+      `).join("");
+      listEl.querySelectorAll(".userRemoveBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const uname = b.getAttribute("data-username");
+          if(!confirm(`¿Quitar el acceso de "${uname}"?`)) return;
+          users = users.filter(u => u.username !== uname);
+          await saveUsers(users);
+          draw();
+        });
+      });
+    }
+    draw();
+    overlay.classList.add("show");
+
+    const addBtn = document.getElementById("addUserBtn");
+    const closeBtn = document.getElementById("usersCloseBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    async function onAdd(){
+      const uname = newUserName.value.trim();
+      const pass = newUserPass.value;
+      errorP.textContent = "";
+      if(!uname){ errorP.textContent = "Ingresá un nombre de usuario."; return; }
+      if(users.some(u=>u.username.toLowerCase()===uname.toLowerCase())){ errorP.textContent = "Ese usuario ya existe."; return; }
+      if(pass.length < 4){ errorP.textContent = "La contraseña debe tener al menos 4 caracteres."; return; }
+      const hash = await hashPassword(uname, pass);
+      users.push({ username: uname, hash });
+      const ok = await saveUsers(users);
+      if(!ok){ errorP.textContent = "No se pudo guardar el usuario, intentá de nuevo."; return; }
+      newUserName.value = "";
+      newUserPass.value = "";
+      draw();
+    }
+    function onClose(){
+      overlay.classList.remove("show");
+      addBtn.removeEventListener("click", onAdd);
+      closeBtn.removeEventListener("click", onClose);
+      logoutBtn.removeEventListener("click", onLogout);
+    }
+    async function onLogout(){
+      if(!confirm("¿Cerrar sesión?")) return;
+      await clearSession();
+      location.reload();
+    }
+    addBtn.addEventListener("click", onAdd);
+    closeBtn.addEventListener("click", onClose);
+    logoutBtn.addEventListener("click", onLogout);
+  }
+  document.getElementById("usersBtn").addEventListener("click", openUsersModal);
+
+  document.getElementById("undoBtn").addEventListener("click", doUndo);
+
+  // ---- Init ----
+  runAuthGate();
+
+
+})();
 </script>
 </body>
 </html>
