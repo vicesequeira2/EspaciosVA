@@ -6,6 +6,9 @@
 <title>Inventario de Parqueo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
 <style>
   :root{
     --asphalt: #24272b;
@@ -873,7 +876,7 @@
     cursor:pointer;
     white-space:nowrap;
   }
-  #usersBtn, #historyBtn, #backupBtn, #restoreBtn{
+  #usersBtn, #historyBtn, #backupBtn, #restoreBtn, #refreshBtn{
     background: transparent;
     color: var(--paper);
     border:1px solid var(--asphalt-3);
@@ -1208,6 +1211,7 @@
       <div class="meta" id="metaLine">cargando…</div>
     </div>
     <div class="headerBtns">
+      <button id="refreshBtn">🔄 Actualizar</button>
       <button id="usersBtn" style="display:none;">Usuarios</button>
       <button id="historyBtn" style="display:none;">Historial</button>
       <button id="backupBtn" style="display:none;">Respaldo</button>
@@ -1319,6 +1323,81 @@
 
 <script>
 (function(){
+
+  // ==================== Firebase (Realtime Database) ====================
+  // Reemplaza el almacenamiento propio de Claude por Firebase, sin tener
+  // que tocar el resto del código: se define un objeto `storage` con la
+  // misma forma (get/set/delete con shared true/false) que ya usaba toda
+  // la app, pero implementado con Firebase por debajo. Los datos "shared"
+  // (inventario, usuarios, historial) van a Realtime Database; los datos
+  // "personales" (la sesión recordada del navegador) van a localStorage,
+  // ya que fuera del entorno de Claude sí se puede usar.
+  const firebaseConfig = {
+    apiKey: "AIzaSyDYnkHNPdB3XPK5zMo5R3JiLAQ6UeGOCKU",
+    authDomain: "espaciosv-6d92e.firebaseapp.com",
+    databaseURL: "https://espaciosv-6d92e-default-rtdb.firebaseio.com",
+    projectId: "espaciosv-6d92e",
+    storageBucket: "espaciosv-6d92e.firebasestorage.app",
+    messagingSenderId: "326267112592",
+    appId: "1:326267112592:web:6826e67fa0a33b0d899c15",
+    measurementId: "G-1MRR2EBE0T"
+  };
+
+  let fbDb = null;
+  let fbReady = false;
+
+  // Inicio de sesión anónimo de Firebase: no pide nada al usuario, pero
+  // exige que el llamado venga de un cliente autenticado (bloquea llamadas
+  // directas a la API REST de la base de datos sin pasar por esta app).
+  function ensureFirebaseAuth(){
+    return new Promise((resolve, reject)=>{
+      if(typeof firebase === "undefined"){
+        reject(new Error("El SDK de Firebase no cargó (revisá la pestaña Network del navegador: gstatic.com puede estar bloqueado, sin internet, o la página en caché)."));
+        return;
+      }
+      try{
+        firebase.initializeApp(firebaseConfig);
+        fbDb = firebase.database();
+        firebase.auth().onAuthStateChanged(user=>{
+          if(user){ fbReady = true; resolve(user); }
+        }, reject);
+        firebase.auth().signInAnonymously().catch(reject);
+      }catch(e){ reject(e); }
+    });
+  }
+
+  const storage = {
+    async get(key, shared){
+      if(!shared){
+        const v = localStorage.getItem("inv_local_" + key);
+        if(v === null) throw new Error("Clave no encontrada: " + key);
+        return { key, value: v, shared: false };
+      }
+      if(!fbReady) throw new Error("Firebase no está listo todavía");
+      const snap = await fbDb.ref(key).once("value");
+      if(!snap.exists()) throw new Error("Clave no encontrada: " + key);
+      return { key, value: snap.val(), shared: true };
+    },
+    async set(key, value, shared){
+      if(!shared){
+        localStorage.setItem("inv_local_" + key, value);
+        return { key, value, shared: false };
+      }
+      if(!fbReady) throw new Error("Firebase no está listo todavía");
+      await fbDb.ref(key).set(value);
+      return { key, value, shared: true };
+    },
+    async delete(key, shared){
+      if(!shared){
+        localStorage.removeItem("inv_local_" + key);
+        return { key, deleted: true, shared: false };
+      }
+      if(!fbReady) throw new Error("Firebase no está listo todavía");
+      await fbDb.ref(key).remove();
+      return { key, deleted: true, shared: true };
+    }
+  };
+  window.storage = storage;
 
   const ZONES = [
     { key: "Avaluo", label: "Avalúo", abbr: "AV", color: "var(--z-avaluo)", hex: "4F8FD1" },
@@ -3259,6 +3338,47 @@
     }
   }
 
+  let autoRefreshInterval = null;
+
+  // Vuelve a leer el inventario desde el almacenamiento compartido (por si
+  // otra persona hizo cambios mientras esta pestaña seguía abierta) y
+  // refresca la vista sin perder el filtro que ya tenías escrito.
+  async function refreshDataFromStorage(silent){
+    if(!storageAvailable){
+      if(!silent) showToast("Sin conexión al almacenamiento compartido");
+      return;
+    }
+    try{
+      let preservedFilter = "";
+      if(activeTab === "__resumen__"){
+        const fi = document.getElementById("resumenFilter");
+        if(fi) preservedFilter = fi.value;
+      }
+      await loadState();
+      if(currentUser.role === "actualizacion"){
+        renderUpdaterPanel();
+      } else {
+        if(preservedFilter) pendingResumenFilter = preservedFilter;
+        renderAll();
+        updateUndoBtn();
+      }
+      if(!silent) showToast("Datos actualizados");
+    }catch(e){
+      console.error("Error actualizando datos", e);
+      if(!silent) showToast("No se pudo actualizar. Intentá de nuevo.");
+    }
+  }
+  document.getElementById("refreshBtn").addEventListener("click", ()=> refreshDataFromStorage(false));
+
+  // El rol Búsqueda es de solo lectura: se puede refrescar solo, de fondo,
+  // sin riesgo de pisar algo que alguien esté editando en ese momento.
+  function startAutoRefreshIfNeeded(){
+    if(autoRefreshInterval){ clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+    if(currentUser && currentUser.role === "consulta"){
+      autoRefreshInterval = setInterval(()=> refreshDataFromStorage(true), 20000);
+    }
+  }
+
   function revealApp(){
     document.getElementById("authGate").style.display = "none";
     document.getElementById("appRoot").style.display = "block";
@@ -3273,6 +3393,7 @@
           await loadState();
           renderAll();
           updateUndoBtn();
+          startAutoRefreshIfNeeded();
         }catch(e){
           console.error("Error cargando la aplicación", e);
           showToast("Ocurrió un error al cargar. Recargá la página e intentá de nuevo.", 5000);
@@ -3285,11 +3406,15 @@
     storageAvailable = false;
     let sessionUsername = null;
     try{
+      await ensureFirebaseAuth();
       storageAvailable = await checkStorageAvailable();
       if(storageAvailable){
         sessionUsername = await getSessionUsername();
       }
-    }catch(e){ /* sin sesión recordada */ }
+    }catch(e){
+      console.error("Firebase no disponible, la app sigue funcionando sin guardado permanente", e);
+      /* sin sesión recordada */
+    }
 
     let users = storageAvailable ? await loadUsers() : [];
     if(users.length === 0){
@@ -4044,6 +4169,7 @@
     if(!confirm("¿Cerrar sesión?")) return;
     if(currentUser) await logAccess(currentUser.username, "logout");
     if(clockInterval) clearInterval(clockInterval);
+    if(autoRefreshInterval) clearInterval(autoRefreshInterval);
     await clearSession();
     location.reload();
   });
