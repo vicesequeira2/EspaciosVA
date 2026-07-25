@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Inventario de Parqueo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
   :root{
     --asphalt: #24272b;
@@ -18,8 +19,12 @@
     --ok: #4caf7d;
     --danger: #d9553f;
     --z-avaluo: #4f8fd1;
+    --z-avaluo-puff: #8fb9e0;
     --z-atras: #5fb37a;
+    --z-atras-entregas: #8ccb9e;
+    --z-atras-solidos: #2f7a4a;
     --z-malla: #a175d4;
+    --z-maya-sn: #c7a6e8;
     --z-neon: #e0529c;
     --z-pge: #e2843a;
     --radius: 10px;
@@ -234,10 +239,12 @@
     font-size:0.85rem;
   }
   .addRowSecondary{
+    display:flex; gap:8px;
     margin-bottom:8px;
   }
   .addRowSecondary input{
-    width:100%;
+    flex:1;
+    min-width:0;
     padding:8px 12px;
     border-radius: var(--radius);
     border:1px solid #e2e3de;
@@ -278,6 +285,26 @@
     margin: -4px 0 10px;
   }
   .dupWarn .dupWarnIcon{flex:0 0 auto; font-size:0.9rem;}
+  .similarWarn{
+    display:flex;
+    align-items:flex-start;
+    gap:6px;
+    background:#f4f2fb;
+    color:#5b4c96;
+    border:1px solid #ded8f2;
+    border-radius:8px;
+    padding:7px 10px;
+    font-size:0.78rem;
+    font-weight:600;
+    margin: -4px 0 10px;
+  }
+  .similarWarn .dupWarnIcon{flex:0 0 auto; font-size:0.9rem;}
+  .similarWarn .similarList{ font-weight:500; }
+  .similarWarn button{
+    background:none; border:none; padding:0;
+    color:inherit; font-weight:800; text-decoration:underline; cursor:pointer;
+    font-size:inherit;
+  }
   details.bulk{
     margin-bottom:14px;
   }
@@ -339,6 +366,20 @@
     margin-top:2px;
   }
   .campoBody{flex:1; min-width:0;}
+  .campoCapBadge{
+    display:inline-block;
+    font-size:0.66rem;
+    font-weight:700;
+    color:var(--muted);
+    background:#eceee9;
+    border-radius:5px;
+    padding:1px 6px;
+    margin-bottom:4px;
+  }
+  .campoCapBadge.overCap{
+    color:white;
+    background: var(--danger);
+  }
   .plateChips{
     display:flex; flex-wrap:wrap; gap:6px;
     align-items:flex-start;
@@ -350,18 +391,31 @@
     padding: 5px 4px 6px 10px;
     font-size:0.85rem;
     cursor:pointer;
+    border-left: 3px solid transparent;
   }
   .plateChip:active{background:#e0e1dc;}
+  .plateChip.updatedToday{
+    background: #e3f3ea;
+    border-left: 3px solid #2f9e5e;
+  }
+  .plateChip.updatedToday:active{ background:#d3ebdc; }
+  .updatedTodayTag{
+    font-size:0.62rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    color:white;
+    background:#2f9e5e;
+    border-radius:5px;
+    padding:2px 6px;
+  }
   .plateChipMain{
     display:flex; align-items:center; gap:6px;
   }
   .plateChip .plateText{
     min-width: 70px;
-    outline:none;
   }
-  .plateChip .plateText:focus{background:white; border-radius:4px; padding:0 3px;}
   .aseguradoraText{
-    outline:none;
     font-size:0.68rem;
     color:var(--muted);
     font-weight:600;
@@ -374,7 +428,6 @@
     color:#b4b6b0;
     font-weight:500;
   }
-  .aseguradoraText:focus{background:white; border-radius:4px; padding:2px 3px; color:var(--ink);}
   .orderBadge{
     display:inline-flex;
     align-items:center;
@@ -529,6 +582,73 @@
   .zoneChips{
     display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;
   }
+  .dashboardGrid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .dashCard{
+    background:white;
+    border-radius: var(--radius);
+    padding:14px 12px;
+    text-align:center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .dashCard .dashCardValue{
+    font-size:1.5rem;
+    font-weight:800;
+    color:var(--ink);
+    line-height:1.1;
+  }
+  .dashCard .dashCardLabel{
+    font-size:0.7rem;
+    color:var(--muted);
+    margin-top:4px;
+    font-weight:600;
+  }
+  .chartCard{
+    background:white;
+    border-radius: var(--radius);
+    padding:14px;
+    margin-bottom:16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .chartCard h3{
+    margin:0 0 12px;
+    font-size:0.85rem;
+    color:var(--ink);
+  }
+  .chartCanvasWrap{
+    position:relative;
+    height:220px;
+  }
+  .dashEmptyNote{
+    font-size:0.78rem;
+    color:var(--muted);
+    text-align:center;
+    padding:10px;
+  }
+  .capacityByZoneList{
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .capacityByZoneRow{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 2px;
+    border-bottom:1px solid #f0f1ed;
+    font-size:0.85rem;
+  }
+  .capacityByZoneRow:last-child{ border-bottom:none; }
+  .capacityByZoneName{ font-weight:600; }
+  .capacityByZoneValue{ margin-left:auto; color:var(--muted); font-size:0.78rem; }
+  .capacityByZoneRow .capacityEditBtn{
+    background:none; border:none;
+    color: var(--line-dim);
+    font-weight:700; font-size:0.78rem;
+    text-decoration:underline;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
   .chip{
     display:flex; align-items:center; gap:6px;
     padding:5px 10px;
@@ -563,6 +683,8 @@
   }
   tbody tr:last-child td{border-bottom:none;}
   .resumenRow{cursor:pointer;}
+  .resumenRow.updatedToday{ background:#e3f3ea; }
+  .resumenRow.updatedToday:hover{ background:#d3ebdc; }
   .resumenRow:active{background:#f0f1ed;}
   .spotNum{
     display:inline-flex;
@@ -683,6 +805,54 @@
     font-size:0.95rem;
   }
   .authBtn{ width:100%; margin-top:18px; padding:11px 14px; }
+  .roleLogos{
+    display:flex; gap:14px; justify-content:center;
+    margin: 6px 0 4px;
+  }
+  .roleLogoBtn{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    background:#f4f5f2;
+    border:1px solid #e6e7e2;
+    border-radius:14px;
+    padding:18px 10px;
+    cursor:pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .roleLogoBtn:active{ transform: scale(0.97); background:#eceee9; }
+  .roleLogoIcon{
+    width:44px; height:44px;
+    border-radius:50%;
+    background: var(--asphalt);
+    color: var(--line);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .roleLogoIcon svg{ width:22px; height:22px; }
+  .roleLogoLabel{
+    font-size:0.78rem; font-weight:700; color:var(--ink);
+  }
+  .linkBackBtn{
+    display:block;
+    width:100%;
+    background:none; border:none;
+    color:var(--muted);
+    font-size:0.78rem;
+    font-weight:600;
+    text-decoration:underline;
+    cursor:pointer;
+    margin-top:10px;
+    padding:4px;
+  }
+  .adminHiddenLink{
+    display:block;
+    margin: 22px auto 0;
+    background:none; border:none;
+    color:#d7d8d3;
+    font-size:0.9rem;
+    letter-spacing:0.3em;
+    cursor:pointer;
+    padding:6px;
+  }
   .authError{
     color:var(--danger);
     font-size:0.78rem;
@@ -692,16 +862,7 @@
   }
   .authError:empty{ margin:0; }
   #authChecking{ display:none; }
-  .userChip{
-    color: var(--paper);
-    font-size:0.76rem;
-    font-weight:600;
-    display:flex;
-    align-items:center;
-    padding: 0 2px;
-    white-space:nowrap;
-  }
-  #usersBtn{
+  #logoutBtn{
     background: transparent;
     color: var(--paper);
     border:1px solid var(--asphalt-3);
@@ -712,20 +873,276 @@
     cursor:pointer;
     white-space:nowrap;
   }
+  #usersBtn, #historyBtn, #backupBtn, #restoreBtn{
+    background: transparent;
+    color: var(--paper);
+    border:1px solid var(--asphalt-3);
+    font-weight:600;
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    font-size: 0.76rem;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .identityRow{
+    display:flex; align-items:center; gap:8px;
+    margin-top:8px;
+    font-size:0.72rem;
+    color: var(--muted);
+    flex-wrap:wrap;
+  }
+  .identityRow .idName{ color: var(--paper); font-weight:700; }
+  .identityRow .idRole{
+    background: var(--line);
+    color: var(--asphalt);
+    padding:2px 8px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:0.68rem;
+  }
+  .identityRow .idClock{ margin-left:auto; }
+  .modalCardWide{ max-width:440px; }
   .usersList{
     display:flex; flex-direction:column; gap:6px;
-    max-height:200px; overflow-y:auto;
+    max-height:220px; overflow-y:auto;
   }
   .userRow{
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
     background:#f4f5f2; border-radius:8px; padding:8px 10px;
     font-size:0.85rem;
   }
+  .userRow .userRowInfo{ display:flex; flex-direction:column; }
   .userRow .userRowName{ font-weight:600; }
-  .userRow .userRowMe{ color:var(--muted); font-size:0.72rem; font-weight:500; }
+  .userRow .userRowRole{ font-size:0.68rem; color:var(--muted); }
+  .userRow .userRowMe{ color:var(--muted); font-size:0.68rem; font-weight:500; }
+  .userRow .userRowBtns{ display:flex; gap:8px; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; max-width:150px; }
   .userRow button{
     background:none; border:none; color:var(--danger);
-    cursor:pointer; font-size:0.78rem; font-weight:600;
+    cursor:pointer; font-size:0.72rem; font-weight:600;
+  }
+  .userRow button.toggleActiveBtn{ color: var(--zone-color, var(--line-dim)); }
+  .userRow button.resetPassBtn{ color: var(--muted); }
+  .userRow button.renameUserBtn{ color: var(--ink); }
+  .userRow.inactive{ opacity:0.5; }
+  .historyTabs{ display:flex; gap:6px; margin-bottom:10px; }
+  .historyTabBtn{
+    flex:1; background:#eceee9; border:none; border-radius:8px;
+    padding:8px; font-size:0.78rem; font-weight:700; color:var(--muted); cursor:pointer;
+  }
+  .historyTabBtn.active{ background: var(--ink); color:white; }
+  .historyList{
+    display:flex; flex-direction:column; gap:6px;
+    max-height:320px; overflow-y:auto;
+  }
+  .historyItem{
+    background:#f4f5f2; border-radius:8px; padding:8px 10px;
+    font-size:0.78rem; line-height:1.4;
+  }
+  .historyItem .historyMeta{ color:var(--muted); font-size:0.68rem; }
+  .updaterCard{
+    max-width:420px; margin:20px auto; background:white;
+    border-radius: var(--radius); padding:18px; box-shadow:0 1px 2px rgba(0,0,0,0.05);
+  }
+  .updaterCard h2{ margin:0 0 12px; font-size:1rem; }
+  .updaterInfoRow{ display:flex; justify-content:space-between; font-size:0.85rem; padding:6px 0; border-bottom:1px solid #f0f1ed; }
+  .zoneChipsRow{
+    display:flex; flex-wrap:wrap; gap:6px;
+    margin-top:4px;
+  }
+  .zoneChipBtn{
+    border:1.5px solid #e2e3de;
+    background:white;
+    color:var(--ink);
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:0.78rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .zoneChipBtn.active{
+    background: var(--chip-color, var(--ink));
+    border-color: var(--chip-color, var(--ink));
+    color:white;
+  }
+  .zoneChipBtn.armed{
+    background:#fff6e0;
+    border-color:#f2c230;
+    color:#8a5a1c;
+    animation: armedPulse 1s ease-in-out infinite;
+  }
+  @keyframes armedPulse{
+    0%,100%{ opacity:1; }
+    50%{ opacity:0.6; }
+  }
+  .zoneConfirmHint{
+    font-size:0.7rem;
+    font-weight:600;
+    color:#8a5a1c;
+  }
+  .campoRowWithBtn{
+    display:flex; gap:8px; align-items:flex-end;
+  }
+  .positionPicker{
+    display:none;
+    margin-top:8px;
+  }
+  .positionPicker.show{ display:block; }
+  .positionPickerNote{
+    font-size:0.72rem; color:var(--muted); margin-bottom:6px;
+  }
+  .positionChipsRow{
+    display:flex; gap:6px;
+  }
+  .positionChipBtn{
+    flex:1;
+    border:1.5px solid #e2e3de;
+    background:white;
+    color:var(--ink);
+    padding:8px 6px;
+    border-radius:8px;
+    font-size:0.76rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .positionChipBtn.active{
+    background: var(--ink);
+    border-color: var(--ink);
+    color:white;
+  }
+  .campoRowWithBtn input{ flex:1; min-width:0; }
+  .campoRowWithBtn .sinAsignarBtn{ flex:0 0 auto; white-space:nowrap; padding-bottom:10px; }
+  .updaterInfoRow span:first-child{ color:var(--muted); }
+  .updaterSuccess{
+    background:#e6f4ec; color:#2f7a4f; border-radius:8px; padding:10px 12px;
+    font-size:0.85rem; font-weight:600; margin-top:12px; text-align:center;
+  }
+  .updaterAllListTitle{
+    font-size:0.72rem; color:var(--muted); font-weight:700;
+    text-transform:uppercase; letter-spacing:0.03em;
+    margin: 18px 0 8px; padding-top:14px; border-top:1px solid #f0f1ed;
+  }
+  .updaterAllListScroll{
+    max-height:260px; overflow-y:auto;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .updaterAllListRow{
+    display:flex; justify-content:space-between; align-items:center;
+    background:#f4f5f2; border-radius:8px; padding:8px 10px;
+    font-size:0.85rem; cursor:pointer;
+  }
+  .updaterAllListRow:active{ background:#eceee9; }
+  .updaterAllListRow.updatedToday{ background:#e3f3ea; }
+  .updaterAllListRow.updatedToday:active{ background:#d3ebdc; }
+  .updaterAllListMeta{ font-size:0.72rem; color:var(--muted); }
+  .updaterZoneFilterRow{
+    display:flex; gap:6px; flex-wrap:wrap;
+    margin-top:14px;
+  }
+  .updaterZoneChip{
+    border:1.5px solid #e2e3de;
+    background:white;
+    color:var(--ink);
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:0.72rem;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .updaterZoneChip .count{
+    background: rgba(0,0,0,0.08);
+    padding:1px 5px;
+    border-radius:999px;
+    font-size:0.66rem;
+    margin-left:3px;
+  }
+  .updaterZoneChip.active{
+    background: var(--chip-color, var(--ink));
+    border-color: var(--chip-color, var(--ink));
+    color:white;
+  }
+  .updaterZoneChip.active .count{
+    background: rgba(255,255,255,0.25);
+  }
+  .updaterZoneGroupHeader{
+    display:flex; align-items:center; gap:6px;
+    font-size:0.72rem; font-weight:800;
+    color:var(--ink);
+    text-transform:uppercase; letter-spacing:0.02em;
+    margin: 10px 0 2px;
+    padding-top:8px;
+    border-top:1px solid #f0f1ed;
+  }
+  .updaterZoneGroupHeader:first-child{ border-top:none; padding-top:0; margin-top:0; }
+  .updaterZoneGroupHeader .count{
+    color:var(--muted); font-weight:600; text-transform:none; margin-left:auto;
+  }
+  .spaceGrid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap:8px;
+    margin-top:6px;
+  }
+  .spaceGridBtn{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px;
+    border:1.5px solid #e2e3de;
+    background:#fafaf9;
+    border-radius:10px;
+    padding:8px 4px;
+    cursor:pointer;
+    min-height:52px;
+  }
+  .spaceGridLabel{ font-size:0.78rem; font-weight:800; color:var(--ink); }
+  .spaceGridCount{ font-size:0.64rem; color:var(--muted); font-weight:600; }
+  .spaceGridBtn.empty{ background:#fafaf9; border-color:#e2e3de; }
+  .spaceGridBtn.partial{ background:#fff3d6; border-color:#f0cd6e; }
+  .spaceGridBtn.partial .spaceGridCount{ color:#8a6a1c; }
+  .spaceGridBtn.full{ background:#fbdedb; border-color:#e79a92; }
+  .spaceGridBtn.full .spaceGridCount{ color:#a13d33; }
+  .spaceGridBtn.active{
+    border-width:2.5px;
+    border-color: var(--ink);
+    box-shadow: 0 0 0 2px rgba(27,30,33,0.12);
+  }
+  .spaceInfoHeader{
+    display:flex; align-items:center; justify-content:space-between;
+    margin: 14px 0 8px;
+    font-size:0.9rem;
+  }
+  .spaceCapBadge{
+    background:#eceee9; color:var(--muted);
+    font-size:0.72rem; font-weight:800;
+    padding:2px 8px; border-radius:999px;
+  }
+  .spaceCapBadge.full{ background: var(--danger); color:white; }
+  .spacePlateRow{
+    display:flex; align-items:center; gap:8px;
+    font-size:0.85rem;
+    padding:6px 0;
+    border-bottom:1px solid #f0f1ed;
+  }
+  .spacePlateRow:last-of-type{ border-bottom:none; }
+  .spacePlateInfo{ flex:1; min-width:0; }
+  .spaceEditForm{
+    background:#f7f7f5;
+    border-radius:8px;
+    padding:10px;
+    margin:4px 0;
+  }
+  .spaceEditQuickRow{
+    display:flex; gap:6px; flex-wrap:wrap;
+  }
+  .spaceEditQuickRow input{
+    flex:1; min-width:90px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid #d7d8d3;
+    font-size:0.85rem;
+  }
+  .spaceEditForm .modalActions button{
+    padding:9px 10px;
+    font-size:0.8rem;
   }
 </style>
 </head>
@@ -735,26 +1152,45 @@
   <div class="authCard">
     <h1 class="authTitle">Inventario <span class="dash">·</span> Parqueo</h1>
 
-    <div id="authSetup" style="display:none;">
-      <p class="authSub">No hay usuarios configurados todavía. Creá la primera cuenta para empezar.</p>
-      <label for="setupUser">Usuario</label>
-      <input type="text" id="setupUser" autocomplete="username">
-      <label for="setupPass">Contraseña</label>
-      <input type="password" id="setupPass" autocomplete="new-password">
-      <label for="setupPass2">Confirmar contraseña</label>
-      <input type="password" id="setupPass2" autocomplete="new-password">
-      <p class="authError" id="setupError"></p>
-      <button class="primaryBtn authBtn" id="setupBtn">Crear cuenta</button>
-    </div>
+    <div id="authPasswordScreen" style="display:none;">
 
-    <div id="authLogin" style="display:none;">
-      <p class="authSub">Ingresá tu usuario y contraseña para continuar.</p>
-      <label for="loginUser">Usuario</label>
-      <input type="text" id="loginUser" autocomplete="username">
-      <label for="loginPass">Contraseña</label>
-      <input type="password" id="loginPass" autocomplete="current-password">
-      <p class="authError" id="loginError"></p>
-      <button class="primaryBtn authBtn" id="loginBtn">Entrar</button>
+      <div id="roleLogos" class="roleLogos">
+        <button type="button" class="roleLogoBtn" data-role="consulta">
+          <span class="roleLogoIcon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </span>
+          <span class="roleLogoLabel">Búsqueda</span>
+        </button>
+        <button type="button" class="roleLogoBtn" data-role="actualizacion">
+          <span class="roleLogoIcon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          </span>
+          <span class="roleLogoLabel">Actualización</span>
+        </button>
+      </div>
+
+      <div id="roleLoginForm" style="display:none;">
+        <p class="authSub" id="roleLoginLabel"></p>
+        <label for="rolePass">Contraseña</label>
+        <input type="password" id="rolePass" autocomplete="current-password">
+        <p class="authError" id="roleLoginError"></p>
+        <button class="primaryBtn authBtn" id="roleLoginBtn">Entrar</button>
+        <button type="button" class="linkBackBtn" id="roleLoginBack">Volver</button>
+      </div>
+
+      <button type="button" class="adminHiddenLink" id="adminHiddenLink">·</button>
+
+      <div id="adminLoginForm" style="display:none;">
+        <p class="authSub">Acceso administrador</p>
+        <label for="loginUser">Usuario</label>
+        <input type="text" id="loginUser" autocomplete="username">
+        <label for="accessPass">Contraseña</label>
+        <input type="password" id="accessPass" autocomplete="current-password">
+        <p class="authError" id="accessError"></p>
+        <button class="primaryBtn authBtn" id="accessBtn">Entrar</button>
+        <button type="button" class="linkBackBtn" id="adminLoginBack">Volver</button>
+      </div>
+
     </div>
 
     <div id="authChecking">
@@ -772,13 +1208,18 @@
       <div class="meta" id="metaLine">cargando…</div>
     </div>
     <div class="headerBtns">
-      <span class="userChip" id="userChip"></span>
-      <button id="usersBtn">Usuarios</button>
-      <button id="undoBtn" disabled>Deshacer</button>
-      <button id="exportBtn">Exportar a Excel</button>
+      <button id="usersBtn" style="display:none;">Usuarios</button>
+      <button id="historyBtn" style="display:none;">Historial</button>
+      <button id="backupBtn" style="display:none;">Respaldo</button>
+      <button id="restoreBtn" style="display:none;">Restaurar</button>
+      <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
+      <button id="logoutBtn">Cerrar sesión</button>
+      <button id="undoBtn" disabled style="display:none;">Deshacer</button>
+      <button id="exportBtn" style="display:none;">Exportar a Excel</button>
     </div>
   </div>
-  <div class="searchWrap">
+  <div class="identityRow" id="identityRow"></div>
+  <div class="searchWrap" id="searchWrap">
     <input id="globalSearch" type="text" placeholder="Buscar placa en todas las zonas…" autocomplete="off">
     <div id="searchResults"></div>
   </div>
@@ -788,26 +1229,11 @@
 
 <main id="mainArea"></main>
 
+<div id="updaterPanel" style="display:none;"></div>
+
 </div>
 
 <div class="toast" id="toast">Guardado</div>
-
-<div class="modalOverlay" id="usersModal">
-  <div class="modalCard">
-    <h3>Usuarios con acceso</h3>
-    <div id="usersList" class="usersList"></div>
-    <label for="newUserName" style="margin-top:14px;">Agregar usuario</label>
-    <input type="text" id="newUserName" autocomplete="off" placeholder="Usuario">
-    <label for="newUserPass">Contraseña</label>
-    <input type="password" id="newUserPass" autocomplete="new-password">
-    <p class="authError" id="usersError"></p>
-    <div class="modalActions" style="margin-top:14px;">
-      <button class="primaryBtn" id="addUserBtn">Agregar usuario</button>
-      <button class="secondaryBtn" id="usersCloseBtn">Cerrar</button>
-      <button class="dangerBtn" id="logoutBtn">Cerrar sesión</button>
-    </div>
-  </div>
-</div>
 
 <div class="modalOverlay" id="dupModal">
   <div class="modalCard">
@@ -833,10 +1259,60 @@
     <button type="button" class="sinAsignarBtn" id="editLocSinAsignarBtn" style="margin-top:6px;">Marcar como sin asignar</button>
     <label for="editLocAseguradora">Aseguradora</label>
     <input type="text" id="editLocAseguradora" placeholder="Ej: INS, Mapfre…">
+    <label for="editLocModelo">Modelo</label>
+    <input type="text" id="editLocModelo" placeholder="Ej: Toyota Corolla (opcional)">
     <div class="modalActions" style="margin-top:16px;">
       <button class="primaryBtn" id="editLocSave">Guardar</button>
       <button class="secondaryBtn" id="editLocCancel">Cancelar</button>
       <button class="dangerBtn" id="editLocDelete">Eliminar esta placa</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="viewDetailModal">
+  <div class="modalCard">
+    <h3>Detalle del vehículo</h3>
+    <div id="viewDetailBody"></div>
+    <div class="modalActions" style="margin-top:16px;">
+      <button class="primaryBtn" id="viewDetailCopyBtn">Copiar info</button>
+      <button class="secondaryBtn" id="viewDetailCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="usersModal">
+  <div class="modalCard modalCardWide">
+    <h3>Usuarios con acceso</h3>
+    <div id="usersList" class="usersList"></div>
+    <label for="newUserName" style="margin-top:14px;">Usuario</label>
+    <input type="text" id="newUserName" autocomplete="off" placeholder="Nombre de usuario">
+    <label for="newUserPass">Contraseña</label>
+    <input type="password" id="newUserPass" autocomplete="new-password">
+    <label for="newUserRole">Rol</label>
+    <select id="newUserRole">
+      <option value="admin">Administrador</option>
+      <option value="consulta">Consulta (solo lectura)</option>
+      <option value="actualizacion">Actualización (solo mover placas)</option>
+    </select>
+    <p class="authError" id="usersError"></p>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="primaryBtn" id="addUserBtn">Agregar usuario</button>
+      <button class="secondaryBtn" id="usersCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="historyModal">
+  <div class="modalCard modalCardWide">
+    <h3>Historial de actividad</h3>
+    <div class="historyTabs">
+      <button class="historyTabBtn active" id="historyTabUpdates" type="button">Movimientos de placas</button>
+      <button class="historyTabBtn" id="historyTabAccess" type="button">Accesos</button>
+    </div>
+    <div id="historyListUpdates" class="historyList"></div>
+    <div id="historyListAccess" class="historyList" style="display:none;"></div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="secondaryBtn" id="historyCloseBtn">Cerrar</button>
     </div>
   </div>
 </div>
@@ -846,11 +1322,135 @@
 
   const ZONES = [
     { key: "Avaluo", label: "Avalúo", abbr: "AV", color: "var(--z-avaluo)", hex: "4F8FD1" },
+    { key: "AvaluoPuff", label: "Avalúo Puff", abbr: "AVP", color: "var(--z-avaluo-puff)", hex: "8FB9E0" },
+    { key: "AtrasEntregas", label: "Atrás entregas", abbr: "ATE", color: "var(--z-atras-entregas)", hex: "8CCB9E" },
     { key: "Atras", label: "Atrás", abbr: "AT", color: "var(--z-atras)", hex: "5FB37A" },
-    { key: "Malla", label: "Malla", abbr: "ML", color: "var(--z-malla)", hex: "A175D4" },
+    { key: "AtrasSolidos", label: "Atrás Sólidos", abbr: "ATS", color: "var(--z-atras-solidos)", hex: "2F7A4A" },
+    { key: "Maya", label: "Maya", abbr: "MY", color: "var(--z-malla)", hex: "A175D4" },
+    { key: "MayaSinNumeracion", label: "Maya Sin numeración", abbr: "MSN", color: "var(--z-maya-sn)", hex: "C7A6E8" },
     { key: "Neon Nieto", label: "Neon Nieto", abbr: "NN", color: "var(--z-neon)", hex: "E0529C" },
     { key: "Parqueo Gash Externo", label: "Parqueo Gash Externo", abbr: "PGE", color: "var(--z-pge)", hex: "E2843A" }
   ];
+
+  // Capacidades por defecto de los bloques sin numeración (solo se aplican si
+  // el admin todavía no definió una capacidad propia para esa zona).
+  const DEFAULT_BLOCK_CAPACITIES = { AvaluoPuff: 11, AtrasSolidos: 11, MayaSinNumeracion: 17 };
+
+  // Capacidad real de CADA espacio/línea, tomada del recorrido físico del
+  // parqueo (registrado en Excel). Se aplica una sola vez (versión 1); si el
+  // admin ajusta capacidades a mano después, no se vuelve a pisar solo.
+  const PER_CAMPO_CAPACITY_VERSION = 1;
+  const PER_CAMPO_CAPACITY = {"Avaluo": {"1": 2, "2": 2, "3": 3, "4": 3, "5": 3, "6": 3, "7": 3, "8": 3, "9": 3, "10": 3, "11": 3, "12": 3, "13": 3, "14": 3, "15": 3, "16": 2, "17": 2, "18": 2, "19": 2, "20": 2, "21": 2, "22": 2, "23": 2, "24": 1, "25": 1, "26": 1, "27": 1, "28": 1, "29": 1, "30": 1, "31": 1}, "AvaluoPuff": {"Línea 1": 2, "Línea 2": 2, "Línea 3": 2, "Línea 4": 2, "Línea 5": 2, "Línea 6": 1}, "AtrasEntregas": {"33": 2, "34": 3, "35": 3, "36": 3}, "Atras": {"37": 3, "38": 3, "39": 3, "40": 3, "41": 3, "42": 3, "43": 2, "44": 3, "45": 3, "46": 3, "47": 3, "48": 2, "49": 2, "50": 2, "51": 2, "52": 3, "53": 3, "54": 3, "55": 3, "56": 3, "57": 3, "58": 3, "59": 3, "60": 3, "61": 3, "62": 3}, "AtrasSolidos": {"Línea 1": 3, "Línea 2": 3, "Línea 3": 2, "Línea 4": 2, "Línea 5": 1}, "Maya": {"1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1, "9": 1, "10": 1, "11": 1, "12": 1, "13": 1, "14": 1, "15": 1, "16": 1, "17": 1, "18": 1, "19": 1, "71": 1, "72": 1, "73": 1, "74": 1, "75": 1, "76": 1}, "MayaSinNumeracion": {"Línea 1": 1, "Línea 2": 1, "Línea 3": 1, "Línea 4": 1, "Línea 5": 1, "Línea 6": 1, "Línea 7": 1, "Línea 8": 1, "Línea 9": 1, "Línea 10": 1, "Línea 11": 1, "Línea 12": 1, "Línea 13": 1, "Línea 14": 1, "Línea 15": 1, "Línea 16": 1, "Línea 17": 1}, "Neon Nieto": {"Línea 1": 1, "Línea 2": 1, "Línea 3": 1, "Línea 4": 1, "Línea 5": 1, "Línea 6": 1, "Línea 7": 1}, "Parqueo Gash Externo": {"Línea 1": 2, "Línea 2": 2, "Línea 3": 2, "Línea 4": 2, "Línea 5": 2, "Línea 6": 2, "Línea 7": 2, "Línea 8": 2, "Línea 9": 2, "Línea 10": 2, "Línea 11": 2, "Línea 12": 2, "Línea 13": 2, "Línea 14": 2, "Línea 15": 2, "Línea 16": 2, "Línea 17": 2, "Línea 18": 2, "Línea 19": 2, "Línea 20": 2, "Línea 21": 2, "Línea 22": 2, "Línea 23": 2, "Línea 24": 2, "Línea 25": 2, "Línea 26": 2, "Línea 27": 2, "Línea 28": 2}};
+
+  // Reubica los vehículos de las antiguas zonas Avaluo/Atras/Malla dentro de
+  // los 7 bloques nuevos, según el número de campo que ya tenían. Lo que no
+  // encaja en el rango numerado del bloque principal cae como "Sin asignar"
+  // en su bloque hermano de capacidad (Puff / Sólidos / Sin numeración).
+  function migrateAvaluoAtrasMallaToBlocks(oldAvaluo, oldAtras, oldMalla){
+    const result = { Avaluo: [], AvaluoPuff: [], AtrasEntregas: [], Atras: [], AtrasSolidos: [], Maya: [], MayaSinNumeracion: [] };
+    const lineCounters = { AvaluoPuff: 0, AtrasSolidos: 0, MayaSinNumeracion: 0 };
+
+    function addPlates(zoneKey, campoLabel, plates){
+      let entry = result[zoneKey].find(c => c.campo === campoLabel);
+      if(!entry){ entry = { campo: campoLabel, plates: [] }; result[zoneKey].push(entry); }
+      entry.plates.push(...plates);
+    }
+    // Cada campo viejo que no encaja en el rango numerado se convierte en su
+    // propia "Línea" (conserva el orden que ya traían esos vehículos juntos,
+    // en vez de mezclar todo en un solo cajón "Sin asignar").
+    function addAsNewLine(zoneKey, plates){
+      lineCounters[zoneKey]++;
+      addPlates(zoneKey, `Línea ${lineCounters[zoneKey]}`, plates);
+    }
+
+    (oldAvaluo || []).forEach(c=>{
+      const n = parseFloat(c.campo);
+      if(!isNaN(n) && n>=1 && n<=31) addPlates("Avaluo", c.campo, c.plates);
+      else addAsNewLine("AvaluoPuff", c.plates);
+    });
+
+    (oldAtras || []).forEach(c=>{
+      const n = parseFloat(c.campo);
+      if(!isNaN(n) && n>=33 && n<=36) addPlates("AtrasEntregas", c.campo, c.plates);
+      else if(!isNaN(n) && n>=37 && n<=62) addPlates("Atras", c.campo, c.plates);
+      else addAsNewLine("AtrasSolidos", c.plates);
+    });
+
+    (oldMalla || []).forEach(c=>{
+      const n = parseFloat(c.campo);
+      if(!isNaN(n) && ((n>=1 && n<=19) || (n>=71 && n<=76))) addPlates("Maya", c.campo, c.plates);
+      else addAsNewLine("MayaSinNumeracion", c.plates);
+    });
+
+    Object.keys(result).forEach(k => sortCampos(result[k]));
+    return result;
+  }
+
+  // Migración adicional (una sola vez): si estos 3 bloques ya habían corrido
+  // con la versión anterior (todo mezclado bajo "Sin asignar"), lo renombra a
+  // "Línea 1" — no se puede reconstruir la separación original ya perdida,
+  // pero al menos queda organizado bajo el nuevo esquema de líneas.
+  function migrateSinAsignarToLineas(st){
+    let changed = false;
+    UNNUMBERED_ONLY_ZONES.forEach(zoneKey=>{
+      const arr = st.zones[zoneKey];
+      if(!arr) return;
+      const entry = arr.find(c => c.campo === SIN_ASIGNAR);
+      if(entry){
+        entry.campo = "Línea 1";
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  // Convierte los campos numerados que ya tenían Neon Nieto y Parqueo Gash
+  // Externo en "Línea N" (una línea por cada campo existente, conservando el
+  // orden y agrupación que ya tenían). Se ejecuta una sola vez.
+  function migrateNumberedZonesToLines(st){
+    let changed = false;
+    ["Neon Nieto", "Parqueo Gash Externo"].forEach(zoneKey=>{
+      const arr = st.zones[zoneKey];
+      if(!arr || arr.length === 0) return;
+      const yaSonLineas = arr.every(c => /^L[ií]nea\s+\d+$/i.test(c.campo));
+      if(!yaSonLineas){
+        st.zones[zoneKey] = arr.map((c, idx) => ({ campo: `Línea ${idx+1}`, plates: c.plates }));
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  // Aplica la capacidad real de cada espacio/línea (del recorrido físico en
+  // Excel) una sola vez. Si el espacio no existe todavía (nadie ha
+  // estacionado ahí), lo crea vacío solo para dejar registrada su capacidad;
+  // si ya existe (con o sin vehículos), únicamente le agrega/actualiza el
+  // número de capacidad, sin tocar los vehículos que ya tenga.
+  function applyPerCampoCapacityImportIfNeeded(st){
+    if((st.perCampoCapacityVersion || 0) >= PER_CAMPO_CAPACITY_VERSION) return false;
+    Object.keys(PER_CAMPO_CAPACITY).forEach(zoneKey=>{
+      if(!st.zones[zoneKey]) st.zones[zoneKey] = [];
+      const arr = st.zones[zoneKey];
+      Object.keys(PER_CAMPO_CAPACITY[zoneKey]).forEach(campoLabel=>{
+        let entry = arr.find(c => c.campo === campoLabel);
+        if(!entry){
+          entry = { campo: campoLabel, plates: [] };
+          arr.push(entry);
+        }
+        entry.capacidad = PER_CAMPO_CAPACITY[zoneKey][campoLabel];
+      });
+      sortCampos(arr);
+    });
+    st.perCampoCapacityVersion = PER_CAMPO_CAPACITY_VERSION;
+    return true;
+  }
+
+  function applyDefaultBlockCapacities(capacities){
+    Object.keys(DEFAULT_BLOCK_CAPACITIES).forEach(k=>{
+      if(capacities[k] === undefined) capacities[k] = DEFAULT_BLOCK_CAPACITIES[k];
+    });
+    return capacities;
+  }
 
   // Semilla: campo (columna/posición real del Excel) -> lista de placas en ese campo
   const SEED_DATA = {"Avaluo": {"1": ["CL338850", "BRT285"], "2": ["FBJ328"], "3": ["BZL006", "AGV9124"], "4": ["CL323859", "BVW241", "ABJ612"], "5": ["BXN690", "CBX388"], "6": ["PE000330", "BYS474"], "7": ["3494", "BWR660"], "8": ["Cl379044", "Prado blanco", "cbk888"], "9": ["Cl307033", "Cl534001", "mkv090"], "10": ["C174570", "bwc311"], "11": ["Cl497008", "Acc081", "Abq540"], "12": ["BJR486", "Aak047"], "13": ["kph192", "Mpg156", "Cl371394"], "14": ["Bsx981", "Cl325517", "MYM683"], "15": ["Tacoma gris", "BWH531"], "16": ["Toyota cross blanco", "881301"], "17": ["FSC307", "BTS859", "Rxj668"], "18": ["Cl481636", "ACY439"], "19": ["Ste108", "Bsv193"], "20": ["Gsp100"], "21": ["Raptor blanco", "Bwc095"], "22": ["BYD323", "BWW252"], "23": ["MRm888", "Krn999"], "24": ["MPR299"], "25": ["Fede"], "27": ["BRF346"], "30": ["CL358702"], "31": ["CL367086", "ADM978"], "33": ["Cl319435"], "34": ["MHV018", "ccn680"], "35": ["Ccg040", "Brb334"], "36": ["Cbg019"], "37": ["GNZ212", "CL775954", "Lnx772"], "38": ["Hmr826"]}, "Atras": {"1": ["CL790798", "ADL148"], "2": ["AAA758", "FSD538"], "3": ["ABL259", "BXB968", "MPZ017"], "4": ["ACF765"], "5": ["BXM699", "FRD026", "MIQ718"], "6": ["CCF126", "BPL587", "NXH359"], "7": ["CL788404"], "8": ["CBD113", "CCH330", "BGJ960"], "9": ["CL357110", "AAM264", "AAH587"], "10": ["Ford-AGV215", "DRY100", "BVY106"], "11": ["GMK430", "ABF372", "FRS091"], "12": ["CROSSBLANCO", "BXJ037", "CL345354"], "13": ["FMD168", "301-000487", "RV4-Agv355"], "14": ["CL352560", "LSZ923", "CBV769"], "15": ["CBS904"], "16": ["BGH379"], "17": ["EAQ028", "PRADOBRONCE"], "18": ["BRT639", "CBL919"], "19": ["CCH663", "CD5718"], "20": ["CBM411", "CCJ147", "BZB750"], "21": ["KTJ929", "AAQ007", "CL357983"], "22": ["CL351523", "MTW019", "VNT028"], "23": ["ACE318", "CBD698", "RVT847"], "24": ["4RUNNERGRIS", "BXW488", "ABJ630"], "25": ["AAN112", "BVX068", "BWQ949"], "26": ["PSB176", "BXY408", "BYK739"], "27": ["CL347413", "BSW458"], "28": ["BXM221", "BWY262", "RBK512"], "29": ["WFQ168", "JPV451", "AAZ775"], "30": ["ABV667"], "33": ["CBZ669", "CL359800", "RVC429"], "34": ["CL347474", "2558", "GKM521"], "35": ["CMM291", "BXZ260"], "36": ["CRC1594", "CL375840", "ABE829", "4Runnerblanca"]}, "Malla": {"SN2": ["CL347468"], "SN3": ["BXL048"], "SN4": ["AAG828", "SM8253"], "SN5": ["AAA672", "PE6-1409"], "SN6": ["ambulancia 0003247"], "SN7": ["BYC412", "BWK142"], "SN9": ["AAG998"], "SN10": ["CBR906"], "SN11": ["AAC559"], "SN12": ["BVZ663"], "66": ["BWB803"], "67": ["BZQ358"], "68": ["BSF310"], "69": ["ABQ118"], "70": ["BQZ676"], "71": ["Cbp169"], "72": ["Raptorblanco"], "73": ["CCL699"], "74": ["YYJ192"], "75": ["BXD917"], "76": ["FAN210"], "1": ["ADp327"], "2": ["Toyota cross/Blanco"], "3": ["BWZ304"], "4": ["MEB007"], "5": ["Fjs248"], "6": ["BWy867"], "7": ["Bwl929"], "8": ["Yariscrossgris/AGv"], "9": ["Ccb551"], "10": ["Gxg097"], "11": ["Cl285553"], "12": ["Cl318237"], "13": ["Qyq511"], "14": ["Clg555"], "15": ["Bxk510"], "16": ["Cl809024"], "17": ["LCY210"], "18": ["AAM260"], "19": ["AAA757"]}, "Neon Nieto": {"8": ["LVD213"], "9": ["BXQ950"], "12": ["JRN010"], "13": ["CL368974"], "14": ["LNX095"], "15": ["BYN180"], "16": ["BLJ217"], "17": ["Raptor azul"], "19": ["PE17 328"]}, "Parqueo Gash Externo": {"1": ["BYB182"], "2": ["BZT815", "BYS479"], "5": ["BQC463"], "6": ["881301", "BRY000"], "7": ["RBK512"], "8": ["ACF277"], "10": ["ABQ926"], "11": ["WTF916"], "12": ["BJK099"], "13": ["BBP042", "BYS802"], "14": ["BKS153"], "15": ["CL337788", "BZJ669"], "16": ["CMM914", "CBS242"], "17": ["BJR852"], "18": ["BFB581", "GJR127"], "19": ["CAJON", "CL284691"], "20": ["DKD581"], "21": ["BTN258"], "23": ["CL534317", "BVP908"], "24": ["ABP277"], "25": ["CCG417"], "26": ["LSH115", "AAH079"], "27": ["ABR935"], "28": ["Carroceria"], "29": ["LYL015"]}};
@@ -858,10 +1458,14 @@
   const STORAGE_KEY = "inventario_parqueo_v4";
   const LEGACY_CAMPOS_KEY = "inventario_parqueo_v3"; // versión anterior (campos con placas como texto simple)
   const LEGACY_FLAT_KEY = "inventario_parqueo_v1"; // versión anterior (lista plana)
-  const USERS_KEY = "inventario_parqueo_users_v1";
-  const SESSION_KEY = "inventario_parqueo_session_v1"; // guardado personal (por navegador), solo el nombre de usuario
+  const SESSION_KEY = "inventario_parqueo_session_v1"; // guardado personal (por navegador): usuario ya autenticado en este navegador
+  const USERS_KEY = "inventario_parqueo_users_v2"; // compartido: cuentas {username, hash, role, active}
+  const HISTORY_KEY = "inventario_parqueo_history_v1"; // compartido: movimientos de placas
+  const ACCESS_LOG_KEY = "inventario_parqueo_access_v1"; // compartido: inicios/cierres de sesión e intentos fallidos
   let state = null; // { zones: { zoneKey: [ {campo, plates:[]}, ... ] }, capacities:{zoneKey:number}, updatedAt }
-  let activeTab = ZONES[0].key;
+  let activeTab = "__dashboard__";
+  let dashboardCharts = []; // instancias Chart.js activas, para destruirlas antes de re-renderizar
+  let lastAddZoneKey = ZONES[0].key; // última zona usada al agregar un vehículo nuevo (rol Actualización)
   let storageAvailable = true;
   let storageWarned = false;
   let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
@@ -881,6 +1485,7 @@
     if(btn) btn.disabled = undoStack.length === 0;
   }
   async function doUndo(){
+    if(!guardEdit()) return;
     if(undoStack.length === 0) return;
     const prev = undoStack.pop();
     state.zones = prev;
@@ -892,13 +1497,37 @@
 
   function zoneInfo(key){ return ZONES.find(z => z.key === key); }
   function normalizePlate(v){ return String(v).trim().toUpperCase(); }
+
+  // ¿Se actualizó (movió, editó o registró) este vehículo hoy? Sirve para
+  // resaltar en la interfaz "ya pasé por esta placa" durante una ronda.
+  function wasUpdatedToday(entry){
+    if(!entry || !entry.lastUpdated) return false;
+    const d = new Date(entry.lastUpdated);
+    if(isNaN(d.getTime())) return false;
+    const now = new Date();
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+  }
   function normalizeCampo(v){ return String(v).trim(); }
 
   const SIN_ASIGNAR = "Sin asignar";
+  // Estas 3 zonas no tienen campos numerados nunca: todo su contenido vive
+  // bajo "Sin asignar", así que su ocupación se mide por vehículos totales,
+  // no por cantidad de campos numerados (que siempre sería cero).
+  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "AtrasSolidos", "MayaSinNumeracion", "Neon Nieto", "Parqueo Gash Externo"]);
+  function occupancyCountForZone(zoneKey){
+    const campos = state.zones[zoneKey] || [];
+    if(UNNUMBERED_ONLY_ZONES.has(zoneKey)){
+      return campos.reduce((a,c)=>a+c.plates.length, 0);
+    }
+    return campos.filter(c => c.campo !== SIN_ASIGNAR).length;
+  }
 
   function campoSortValue(c){
     const n = parseFloat(c);
-    return isNaN(n) ? Infinity : n;
+    if(!isNaN(n)) return n;
+    const m = /^L[ií]nea\s+(\d+)$/i.exec(String(c).trim());
+    if(m) return 1000000 + parseInt(m[1], 10); // Líneas: después de los números, pero en orden numérico entre sí
+    return Infinity;
   }
   function sortCampos(arr){
     arr.sort((a,b)=>{
@@ -910,17 +1539,33 @@
     });
   }
 
+  function rawSeedToCampoArray(rawObj){
+    const arr = Object.keys(rawObj || {}).map(campo => ({
+      campo,
+      plates: rawObj[campo].map(p => ({ plate: p, aseguradora: "" }))
+    }));
+    sortCampos(arr);
+    return arr;
+  }
+
   function seedZonesFromScratch(){
     const zones = {};
-    ZONES.forEach(z=>{
-      const src = SEED_DATA[z.key] || {};
-      const arr = Object.keys(src).map(campo => ({
-        campo,
-        plates: src[campo].map(p => ({ plate: p, aseguradora: "" }))
-      }));
-      sortCampos(arr);
-      zones[z.key] = arr;
+
+    // Avalúo / Atrás / Malla (datos originales del Excel) se reparten entre
+    // los 7 bloques nuevos usando la misma migración que se aplica a datos
+    // ya existentes, para que una instalación nueva también quede correcta.
+    const oldAvaluo = rawSeedToCampoArray(SEED_DATA["Avaluo"]);
+    const oldAtras = rawSeedToCampoArray(SEED_DATA["Atras"]);
+    const oldMalla = rawSeedToCampoArray(SEED_DATA["Malla"]);
+    Object.assign(zones, migrateAvaluoAtrasMallaToBlocks(oldAvaluo, oldAtras, oldMalla));
+
+    // Neon Nieto y Parqueo Gash Externo no tienen numeración física real:
+    // cada campo del Excel original se convierte en su propia línea.
+    ["Neon Nieto", "Parqueo Gash Externo"].forEach(key=>{
+      const raw = rawSeedToCampoArray(SEED_DATA[key]);
+      zones[key] = raw.map((c, idx) => ({ campo: `Línea ${idx+1}`, plates: c.plates }));
     });
+
     return zones;
   }
 
@@ -961,7 +1606,14 @@
     b.id = "storageBanner";
     b.style.cssText = "background:#3a2a12;color:#f2c230;font-size:0.78rem;padding:8px 16px;text-align:center;";
     b.textContent = "No se pudo activar el guardado automático en este navegador — los cambios se mantienen mientras la pestaña esté abierta. Exportá a Excel antes de cerrar para no perder nada.";
-    document.body.insertBefore(b, document.querySelector("nav#tabs"));
+    const appRoot = document.getElementById("appRoot");
+    if(appRoot && appRoot.firstElementChild && appRoot.contains(appRoot.firstElementChild)){
+      appRoot.insertBefore(b, appRoot.firstElementChild);
+    } else if(appRoot){
+      appRoot.appendChild(b);
+    } else {
+      document.body.appendChild(b);
+    }
   }
 
   async function checkStorageAvailable(){
@@ -977,8 +1629,33 @@
     }
   }
 
+  // Si el estado cargado todavía tiene la clave "Malla" (formato anterior a
+  // los 7 bloques), reubica Avalúo/Atrás/Malla en los bloques nuevos según
+  // su número de campo y aplica las capacidades por defecto de los bloques
+  // sin numeración. Devuelve true si hizo falta migrar (para re-guardar).
+  function migrateStateToBlocksIfNeeded(st){
+    if(st.zones && st.zones.Malla !== undefined){
+      // Por si alguna placa llegó aquí todavía como texto simple (formatos muy antiguos)
+      ["Avaluo","Atras","Malla"].forEach(k=>{
+        (st.zones[k]||[]).forEach(c=>{
+          c.plates = (c.plates||[]).map(p => (typeof p === "string") ? { plate: p, aseguradora: "" } : p);
+        });
+      });
+      const migrated = migrateAvaluoAtrasMallaToBlocks(st.zones.Avaluo, st.zones.Atras, st.zones.Malla);
+      delete st.zones.Avaluo;
+      delete st.zones.Atras;
+      delete st.zones.Malla;
+      Object.assign(st.zones, migrated);
+      st.capacities = applyDefaultBlockCapacities(st.capacities || {});
+      return true;
+    }
+    return false;
+  }
+
   async function loadState(){
-    storageAvailable = await checkStorageAvailable();
+    // storageAvailable ya fue calculado por runAuthGate() al arrancar la app,
+    // antes de que revealApp() invoque esta función; se reutiliza en vez de
+    // repetir la verificación (evita una escritura de "sonda" extra).
 
     if(storageAvailable){
       // 1) dato compartido ya en el formato actual (v4, con aseguradora)
@@ -987,6 +1664,11 @@
         if(shared && shared.value){
           state = JSON.parse(shared.value);
           if(!state.capacities) state.capacities = {};
+          let needsResave = migrateStateToBlocksIfNeeded(state);
+          needsResave = migrateSinAsignarToLineas(state) || needsResave;
+          needsResave = migrateNumberedZonesToLines(state) || needsResave;
+          needsResave = applyPerCampoCapacityImportIfNeeded(state) || needsResave;
+          if(needsResave) await saveState(true);
           return;
         }
       }catch(e){ /* no existe todavía */ }
@@ -1001,6 +1683,10 @@
             capacities: old.capacities || {},
             updatedAt: new Date().toISOString()
           };
+          migrateStateToBlocksIfNeeded(state);
+          migrateSinAsignarToLineas(state);
+          migrateNumberedZonesToLines(state);
+          applyPerCampoCapacityImportIfNeeded(state);
           await saveState(true);
           return;
         }
@@ -1011,7 +1697,7 @@
         const legacyShared = await window.storage.get(LEGACY_FLAT_KEY, true);
         if(legacyShared && legacyShared.value){
           const old = JSON.parse(legacyShared.value);
-          state = { zones: migrateFlatToCampos(old.zones || {}), capacities: {}, updatedAt: new Date().toISOString() };
+          state = { zones: migrateFlatToCampos(old.zones || {}), capacities: applyDefaultBlockCapacities({}), updatedAt: new Date().toISOString() };
           await saveState(true);
           return;
         }
@@ -1022,7 +1708,7 @@
         const legacyPersonal = await window.storage.get(LEGACY_FLAT_KEY, false);
         if(legacyPersonal && legacyPersonal.value){
           const old = JSON.parse(legacyPersonal.value);
-          state = { zones: migrateFlatToCampos(old.zones || {}), capacities: {}, updatedAt: new Date().toISOString() };
+          state = { zones: migrateFlatToCampos(old.zones || {}), capacities: applyDefaultBlockCapacities({}), updatedAt: new Date().toISOString() };
           await saveState(true);
           return;
         }
@@ -1030,7 +1716,8 @@
     }
 
     // primera vez, o sin almacenamiento disponible: sembrar con los datos reales del Excel
-    state = { zones: seedZonesFromScratch(), capacities: {}, updatedAt: new Date().toISOString() };
+    state = { zones: seedZonesFromScratch(), capacities: applyDefaultBlockCapacities({}), updatedAt: new Date().toISOString() };
+    applyPerCampoCapacityImportIfNeeded(state);
     await saveState(true);
   }
 
@@ -1073,15 +1760,23 @@
   function renderTabs(){
     const nav = document.getElementById("tabs");
     nav.innerHTML = "";
-    ZONES.forEach(z=>{
-      const btn = document.createElement("button");
-      btn.className = "tabBtn" + (activeTab===z.key ? " active" : "");
-      btn.style.setProperty("--zone-color", z.color);
-      const count = (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0);
-      btn.innerHTML = `<span class="dot" style="background:${z.color}"></span> ${z.label} <span class="count">${count}</span>`;
-      btn.onclick = ()=>{ activeTab = z.key; renderAll(); };
-      nav.appendChild(btn);
-    });
+    const dashBtn = document.createElement("button");
+    dashBtn.className = "tabBtn" + (activeTab==="__dashboard__" ? " active" : "");
+    dashBtn.style.setProperty("--zone-color", "var(--line-dim)");
+    dashBtn.innerHTML = `Dashboard`;
+    dashBtn.onclick = ()=>{ activeTab = "__dashboard__"; renderAll(); };
+    nav.appendChild(dashBtn);
+    if(!(currentUser && currentUser.role === "consulta")){
+      ZONES.forEach(z=>{
+        const btn = document.createElement("button");
+        btn.className = "tabBtn" + (activeTab===z.key ? " active" : "");
+        btn.style.setProperty("--zone-color", z.color);
+        const count = (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0);
+        btn.innerHTML = `<span class="dot" style="background:${z.color}"></span> ${z.label} <span class="count">${count}</span>`;
+        btn.onclick = ()=>{ activeTab = z.key; renderAll(); };
+        nav.appendChild(btn);
+      });
+    }
     const btn = document.createElement("button");
     btn.className = "tabBtn" + (activeTab==="__resumen__" ? " active" : "");
     btn.style.setProperty("--zone-color", "var(--line-dim)");
@@ -1091,9 +1786,6 @@
     nav.appendChild(btn);
   }
 
-  function escapeAttr(s){
-    return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
-  }
   function escapeHtml(s){
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
@@ -1113,6 +1805,48 @@
       }
     }
     return null;
+  }
+
+  // Distancia de edición simple (Levenshtein), para detectar placas parecidas
+  // (posible error de tipeo) sin que sean un duplicado exacto.
+  function levenshteinDistance(a, b){
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m+1}, ()=> new Array(n+1).fill(0));
+    for(let i=0;i<=m;i++) dp[i][0] = i;
+    for(let j=0;j<=n;j++) dp[0][j] = j;
+    for(let i=1;i<=m;i++){
+      for(let j=1;j<=n;j++){
+        dp[i][j] = (a[i-1]===b[j-1]) ? dp[i-1][j-1]
+          : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+      }
+    }
+    return dp[m][n];
+  }
+
+  // Busca placas ya existentes MUY parecidas (pero no iguales) a `plateUpper`.
+  // Solo tiene sentido con placas de al menos 4 caracteres, para evitar
+  // falsos positivos mientras la persona recién empieza a escribir.
+  function findSimilarPlates(plateUpper, excludeZone, excludeCampoIdx, excludePlateIdx){
+    if(!plateUpper || plateUpper.length < 4) return [];
+    const results = [];
+    for(const z of ZONES){
+      const arr = state.zones[z.key] || [];
+      for(let ci=0; ci<arr.length; ci++){
+        const plates = arr[ci].plates;
+        for(let pi=0; pi<plates.length; pi++){
+          if(z.key===excludeZone && ci===excludeCampoIdx && pi===excludePlateIdx) continue;
+          const existing = (plates[pi].plate || "").toUpperCase();
+          if(!existing || existing === plateUpper) continue;
+          const threshold = existing.length <= 6 ? 1 : 2;
+          const dist = levenshteinDistance(plateUpper, existing);
+          if(dist > 0 && dist <= threshold){
+            results.push({ zoneKey: z.key, campoIdx: ci, plateIdx: pi, plate: existing, distance: dist });
+          }
+        }
+      }
+    }
+    results.sort((a,b)=> a.distance - b.distance);
+    return results.slice(0, 3);
   }
 
   function askMoveOrCancel(plate, fromZoneLabel, fromCampo, toZoneLabel, toCampo){
@@ -1160,7 +1894,62 @@
     }
   }
 
+  // Vista de solo lectura para el rol Búsqueda: muestra el detalle del
+  // vehículo y permite copiar la info, sin ninguna posibilidad de editar.
+  function openViewDetailModal(zoneKey, ci, pi){
+    const arr = state.zones[zoneKey];
+    if(!arr || !arr[ci] || pi >= arr[ci].plates.length){
+      showToast("Esa placa ya cambió de lugar, actualizá la búsqueda");
+      return;
+    }
+    const campoObj = arr[ci];
+    const entry = campoObj.plates[pi];
+    const zi = zoneInfo(zoneKey);
+
+    const overlay = document.getElementById("viewDetailModal");
+    const body = document.getElementById("viewDetailBody");
+    body.innerHTML = `
+      <div class="updaterInfoRow"><span>Placa</span><strong>${escapeHtml(entry.plate)}</strong></div>
+      <div class="updaterInfoRow"><span>Zona</span><strong>${zi.label}</strong></div>
+      <div class="updaterInfoRow"><span>Campo</span><strong>${escapeHtml(campoObj.campo)}</strong></div>
+      <div class="updaterInfoRow"><span>Aseguradora</span><strong>${entry.aseguradora ? escapeHtml(entry.aseguradora) : "—"}</strong></div>
+      <div class="updaterInfoRow"><span>Modelo</span><strong>${entry.modelo ? escapeHtml(entry.modelo) : "—"}</strong></div>
+    `;
+    overlay.classList.add("show");
+
+    const copyBtn = document.getElementById("viewDetailCopyBtn");
+    const closeBtn = document.getElementById("viewDetailCloseBtn");
+    async function onCopy(){
+      const text = `Placa: ${entry.plate}\nZona: ${zi.label}\nCampo: ${campoObj.campo}\nAseguradora: ${entry.aseguradora || "—"}\nModelo: ${entry.modelo || "—"}`;
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        }
+        showToast("Info copiada al portapapeles");
+      }catch(e){
+        showToast("No se pudo copiar. Copiá el texto manualmente.");
+      }
+    }
+    function onClose(){
+      overlay.classList.remove("show");
+      copyBtn.removeEventListener("click", onCopy);
+      closeBtn.removeEventListener("click", onClose);
+    }
+    copyBtn.addEventListener("click", onCopy);
+    closeBtn.addEventListener("click", onClose);
+  }
+
   function openEditLocModal(zoneKey, ci, pi){
+    if(!guardEdit()) return;
     const arr = state.zones[zoneKey];
     if(!arr || !arr[ci] || pi >= arr[ci].plates.length){
       showToast("Esa placa ya cambió de lugar, actualizá la búsqueda");
@@ -1177,6 +1966,7 @@
     const zoneSelect = document.getElementById("editLocZone");
     const campoInput = document.getElementById("editLocCampo");
     const aseguradoraInput = document.getElementById("editLocAseguradora");
+    const modeloInput = document.getElementById("editLocModelo");
     const saveBtn = document.getElementById("editLocSave");
     const cancelBtn = document.getElementById("editLocCancel");
     const deleteBtn = document.getElementById("editLocDelete");
@@ -1187,8 +1977,12 @@
     zoneSelect.innerHTML = ZONES.map(z=>`<option value="${z.key}" ${z.key===zoneKey?"selected":""}>${z.label}</option>`).join("");
     campoInput.value = currentCampo;
     aseguradoraInput.value = targetEntry.aseguradora || "";
+    modeloInput.value = targetEntry.modelo || "";
 
     overlay.classList.add("show");
+
+    function onEnterKey(e){ if(e.key === "Enter") onSave(); }
+    [placaInput, campoInput, aseguradoraInput, modeloInput].forEach(inp=> inp.addEventListener("keydown", onEnterKey));
 
     function cleanup(){
       overlay.classList.remove("show");
@@ -1196,6 +1990,7 @@
       cancelBtn.removeEventListener("click", onCancel);
       deleteBtn.removeEventListener("click", onDelete);
       sinAsignarBtn.removeEventListener("click", onSinAsignar);
+      [placaInput, campoInput, aseguradoraInput, modeloInput].forEach(inp=> inp.removeEventListener("keydown", onEnterKey));
     }
     function onCancel(){ cleanup(); }
     function onSinAsignar(){ campoInput.value = SIN_ASIGNAR; campoInput.focus(); }
@@ -1204,6 +1999,7 @@
       const newCampo = normalizeCampo(campoInput.value);
       const newPlate = normalizePlate(placaInput.value);
       const newAseguradora = aseguradoraInput.value.trim();
+      const newModelo = modeloInput.value.trim();
       if(!newCampo){ showToast("Ingresá un campo válido"); return; }
       if(!newPlate){ showToast("Ingresá una placa válida"); return; }
 
@@ -1213,9 +2009,11 @@
       // Caso simple: no cambia ni la ubicación ni la placa -> solo actualizar
       // la aseguradora en el mismo lugar, sin tocar el orden de llegada.
       if(sameLocation && samePlate){
-        if(newAseguradora === (targetEntry.aseguradora || "")){ cleanup(); return; }
+        if(newAseguradora === (targetEntry.aseguradora || "") && newModelo === (targetEntry.modelo || "")){ cleanup(); return; }
         const snap = snapshotZones();
         targetEntry.aseguradora = newAseguradora;
+        targetEntry.modelo = newModelo;
+        targetEntry.lastUpdated = new Date().toISOString();
         pushUndo(snap);
         cleanup();
         await saveState();
@@ -1236,10 +2034,11 @@
           const snap = snapshotZones();
           removePlateEntryByRef(dup.zoneKey, dupCampoObj, dupEntry);
           removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
-          getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora });
+          getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() });
           pushUndo(snap);
           cleanup();
           await saveState();
+          await logUpdate(newPlate, zoneKey, currentCampo, newZone, newCampo);
           pendingResumenFilter = newPlate;
           renderAll();
           return;
@@ -1257,10 +2056,13 @@
 
       const snap = snapshotZones();
       removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
-      getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora });
+      getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() });
       pushUndo(snap);
       cleanup();
       await saveState();
+      if(!sameLocation){
+        await logUpdate(newPlate, zoneKey, currentCampo, newZone, newCampo);
+      }
       pendingResumenFilter = newPlate;
       renderAll();
     }
@@ -1290,6 +2092,19 @@
     return entry;
   }
 
+  // Inserta una placa en un campo/línea ya existente en la posición elegida:
+  // "first" (antes de todas), "middle" (a la mitad), "last" (al final, default).
+  function insertPlateAtPosition(campoObj, entry, position){
+    if(position === "first"){
+      campoObj.plates.unshift(entry);
+    } else if(position === "middle"){
+      const idx = Math.ceil(campoObj.plates.length / 2);
+      campoObj.plates.splice(idx, 0, entry);
+    } else {
+      campoObj.plates.push(entry);
+    }
+  }
+
   function nextAutoCampo(zoneKey){
     const arr = state.zones[zoneKey];
     let max = 0;
@@ -1297,14 +2112,41 @@
     return String(max+1);
   }
 
+  // Para las 3 zonas sin numeración física: siguiente "Línea N" disponible,
+  // en vez de un número de espacio (que ahí no existe).
+  function nextLineLabel(zoneKey){
+    const arr = state.zones[zoneKey] || [];
+    let max = 0;
+    arr.forEach(c=>{
+      const m = /^L[ií]nea\s+(\d+)$/i.exec(c.campo);
+      if(m){ const n = parseInt(m[1],10); if(n>max) max = n; }
+    });
+    return `Línea ${max+1}`;
+  }
+
+  // Campos/líneas que ya tienen al menos un vehículo en esta zona (ordenados),
+  // para sugerirlos como opciones rápidas al elegir dónde ubicar una placa.
+  function getExistingCamposForZone(zoneKey){
+    return (state.zones[zoneKey] || []).map(c => c.campo);
+  }
+
+  // ¿Cuántos vehículos hay ya en ese campo/línea de esa zona? (0 si no existe todavía)
+  function countPlatesInCampo(zoneKey, campoLabel){
+    const arr = state.zones[zoneKey] || [];
+    const entry = arr.find(c => c.campo === campoLabel);
+    return entry ? entry.plates.length : 0;
+  }
+
   // Intenta agregar `plate` al `campoLabel` de `zoneKey`. Maneja duplicados
   // preguntando si se debe mover. Devuelve true si finalmente se agregó.
-  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw){
+  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position){
     const plate = normalizePlate(plateRaw);
     if(!plate) return false;
     const aseguradora = (aseguradoraRaw || "").trim();
+    const modelo = (modeloRaw || "").trim();
     const info = zoneInfo(zoneKey);
-    const campo = campoLabel ? normalizeCampo(campoLabel) : nextAutoCampo(zoneKey);
+    const campo = campoLabel ? normalizeCampo(campoLabel)
+      : (UNNUMBERED_ONLY_ZONES.has(zoneKey) ? nextLineLabel(zoneKey) : nextAutoCampo(zoneKey));
 
     const dup = findPlate(plate);
     if(dup){
@@ -1319,7 +2161,7 @@
       removePlateAt(dup.zoneKey, dup.campoIdx, dup.plateIdx);
     }
 
-    getOrCreateCampo(zoneKey, campo).plates.push({ plate, aseguradora });
+    insertPlateAtPosition(getOrCreateCampo(zoneKey, campo), { plate, aseguradora, modelo, lastUpdated: new Date().toISOString() }, position || "last");
     return true;
   }
 
@@ -1331,14 +2173,14 @@
         <div class="occupancyRow">
           <div class="occupancyBar"><div class="occupancyBarFill" style="width:${pct}%; background:${color};"></div></div>
           <span class="occupancyText">${campoCount}/${cap} campos (${pct}%)</span>
-          <button class="capacityEditBtn" id="capEdit">editar</button>
+          <button class="capacityEditBtn">editar</button>
         </div>
       `;
     }
     return `
       <div class="occupancyRow">
         <span class="occupancyText">${campoCount} campo(s) ocupados</span>
-        <button class="capacityEditBtn" id="capEdit">definir capacidad</button>
+        <button class="capacityEditBtn">definir capacidad</button>
       </div>
     `;
   }
@@ -1351,22 +2193,33 @@
     wrap.className = "zonePanel active";
     wrap.style.setProperty("--zone-color", info.color);
 
+    if(!canEdit()){
+      wrap.innerHTML = `<div class="dashEmptyNote">Tu usuario no tiene acceso a esta sección.</div>`;
+      document.getElementById("mainArea").appendChild(wrap);
+      return wrap;
+    }
+
     wrap.innerHTML = `
       <div class="zoneHeadCard">
         <h2>${info.label}</h2>
         <div class="sub">${totalVeh} vehículo(s) en ${campos.length} campo(s)</div>
-        ${occupancyHtml(zone.key, campos.filter(c => c.campo !== SIN_ASIGNAR).length, info.color)}
+        ${occupancyHtml(zone.key, occupancyCountForZone(zone.key), info.color)}
       </div>
       <div class="addRow">
-        <input type="text" id="campoInput_${info.abbr}" class="campoInput" placeholder="Campo">
+        <input type="text" id="campoInput_${info.abbr}" class="campoInput" placeholder="${UNNUMBERED_ONLY_ZONES.has(zone.key) ? "Línea" : "Campo"}">
         <input type="text" id="addInput_${info.abbr}" class="plate plateInputAdd" placeholder="Placa">
         <button id="addBtn_${info.abbr}">Agregar</button>
       </div>
       <div class="addRowSecondary">
         <input type="text" id="aseguradoraInput_${info.abbr}" placeholder="Aseguradora (opcional)">
+        <input type="text" id="modeloInput_${info.abbr}" placeholder="Modelo (opcional)">
       </div>
       <div class="dupWarn" id="dupWarn_${info.abbr}" style="display:none;"></div>
-      <div class="addHint">Dejá "Campo" vacío para asignar el siguiente número disponible, o <button type="button" class="sinAsignarBtn" id="sinAsignarBtn_${info.abbr}">marcá como sin asignar</button>. Si el campo ya existe, la placa se suma a las que ya tiene.</div>
+      <div class="similarWarn" id="similarWarn_${info.abbr}" style="display:none;"></div>
+      <div class="addHint">${UNNUMBERED_ONLY_ZONES.has(zone.key)
+        ? `Dejá "Línea" vacío para asignar la siguiente disponible (Línea 1, Línea 2…). Si ya existe, la placa se suma a las que ya tiene esa línea.`
+        : `Dejá "Campo" vacío para asignar el siguiente número disponible, o <button type="button" class="sinAsignarBtn" id="sinAsignarBtn_${info.abbr}">marcá como sin asignar</button>. Si el campo ya existe, la placa se suma a las que ya tiene.`
+      }</div>
       <details class="bulk">
         <summary>Pegar varias placas a la vez</summary>
         <div class="bulkHint">Una por línea, formato "campo placa" (ej: 42 CL338850). Si solo ponés la placa, se le asigna un campo nuevo. La aseguradora se agrega después, editando cada placa.</div>
@@ -1379,7 +2232,7 @@
 
     document.getElementById("mainArea").appendChild(wrap);
 
-    wrap.querySelector("#capEdit").addEventListener("click", ()=>{
+    wrap.querySelector(".capacityEditBtn").addEventListener("click", ()=>{
       const current = state.capacities[zone.key] || "";
       const input = prompt(`Capacidad total de espacios en ${info.label} (dejá vacío para quitarla):`, current);
       if(input === null) return;
@@ -1404,9 +2257,12 @@
         const card = document.createElement("div");
         card.className = "campoCard";
         const isSinAsignar = c.campo === SIN_ASIGNAR;
+        const hasCap = typeof c.capacidad === "number" && c.capacidad > 0;
+        const overCap = hasCap && c.plates.length > c.capacidad;
         card.innerHTML = `
           <span class="campoNum${isSinAsignar ? " sinAsignar" : ""}" ${isSinAsignar ? "" : `style="background:${info.color}"`} data-ci="${ci}" title="Tocá para renombrar el campo">${escapeHtml(c.campo)}</span>
           <div class="campoBody">
+            ${hasCap ? `<div class="campoCapBadge${overCap ? " overCap" : ""}" title="Capacidad de este espacio">${c.plates.length}/${c.capacidad} vehíc.</div>` : ``}
             <div class="plateChips" data-ci="${ci}"></div>
           </div>
           <button class="campoDeleteBtn" data-ci="${ci}" title="Eliminar campo completo">✕</button>
@@ -1414,7 +2270,7 @@
         const chipsWrap = card.querySelector(".plateChips");
         c.plates.forEach((entry, pi)=>{
           const chip = document.createElement("span");
-          chip.className = "plateChip";
+          chip.className = "plateChip" + (wasUpdatedToday(entry) ? " updatedToday" : "");
           chip.dataset.ci = ci;
           chip.dataset.pi = pi;
           chip.title = "Tocá para editar placa, campo, zona o aseguradora";
@@ -1431,9 +2287,11 @@
               <span class="plateText plate">${escapeHtml(entry.plate)}</span>
               ${isFirst ? '<span class="orderTag">primero</span>' : ''}
               ${isLast ? '<span class="orderTag last">último</span>' : ''}
+              ${wasUpdatedToday(entry) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}
               <button class="chipRm" data-ci="${ci}" data-pi="${pi}" title="Eliminar rápido">✕</button>
             </div>
             <div class="aseguradoraText" data-placeholder="sin aseguradora">${entry.aseguradora ? escapeHtml(entry.aseguradora) : ""}</div>
+            <div class="aseguradoraText" data-placeholder="sin modelo">${entry.modelo ? escapeHtml(entry.modelo) : ""}</div>
           `;
           chip.addEventListener("click", (e)=>{
             if(e.target.closest("button")) return;
@@ -1546,18 +2404,21 @@
     const campoInput = wrap.querySelector(`#campoInput_${info.abbr}`);
     const addInput = wrap.querySelector(`#addInput_${info.abbr}`);
     const aseguradoraInput = wrap.querySelector(`#aseguradoraInput_${info.abbr}`);
+    const modeloInput = wrap.querySelector(`#modeloInput_${info.abbr}`);
     const addBtn = wrap.querySelector(`#addBtn_${info.abbr}`);
     const dupWarn = wrap.querySelector(`#dupWarn_${info.abbr}`);
+    const similarWarn = wrap.querySelector(`#similarWarn_${info.abbr}`);
     const sinAsignarBtn = wrap.querySelector(`#sinAsignarBtn_${info.abbr}`);
-
-    sinAsignarBtn.addEventListener("click", ()=>{
-      campoInput.value = SIN_ASIGNAR;
-      addInput.focus();
-    });
+    if(sinAsignarBtn){
+      sinAsignarBtn.addEventListener("click", ()=>{
+        campoInput.value = SIN_ASIGNAR;
+        addInput.focus();
+      });
+    }
 
     function checkLiveDup(){
       const v = normalizePlate(addInput.value);
-      if(!v){ dupWarn.style.display = "none"; return; }
+      if(!v){ dupWarn.style.display = "none"; similarWarn.style.display = "none"; return; }
       const dup = findPlate(v);
       if(dup){
         const dupInfo = zoneInfo(dup.zoneKey);
@@ -1565,8 +2426,28 @@
         const mismaZona = dup.zoneKey === zone.key;
         dupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya está registrada en ${mismaZona ? "esta zona" : dupInfo.label}, campo ${dupCampo}`;
         dupWarn.style.display = "flex";
+        similarWarn.style.display = "none";
       } else {
         dupWarn.style.display = "none";
+        const similares = findSimilarPlates(v);
+        if(similares.length > 0){
+          const items = similares.map(s=>{
+            const zi = zoneInfo(s.zoneKey);
+            const campo = state.zones[s.zoneKey][s.campoIdx].campo;
+            return `<button type="button" class="useSimilarBtn" data-plate="${escapeAttrLike(s.plate)}">${s.plate}</button> (${zi.label}, campo ${campo})`;
+          }).join(", ");
+          similarWarn.innerHTML = `<span class="dupWarnIcon">🔍</span><span class="similarList">¿Es alguna de estas? ${items}</span>`;
+          similarWarn.style.display = "flex";
+          similarWarn.querySelectorAll(".useSimilarBtn").forEach(b=>{
+            b.addEventListener("click", ()=>{
+              addInput.value = b.getAttribute("data-plate");
+              checkLiveDup();
+              addInput.focus();
+            });
+          });
+        } else {
+          similarWarn.style.display = "none";
+        }
       }
     }
     addInput.addEventListener("input", checkLiveDup);
@@ -1576,12 +2457,13 @@
       const plate = addInput.value;
       if(!normalizePlate(plate)) return;
       const snap = snapshotZones();
-      const ok = await addPlateToZone(zone.key, campoInput.value, plate, aseguradoraInput.value);
+      const ok = await addPlateToZone(zone.key, campoInput.value, plate, aseguradoraInput.value, modeloInput.value);
       if(ok){
         pushUndo(snap);
         campoInput.value = "";
         addInput.value = "";
         aseguradoraInput.value = "";
+        modeloInput.value = "";
         dupWarn.style.display = "none";
         saveState();
         renderAll();
@@ -1627,7 +2509,7 @@
     ZONES.forEach(z=>{
       (state.zones[z.key]||[]).forEach((c, ci)=>{
         c.plates.forEach((entry, pi)=>{
-          rows.push({ zoneKey: z.key, zoneLabel: z.label, color: z.color, campo: c.campo, placa: entry.plate, aseguradora: entry.aseguradora || "", ci, pi });
+          rows.push({ zoneKey: z.key, zoneLabel: z.label, color: z.color, campo: c.campo, placa: entry.plate, aseguradora: entry.aseguradora || "", modelo: entry.modelo || "", lastUpdated: entry.lastUpdated, ci, pi });
         });
       });
     });
@@ -1639,7 +2521,7 @@
     wrap.className = "zonePanel active";
 
     const chips = ZONES.map(z=>{
-      const camposCount = (state.zones[z.key]||[]).filter(c => c.campo !== SIN_ASIGNAR).length;
+      const camposCount = occupancyCountForZone(z.key);
       const vehCount = (state.zones[z.key]||[]).reduce((a,cc)=>a+cc.plates.length,0);
       const cap = state.capacities[z.key];
       const occ = (cap && cap > 0) ? ` · ${camposCount}/${cap} campos` : ``;
@@ -1663,7 +2545,7 @@
       </div>
       <div class="resultsCount" id="resultsCount"></div>
       <table>
-        <thead><tr><th style="width:70px;">Campo</th><th>Placa</th><th>Zona</th><th>Aseguradora</th></tr></thead>
+        <thead><tr><th style="width:70px;">Campo</th><th>Placa</th><th>Zona</th><th>Aseguradora</th><th>Modelo</th></tr></thead>
         <tbody id="resumenTbody"></tbody>
       </table>
       <div id="resumenEmpty"></div>
@@ -1687,7 +2569,7 @@
       let rows = buildResumenRows();
       const totalCount = rows.length;
       if(filterZone) rows = rows.filter(r=>r.zoneKey===filterZone);
-      if(filterText) rows = rows.filter(r=> r.placa.toUpperCase().includes(filterText) || String(r.campo).toUpperCase().includes(filterText) || (r.aseguradora||"").toUpperCase().includes(filterText));
+      if(filterText) rows = rows.filter(r=> r.placa.toUpperCase().includes(filterText) || String(r.campo).toUpperCase().includes(filterText) || (r.aseguradora||"").toUpperCase().includes(filterText) || (r.modelo||"").toUpperCase().includes(filterText));
 
       const countEl = wrap.querySelector("#resultsCount");
       countEl.textContent = (filterText || filterZone)
@@ -1702,18 +2584,23 @@
         wrap.querySelector("#resumenEmpty").innerHTML = "";
         rows.forEach(r=>{
           const tr = document.createElement("tr");
-          tr.className = "resumenRow";
+          tr.className = "resumenRow" + (wasUpdatedToday(r) ? " updatedToday" : "");
           tr.dataset.zone = r.zoneKey;
           tr.dataset.ci = r.ci;
           tr.dataset.pi = r.pi;
           tr.innerHTML = `
             <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${escapeHtml(r.campo)}</span></td>
-            <td class="plate">${escapeHtml(r.placa)}</td>
+            <td class="plate">${escapeHtml(r.placa)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</td>
             <td>${r.zoneLabel}</td>
             <td>${r.aseguradora ? escapeHtml(r.aseguradora) : '<span style="color:var(--muted);">—</span>'}</td>
+            <td>${r.modelo ? escapeHtml(r.modelo) : '<span style="color:var(--muted);">—</span>'}</td>
           `;
           tr.addEventListener("click", ()=>{
-            openEditLocModal(r.zoneKey, r.ci, r.pi);
+            if(currentUser && currentUser.role === "consulta"){
+              openViewDetailModal(r.zoneKey, r.ci, r.pi);
+            } else {
+              openEditLocModal(r.zoneKey, r.ci, r.pi);
+            }
           });
           tbody.appendChild(tr);
         });
@@ -1732,11 +2619,166 @@
     draw();
   }
 
+  function renderDashboardPanel(){
+    const wrap = document.createElement("div");
+    wrap.className = "zonePanel active";
+
+    const totalVeh = ZONES.reduce((a,z)=> a + (state.zones[z.key]||[]).reduce((aa,c)=>aa+c.plates.length,0), 0);
+    const totalCampos = ZONES.reduce((a,z)=> a + occupancyCountForZone(z.key), 0);
+    const totalSinAsignar = ZONES.reduce((a,z)=>{
+      const c = (state.zones[z.key]||[]).find(c=>c.campo===SIN_ASIGNAR);
+      return a + (c ? c.plates.length : 0);
+    }, 0);
+    const zonasConCapacidad = ZONES.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0).length;
+
+    wrap.innerHTML = `
+      <div class="dashboardGrid">
+        <div class="dashCard"><div class="dashCardValue">${totalVeh}</div><div class="dashCardLabel">Vehículos totales</div></div>
+        <div class="dashCard"><div class="dashCardValue">${totalCampos}</div><div class="dashCardLabel">Campos numerados en uso</div></div>
+        <div class="dashCard"><div class="dashCardValue">${totalSinAsignar}</div><div class="dashCardLabel">Sin asignar</div></div>
+        <div class="dashCard"><div class="dashCardValue">${zonasConCapacidad}/${ZONES.length}</div><div class="dashCardLabel">Zonas con capacidad definida</div></div>
+      </div>
+      <div class="chartCard">
+        <h3>Vehículos por zona</h3>
+        <div class="chartCanvasWrap"><canvas id="chartVehiclesByZone"></canvas></div>
+      </div>
+      <div class="chartCard">
+        <h3>Ocupación vs. capacidad</h3>
+        <div id="occupancyChartHolder"></div>
+      </div>
+      ${canEdit() ? `
+      <div class="chartCard">
+        <h3>Capacidad por zona</h3>
+        <div class="capacityByZoneList">
+          ${ZONES.map(z=>{
+            const ocupados = occupancyCountForZone(z.key);
+            const cap = state.capacities[z.key];
+            return `
+              <div class="capacityByZoneRow">
+                <span class="dot" style="background:${z.color}"></span>
+                <span class="capacityByZoneName">${z.label}</span>
+                <span class="capacityByZoneValue">${cap && cap>0 ? `${ocupados}/${cap} campos` : `${ocupados} campos · sin capacidad`}</span>
+                <button type="button" class="capacityEditBtn" data-zone="${z.key}">${cap && cap>0 ? "Editar" : "Definir"}</button>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+      ` : ``}
+    `;
+    document.getElementById("mainArea").appendChild(wrap);
+
+    if(canEdit()){
+      wrap.querySelectorAll(".capacityByZoneList .capacityEditBtn").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const zoneKey = btn.getAttribute("data-zone");
+          const info = zoneInfo(zoneKey);
+          const current = state.capacities[zoneKey] || "";
+          const input = prompt(`Capacidad total de espacios en ${info.label} (dejá vacío para quitarla):`, current);
+          if(input === null) return;
+          const trimmed = input.trim();
+          if(trimmed === ""){
+            delete state.capacities[zoneKey];
+          } else {
+            const n = parseInt(trimmed, 10);
+            if(isNaN(n) || n <= 0){ showToast("Ingresá un número válido"); return; }
+            state.capacities[zoneKey] = n;
+          }
+          saveState();
+          renderAll();
+        });
+      });
+    }
+
+    // ---- Gráfico 1: vehículos por zona (barras) ----
+    try{
+      if(typeof Chart === "undefined") throw new Error("Chart.js no está disponible");
+      const ctx1 = wrap.querySelector("#chartVehiclesByZone").getContext("2d");
+      const chart1 = new Chart(ctx1, {
+        type: "bar",
+        data: {
+          labels: ZONES.map(z=>z.label),
+          datasets: [{
+            data: ZONES.map(z=> (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0)),
+            backgroundColor: ZONES.map(z=>"#"+z.hex),
+            borderRadius: 5,
+            maxBarThickness: 46
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+      });
+      dashboardCharts.push(chart1);
+    }catch(e){
+      console.error("No se pudo dibujar el gráfico de vehículos por zona", e);
+      wrap.querySelector(".chartCanvasWrap").innerHTML = `<div class="dashEmptyNote">No se pudo cargar el gráfico (revisá tu conexión a internet).</div>`;
+    }
+
+    // ---- Gráfico 2: ocupación vs capacidad (solo zonas con capacidad definida) ----
+    const zonasConCap = ZONES.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0);
+    const holder = wrap.querySelector("#occupancyChartHolder");
+    if(zonasConCap.length === 0){
+      holder.innerHTML = `<div class="dashEmptyNote">Todavía no definiste capacidad en ninguna zona. Entrá a una zona y tocá "definir capacidad" para ver aquí el porcentaje de ocupación.</div>`;
+    } else {
+      try{
+        if(typeof Chart === "undefined") throw new Error("Chart.js no está disponible");
+        holder.innerHTML = `<div class="chartCanvasWrap"><canvas id="chartOccupancy"></canvas></div>`;
+        const ctx2 = holder.querySelector("#chartOccupancy").getContext("2d");
+        const chart2 = new Chart(ctx2, {
+          type: "bar",
+          data: {
+            labels: zonasConCap.map(z=>z.label),
+            datasets: [
+              {
+                label: "Ocupados",
+                data: zonasConCap.map(z => occupancyCountForZone(z.key)),
+                backgroundColor: zonasConCap.map(z=>"#"+z.hex),
+                borderRadius: 5,
+                maxBarThickness: 36
+              },
+              {
+                label: "Capacidad",
+                data: zonasConCap.map(z => state.capacities[z.key]),
+                backgroundColor: "#e6e7e2",
+                borderRadius: 5,
+                maxBarThickness: 36
+              }
+            ]
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
+            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+          }
+        });
+        dashboardCharts.push(chart2);
+      }catch(e){
+        console.error("No se pudo dibujar el gráfico de ocupación", e);
+        holder.innerHTML = `<div class="dashEmptyNote">No se pudo cargar el gráfico (revisá tu conexión a internet).</div>`;
+      }
+    }
+
+    return wrap;
+  }
+
   function renderAll(){
+    // Destruir cualquier gráfico de un render anterior antes de reconstruir
+    // el contenido; evita fugas de memoria y "canvas ya en uso" de Chart.js.
+    dashboardCharts.forEach(ch => ch.destroy());
+    dashboardCharts = [];
+
     renderTabs();
     const main = document.getElementById("mainArea");
     main.innerHTML = "";
-    if(activeTab === "__resumen__"){
+    if(activeTab === "__dashboard__"){
+      renderDashboardPanel();
+    } else if(activeTab === "__resumen__"){
       renderResumenPanel();
     } else {
       renderZonePanel(zoneInfo(activeTab));
@@ -1793,7 +2835,67 @@
   });
 
   // ---- Export ----
+  // ---- Respaldo completo (JSON): exportar todo el estado y poder restaurarlo ----
+  document.getElementById("backupBtn").addEventListener("click", ()=>{
+    if(!guardEdit()) return;
+    const payload = {
+      tipo: "respaldo-inventario-parqueo",
+      version: 1,
+      exportadoEn: new Date().toISOString(),
+      zones: state.zones,
+      capacities: state.capacities
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const fecha = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `Respaldo_Inventario_Parqueo_${fecha}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Respaldo descargado");
+  });
+
+  document.getElementById("restoreBtn").addEventListener("click", ()=>{
+    if(!guardEdit()) return;
+    document.getElementById("restoreFileInput").click();
+  });
+
+  document.getElementById("restoreFileInput").addEventListener("change", (e)=>{
+    if(!guardEdit()) return;
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // permitir volver a elegir el mismo archivo después
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async ()=>{
+      let payload;
+      try{
+        payload = JSON.parse(reader.result);
+      }catch(err){
+        showToast("Ese archivo no es un respaldo válido (JSON inválido)");
+        return;
+      }
+      if(!payload || typeof payload.zones !== "object"){
+        showToast("Ese archivo no tiene el formato esperado de un respaldo");
+        return;
+      }
+      if(!confirm("Esto reemplaza TODO el inventario actual por el contenido del respaldo. ¿Continuar?")) return;
+      const snap = snapshotZones();
+      state.zones = payload.zones;
+      state.capacities = payload.capacities || {};
+      pushUndo(snap);
+      await saveState();
+      renderAll();
+      showToast("Respaldo restaurado correctamente");
+    };
+    reader.onerror = ()=> showToast("No se pudo leer el archivo");
+    reader.readAsText(file);
+  });
+
   document.getElementById("exportBtn").addEventListener("click", ()=>{
+    if(!guardEdit()) return;
     const wb = XLSX.utils.book_new();
     const now = new Date();
     const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
@@ -1806,57 +2908,130 @@
       const capTxt = (cap && cap>0) ? ` · ${campos.length}/${cap} campos ocupados` : ``;
 
       const data = [
-        [`${z.label} — Inventario de Parqueo`, "", ""],
-        [`Generado ${fechaLarga}, ${horaLarga} · ${totalVeh} vehículo(s) en ${campos.length} campo(s)${capTxt}`, "", ""],
+        [`${z.label} — Inventario de Parqueo`, "", "", ""],
+        [`Generado ${fechaLarga}, ${horaLarga} · ${totalVeh} vehículo(s) en ${campos.length} campo(s)${capTxt}`, "", "", ""],
         [],
-        ["Campo","Placa","Aseguradora"]
+        ["Campo","Placa","Aseguradora","Modelo"]
       ];
-      campos.forEach(c => c.plates.forEach(p => data.push([c.campo, p.plate, p.aseguradora || ""])));
+      campos.forEach(c => c.plates.forEach(p => data.push([c.campo, p.plate, p.aseguradora || "", p.modelo || ""])));
 
       const ws = XLSX.utils.aoa_to_sheet(data);
       ws["!merges"] = [
-        { s:{r:0,c:0}, e:{r:0,c:2} },
-        { s:{r:1,c:0}, e:{r:1,c:2} }
+        { s:{r:0,c:0}, e:{r:0,c:3} },
+        { s:{r:1,c:0}, e:{r:1,c:3} }
       ];
-      ws["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 20 }];
+      ws["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }];
       if(data.length > 4){
-        ws["!autofilter"] = { ref: `A4:C${data.length}` };
+        ws["!autofilter"] = { ref: `A4:D${data.length}` };
       }
       XLSX.utils.book_append_sheet(wb, ws, z.label.substring(0,31));
     });
 
     const resumenRows = buildResumenRows();
     const resumenData = [
-      ["Resumen general — Inventario de Parqueo", "", "", ""],
-      [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", ""],
+      ["Resumen general — Inventario de Parqueo", "", "", "", ""],
+      [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", "", ""],
       [],
-      ["Campo","Placa","Zona","Aseguradora"]
+      ["Campo","Placa","Zona","Aseguradora","Modelo"]
     ];
-    resumenRows.forEach(r=> resumenData.push([r.campo, r.placa, r.zoneLabel, r.aseguradora || ""]));
+    resumenRows.forEach(r=> resumenData.push([r.campo, r.placa, r.zoneLabel, r.aseguradora || "", r.modelo || ""]));
     const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
     wsResumen["!merges"] = [
-      { s:{r:0,c:0}, e:{r:0,c:3} },
-      { s:{r:1,c:0}, e:{r:1,c:3} }
+      { s:{r:0,c:0}, e:{r:0,c:4} },
+      { s:{r:1,c:0}, e:{r:1,c:4} }
     ];
-    wsResumen["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 24 }, { wch: 20 }];
+    wsResumen["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 22 }];
     if(resumenData.length > 4){
-      wsResumen["!autofilter"] = { ref: `A4:D${resumenData.length}` };
+      wsResumen["!autofilter"] = { ref: `A4:E${resumenData.length}` };
     }
     XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
 
+    // ---- Hoja: conteo por Aseguradora y por Modelo ----
+    const conteoAseguradora = {};
+    const conteoModelo = {};
+    resumenRows.forEach(r=>{
+      const aseg = r.aseguradora || "(sin aseguradora)";
+      const mod = r.modelo || "(sin modelo)";
+      conteoAseguradora[aseg] = (conteoAseguradora[aseg] || 0) + 1;
+      conteoModelo[mod] = (conteoModelo[mod] || 0) + 1;
+    });
+    const conteoData = [
+      ["Conteo por Aseguradora y Modelo — Inventario de Parqueo", ""],
+      [`Generado ${fechaLarga}, ${horaLarga}`, ""],
+      [],
+      ["Aseguradora", "Vehículos"]
+    ];
+    Object.keys(conteoAseguradora).sort((a,b)=> conteoAseguradora[b]-conteoAseguradora[a]).forEach(k=>{
+      conteoData.push([k, conteoAseguradora[k]]);
+    });
+    conteoData.push([]);
+    conteoData.push(["Modelo", "Vehículos"]);
+    Object.keys(conteoModelo).sort((a,b)=> conteoModelo[b]-conteoModelo[a]).forEach(k=>{
+      conteoData.push([k, conteoModelo[k]]);
+    });
+    const wsConteo = XLSX.utils.aoa_to_sheet(conteoData);
+    wsConteo["!merges"] = [
+      { s:{r:0,c:0}, e:{r:0,c:1} },
+      { s:{r:1,c:0}, e:{r:1,c:1} }
+    ];
+    wsConteo["!cols"] = [{ wch: 26 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, wsConteo, "Por Aseguradora y Modelo");
+
+    // ---- Hoja: alerta de placas duplicadas (si alguna aparece en más de un lugar) ----
+    const porPlaca = {};
+    resumenRows.forEach(r=>{
+      const key = r.placa.toUpperCase();
+      if(!porPlaca[key]) porPlaca[key] = [];
+      porPlaca[key].push(r);
+    });
+    const duplicadas = Object.values(porPlaca).filter(list => list.length > 1);
+    if(duplicadas.length > 0){
+      const dupData = [
+        ["⚠ Placas duplicadas detectadas — revisar", "", "", ""],
+        [`Generado ${fechaLarga}, ${horaLarga} · ${duplicadas.length} placa(s) con más de una ubicación`, "", "", ""],
+        [],
+        ["Placa","Zona","Campo","Aseguradora"]
+      ];
+      duplicadas.forEach(list=>{
+        list.forEach(r=> dupData.push([r.placa, r.zoneLabel, r.campo, r.aseguradora || ""]));
+        dupData.push([]);
+      });
+      const wsDup = XLSX.utils.aoa_to_sheet(dupData);
+      wsDup["!merges"] = [
+        { s:{r:0,c:0}, e:{r:0,c:3} },
+        { s:{r:1,c:0}, e:{r:1,c:3} }
+      ];
+      wsDup["!cols"] = [{ wch: 16 }, { wch: 24 }, { wch: 14 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsDup, "Placas duplicadas");
+    }
+
     const fecha = now.toISOString().slice(0,10);
     XLSX.writeFile(wb, `Inventario_Parqueo_${fecha}.xlsx`);
-    showToast("Excel generado");
+    showToast(duplicadas.length > 0 ? `Excel generado — se detectaron ${duplicadas.length} placa(s) duplicada(s)` : "Excel generado");
   });
 
-  // ==================== Control de acceso ====================
-  // Aviso: esto es un candado simple del lado del cliente para evitar
-  // que cualquiera entre sin saber usuario/clave. No es seguridad de
-  // nivel empresarial: el código de esta app es visible para quien
-  // inspeccione el archivo. Las contraseñas se guardan como hash
-  // (no en texto plano), pero esto no reemplaza un sistema con servidor.
+  // ==================== Control de acceso con roles ====================
+  // Aviso: esto sigue siendo un candado del lado del cliente (sin servidor).
+  // Cada acción sensible valida el rol tanto al construir la interfaz (para
+  // no mostrar botones que no corresponden) como dentro de la función que
+  // ejecuta la acción (para que forzar un botón oculto por consola no
+  // alcance a mover/borrar nada si el rol no lo permite).
 
-  let currentUser = null; // { username }
+  const ROLES = {
+    admin: "Administrador",
+    consulta: "Búsqueda",
+    actualizacion: "Actualización"
+  };
+
+  let currentUser = null; // { username, role }
+  let clockInterval = null;
+
+  async function hashUserPassword(username, password){
+    const enc = new TextEncoder();
+    const data = enc.encode(String(username).trim().toLowerCase() + "::" + password);
+    const buf = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
 
   async function loadUsers(){
     try{
@@ -1869,17 +3044,158 @@
     try{
       const result = await window.storage.set(USERS_KEY, JSON.stringify(list), true);
       return !!(result && typeof result === "object");
-    }catch(e){
-      console.error("Error guardando usuarios", e);
-      return false;
+    }catch(e){ console.error("Error guardando usuarios", e); return false; }
+  }
+
+  async function appendLog(key, entry, limit){
+    let list = [];
+    try{
+      const res = await window.storage.get(key, true);
+      if(res && res.value) list = JSON.parse(res.value);
+    }catch(e){ /* la clave todavía no existe: arrancamos con lista vacía */ }
+    list.push(entry);
+    if(list.length > limit) list = list.slice(list.length - limit);
+    try{
+      await window.storage.set(key, JSON.stringify(list), true);
+    }catch(e){ /* el registro de historial nunca debe romper la acción principal */ }
+  }
+  async function readLog(key){
+    try{
+      const res = await window.storage.get(key, true);
+      if(res && res.value) return JSON.parse(res.value);
+    }catch(e){ /* sin historial todavía */ }
+    return [];
+  }
+  function nowStamp(){
+    return new Date().toLocaleString("es-CR", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
+  }
+  async function logUpdate(plate, fromZoneKey, fromCampo, toZoneKey, toCampo){
+    const desde = fromZoneKey
+      ? `${zoneInfo(fromZoneKey) ? zoneInfo(fromZoneKey).label : fromZoneKey} · campo ${fromCampo}`
+      : "Vehículo nuevo";
+    await appendLog(HISTORY_KEY, {
+      ts: nowStamp(),
+      username: currentUser ? currentUser.username : "?",
+      placa: plate,
+      desde,
+      hasta: `${zoneInfo(toZoneKey) ? zoneInfo(toZoneKey).label : toZoneKey} · campo ${toCampo}`
+    }, 300);
+  }
+  async function logAccess(username, type){
+    await appendLog(ACCESS_LOG_KEY, { ts: nowStamp(), username, type }, 300);
+  }
+
+  // Permite editar/borrar/agregar/exportar/deshacer/gestionar: solo admin.
+  // (Actualización tiene su propio flujo restringido, ver updaterConfirmMove.)
+  function canEdit(){
+    return !!(currentUser && currentUser.role === "admin");
+  }
+  function guardEdit(){
+    if(canEdit()) return true;
+    showToast("Tu usuario no tiene permiso para esta acción");
+    return false;
+  }
+
+  function seedDefaultAdmin(){
+    return Promise.all([
+      hashUserPassword("Vicente", "Parqueos2026"),
+      hashUserPassword("Busqueda", "2026"),
+      hashUserPassword("Actualizacion", "Actualiza2026")
+    ]).then(([adminHash, consultaHash, actualizaHash])=>[
+      { username: "Vicente", hash: adminHash, role: "admin", active: true },
+      { username: "Busqueda", hash: consultaHash, role: "consulta", active: true },
+      { username: "Actualizacion", hash: actualizaHash, role: "actualizacion", active: true }
+    ]);
+  }
+
+  function showLoginScreen(onRoleSubmit, onAdminSubmit){
+    document.getElementById("authChecking").style.display = "none";
+    document.getElementById("authPasswordScreen").style.display = "block";
+
+    const logosBox = document.getElementById("roleLogos");
+    const roleForm = document.getElementById("roleLoginForm");
+    const roleLabel = document.getElementById("roleLoginLabel");
+    const rolePass = document.getElementById("rolePass");
+    const roleError = document.getElementById("roleLoginError");
+    const roleBtn = document.getElementById("roleLoginBtn");
+    const roleBack = document.getElementById("roleLoginBack");
+    const adminLink = document.getElementById("adminHiddenLink");
+    const adminForm = document.getElementById("adminLoginForm");
+    const userInput = document.getElementById("loginUser");
+    const passInput = document.getElementById("accessPass");
+    const errorP = document.getElementById("accessError");
+    const btn = document.getElementById("accessBtn");
+    const adminBack = document.getElementById("adminLoginBack");
+
+    let selectedRole = null;
+
+    function showLogos(){
+      logosBox.style.display = "flex";
+      roleForm.style.display = "none";
+      adminForm.style.display = "none";
+      adminLink.style.display = "block";
     }
+    function showRoleForm(role){
+      selectedRole = role;
+      roleLabel.textContent = role === "consulta" ? "Acceso de Búsqueda" : "Acceso de Actualización";
+      logosBox.style.display = "none";
+      roleForm.style.display = "block";
+      adminLink.style.display = "none";
+      roleError.textContent = "";
+      rolePass.value = "";
+      rolePass.focus();
+    }
+    function showAdminForm(){
+      logosBox.style.display = "none";
+      adminLink.style.display = "none";
+      adminForm.style.display = "block";
+      errorP.textContent = "";
+      userInput.focus();
+    }
+
+    logosBox.querySelectorAll(".roleLogoBtn").forEach(b=>{
+      b.addEventListener("click", ()=> showRoleForm(b.getAttribute("data-role")));
+    });
+    roleBack.addEventListener("click", showLogos);
+    adminBack.addEventListener("click", showLogos);
+    adminLink.addEventListener("click", showAdminForm);
+
+    async function submitRole(){
+      const p = rolePass.value;
+      roleError.textContent = "";
+      if(!p){ roleError.textContent = "Ingresá la contraseña."; return; }
+      roleBtn.disabled = true;
+      const ok = await onRoleSubmit(selectedRole, p);
+      roleBtn.disabled = false;
+      if(!ok){
+        roleError.textContent = "Contraseña incorrecta.";
+        rolePass.value = "";
+        rolePass.focus();
+      }
+    }
+    roleBtn.addEventListener("click", submitRole);
+    rolePass.addEventListener("keydown", (e)=>{ if(e.key==="Enter") submitRole(); });
+
+    async function submitAdmin(){
+      const u = userInput.value.trim();
+      const p = passInput.value;
+      errorP.textContent = "";
+      if(!u || !p){ errorP.textContent = "Ingresá usuario y contraseña."; return; }
+      btn.disabled = true;
+      const ok = await onAdminSubmit(u, p);
+      btn.disabled = false;
+      if(!ok){
+        errorP.textContent = "Usuario o contraseña incorrectos.";
+        passInput.value = "";
+        passInput.focus();
+      }
+    }
+    btn.addEventListener("click", submitAdmin);
+    [userInput, passInput].forEach(inp=> inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") submitAdmin(); }));
+
+    showLogos();
   }
-  async function hashPassword(username, password){
-    const enc = new TextEncoder();
-    const data = enc.encode(String(username).trim().toLowerCase() + "::" + password);
-    const buf = await crypto.subtle.digest("SHA-256", data);
-    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-  }
+
   async function getSessionUsername(){
     try{
       const res = await window.storage.get(SESSION_KEY, false);
@@ -1894,138 +3210,227 @@
     try{ await window.storage.delete(SESSION_KEY, false); }catch(e){ /* no crítico */ }
   }
 
-  function showSetupScreen(onSubmit){
-    document.getElementById("authChecking").style.display = "none";
-    document.getElementById("authLogin").style.display = "none";
-    document.getElementById("authSetup").style.display = "block";
-    const userInput = document.getElementById("setupUser");
-    const passInput = document.getElementById("setupPass");
-    const pass2Input = document.getElementById("setupPass2");
-    const errorP = document.getElementById("setupError");
-    const btn = document.getElementById("setupBtn");
-    async function submit(){
-      const u = userInput.value.trim();
-      const p = passInput.value;
-      const p2 = pass2Input.value;
-      errorP.textContent = "";
-      if(!u){ errorP.textContent = "Ingresá un nombre de usuario."; return; }
-      if(p.length < 4){ errorP.textContent = "La contraseña debe tener al menos 4 caracteres."; return; }
-      if(p !== p2){ errorP.textContent = "Las contraseñas no coinciden."; return; }
-      btn.disabled = true;
-      await onSubmit(u, p);
+  function startClock(){
+    const el = document.getElementById("identityRow");
+    if(clockInterval) clearInterval(clockInterval);
+    function tick(){
+      const clock = el.querySelector(".idClock");
+      if(clock) clock.textContent = new Date().toLocaleString("es-CR", {weekday:"short", day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"});
     }
-    btn.addEventListener("click", submit);
-    [userInput, passInput, pass2Input].forEach(inp=> inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") submit(); }));
-    userInput.focus();
+    tick();
+    clockInterval = setInterval(tick, 30000);
   }
 
-  function showLoginScreen(onSubmit){
-    document.getElementById("authChecking").style.display = "none";
-    document.getElementById("authSetup").style.display = "none";
-    document.getElementById("authLogin").style.display = "block";
-    const userInput = document.getElementById("loginUser");
-    const passInput = document.getElementById("loginPass");
-    const errorP = document.getElementById("loginError");
-    const btn = document.getElementById("loginBtn");
-    async function submit(){
-      const u = userInput.value.trim();
-      const p = passInput.value;
-      errorP.textContent = "";
-      if(!u || !p){ errorP.textContent = "Ingresá usuario y contraseña."; return; }
-      btn.disabled = true;
-      const ok = await onSubmit(u, p);
-      btn.disabled = false;
-      if(!ok){
-        errorP.textContent = "Usuario o contraseña incorrectos.";
-        passInput.value = "";
-        passInput.focus();
-      }
+  function applyRoleUI(){
+    const role = currentUser.role;
+    document.getElementById("identityRow").innerHTML = `
+      <span class="idName">${escapeHtml(currentUser.username)}</span>
+      <span class="idRole">${ROLES[role] || role}</span>
+      <span class="idClock"></span>
+    `;
+    startClock();
+
+    document.getElementById("usersBtn").style.display = role === "admin" ? "inline-block" : "none";
+    document.getElementById("historyBtn").style.display = role === "admin" ? "inline-block" : "none";
+    document.getElementById("backupBtn").style.display = role === "admin" ? "inline-block" : "none";
+    document.getElementById("restoreBtn").style.display = role === "admin" ? "inline-block" : "none";
+    document.getElementById("undoBtn").style.display = role === "admin" ? "inline-block" : "none";
+    document.getElementById("exportBtn").style.display = role === "admin" ? "inline-block" : "none";
+
+    const nav = document.getElementById("tabs");
+    const main = document.getElementById("mainArea");
+    const searchWrap = document.getElementById("searchWrap");
+    const updaterPanel = document.getElementById("updaterPanel");
+
+    if(role === "actualizacion"){
+      nav.style.display = "none";
+      main.style.display = "none";
+      searchWrap.style.display = "none";
+      updaterPanel.style.display = "block";
+      renderUpdaterPanel().catch(e=>{
+        console.error("Error cargando la pantalla de actualización", e);
+        showToast("Ocurrió un error al cargar. Recargá la página e intentá de nuevo.", 5000);
+      });
+    } else {
+      nav.style.display = "";
+      main.style.display = "";
+      searchWrap.style.display = "";
+      updaterPanel.style.display = "none";
     }
-    btn.addEventListener("click", submit);
-    [userInput, passInput].forEach(inp=> inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") submit(); }));
-    userInput.focus();
   }
 
   function revealApp(){
     document.getElementById("authGate").style.display = "none";
     document.getElementById("appRoot").style.display = "block";
-    const chip = document.getElementById("userChip");
-    if(chip) chip.textContent = currentUser ? currentUser.username : "";
-    (async function(){
-      await loadState();
-      renderAll();
-      updateUndoBtn();
-    })();
+    try{
+      applyRoleUI();
+    }catch(e){
+      console.error("Error mostrando la interfaz", e);
+    }
+    if(currentUser.role !== "actualizacion"){
+      (async function(){
+        try{
+          await loadState();
+          renderAll();
+          updateUndoBtn();
+        }catch(e){
+          console.error("Error cargando la aplicación", e);
+          showToast("Ocurrió un error al cargar. Recargá la página e intentá de nuevo.", 5000);
+        }
+      })();
+    }
   }
 
   async function runAuthGate(){
-    const authAvailable = await checkStorageAvailable();
-    if(!authAvailable){
-      showToast("No se pudo activar el control de acceso en este navegador", 3800);
-      revealApp();
-      return;
-    }
+    storageAvailable = false;
+    let sessionUsername = null;
+    try{
+      storageAvailable = await checkStorageAvailable();
+      if(storageAvailable){
+        sessionUsername = await getSessionUsername();
+      }
+    }catch(e){ /* sin sesión recordada */ }
 
-    const users = await loadUsers();
-
+    let users = storageAvailable ? await loadUsers() : [];
     if(users.length === 0){
-      showSetupScreen(async (username, password)=>{
-        const hash = await hashPassword(username, password);
-        await saveUsers([{ username, hash }]);
-        currentUser = { username };
-        await setSessionUsername(username);
-        revealApp();
-      });
-      return;
+      users = await seedDefaultAdmin();
+      if(storageAvailable){
+        await saveUsers(users);
+      }
     }
 
-    const sessionUser = await getSessionUsername();
-    if(sessionUser){
-      const found = users.find(u => u.username.toLowerCase() === sessionUser.toLowerCase());
+    if(sessionUsername){
+      const found = users.find(u => u.username.toLowerCase() === sessionUsername.toLowerCase() && u.active !== false);
       if(found){
-        currentUser = { username: found.username };
+        currentUser = { username: found.username, role: found.role };
         revealApp();
         return;
       }
     }
 
-    showLoginScreen(async (username, password)=>{
-      const users2 = await loadUsers(); // por si otro usuario se agregó mientras tanto
-      const found = users2.find(u => u.username.toLowerCase() === username.toLowerCase());
-      if(!found) return false;
-      const hash = await hashPassword(found.username, password);
-      if(hash !== found.hash) return false;
-      currentUser = { username: found.username };
-      await setSessionUsername(found.username);
+    async function tryLogin(found, password){
+      if(!found || found.active === false){
+        if(storageAvailable) await logAccess(found ? found.username : "?", "login_failed");
+        return false;
+      }
+      const hash = await hashUserPassword(found.username, password);
+      if(hash !== found.hash){
+        if(storageAvailable) await logAccess(found.username, "login_failed");
+        return false;
+      }
+      currentUser = { username: found.username, role: found.role };
+      if(storageAvailable){
+        await setSessionUsername(found.username);
+        await logAccess(found.username, "login");
+      }
       revealApp();
       return true;
-    });
+    }
+
+    showLoginScreen(
+      // Logos de Consulta / Actualización: solo piden contraseña; se prueba
+      // contra cualquier cuenta activa que tenga ese rol.
+      async (role, password)=>{
+        const freshUsers = storageAvailable ? await loadUsers() : users;
+        const candidates = freshUsers.filter(u => u.role === role && u.active !== false);
+        for(const candidate of candidates){
+          const hash = await hashUserPassword(candidate.username, password);
+          if(hash === candidate.hash){
+            return await tryLogin(candidate, password);
+          }
+        }
+        if(storageAvailable) await logAccess(`(${ROLES[role]||role})`, "login_failed");
+        return false;
+      },
+      // Acceso administrador, detrás del enlace discreto: usuario + contraseña.
+      async (username, password)=>{
+        const freshUsers = storageAvailable ? await loadUsers() : users;
+        const found = freshUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+        return await tryLogin(found, password);
+      }
+    );
   }
 
+  // ---- Gestión de usuarios (solo Admin) ----
   async function openUsersModal(){
+    if(!guardEdit()) return;
     const overlay = document.getElementById("usersModal");
     const listEl = document.getElementById("usersList");
     const errorP = document.getElementById("usersError");
-    const newUserName = document.getElementById("newUserName");
-    const newUserPass = document.getElementById("newUserPass");
-    errorP.textContent = "";
-    newUserName.value = "";
-    newUserPass.value = "";
+    const nameInput = document.getElementById("newUserName");
+    const passInput = document.getElementById("newUserPass");
+    const roleSelect = document.getElementById("newUserRole");
+    errorP.textContent = ""; nameInput.value = ""; passInput.value = ""; roleSelect.value = "consulta";
 
     let users = await loadUsers();
 
     function draw(){
-      listEl.innerHTML = users.map(u => `
-        <div class="userRow">
-          <span class="userRowName">${escapeHtml(u.username)} ${currentUser && u.username.toLowerCase()===currentUser.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
-          <button class="userRemoveBtn" data-username="${escapeAttr(u.username)}" ${users.length<=1 ? "disabled title=\"Debe quedar al menos un usuario\"" : ""}>Quitar</button>
+      listEl.innerHTML = users.map((u,i)=>`
+        <div class="userRow ${u.active===false ? 'inactive' : ''}">
+          <div class="userRowInfo">
+            <span class="userRowName">${escapeHtml(u.username)} ${currentUser.username.toLowerCase()===u.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
+            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}</span>
+          </div>
+          <div class="userRowBtns">
+            <button class="renameUserBtn" data-i="${i}">Renombrar</button>
+            <button class="resetPassBtn" data-i="${i}">Restablecer clave</button>
+            <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "Activar" : "Desactivar"}</button>
+            <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
+          </div>
         </div>
       `).join("");
-      listEl.querySelectorAll(".userRemoveBtn").forEach(b=>{
+      listEl.querySelectorAll(".renameUserBtn").forEach(b=>{
         b.addEventListener("click", async ()=>{
-          const uname = b.getAttribute("data-username");
-          if(!confirm(`¿Quitar el acceso de "${uname}"?`)) return;
-          users = users.filter(u => u.username !== uname);
+          const i = parseInt(b.getAttribute("data-i"),10);
+          const oldName = users[i].username;
+          const newName = prompt(`Nuevo nombre de usuario (antes "${oldName}"):`, oldName);
+          if(newName === null) return;
+          const trimmed = newName.trim();
+          if(!trimmed){ errorP.textContent = "Ingresá un nombre de usuario."; return; }
+          if(users.some((u,j)=> j!==i && u.username.toLowerCase()===trimmed.toLowerCase())){
+            errorP.textContent = "Ese usuario ya existe."; return;
+          }
+          if(trimmed.toLowerCase() === oldName.toLowerCase()){ return; }
+          // La contraseña queda protegida usando el usuario como parte del hash,
+          // así que renombrar exige volver a definir la contraseña.
+          const newPass = prompt(`Definí la contraseña para "${trimmed}" (mínimo 4 caracteres):`);
+          if(newPass === null) return;
+          if(newPass.length < 4){ errorP.textContent = "La contraseña debe tener al menos 4 caracteres."; return; }
+          users[i].username = trimmed;
+          users[i].hash = await hashUserPassword(trimmed, newPass);
+          const ok = await saveUsers(users);
+          if(!ok){ errorP.textContent = "No se pudo guardar, intentá de nuevo."; return; }
+          errorP.textContent = "";
+          showToast(`Usuario renombrado a "${trimmed}"`);
+          draw();
+        });
+      });
+      listEl.querySelectorAll(".resetPassBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          const uname = users[i].username;
+          const newPass = prompt(`Nueva contraseña para "${uname}" (mínimo 4 caracteres):`);
+          if(newPass === null) return;
+          if(newPass.length < 4){ errorP.textContent = "La contraseña debe tener al menos 4 caracteres."; return; }
+          users[i].hash = await hashUserPassword(uname, newPass);
+          const ok = await saveUsers(users);
+          errorP.textContent = ok ? "" : "No se pudo guardar, intentá de nuevo.";
+          if(ok) showToast(`Contraseña de "${uname}" actualizada`);
+        });
+      });
+      listEl.querySelectorAll(".toggleActiveBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          users[i].active = users[i].active === false ? true : false;
+          await saveUsers(users);
+          draw();
+        });
+      });
+      listEl.querySelectorAll(".removeUserBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          if(!confirm(`¿Quitar el acceso de "${users[i].username}"?`)) return;
+          users.splice(i,1);
           await saveUsers(users);
           draw();
         });
@@ -2036,41 +3441,614 @@
 
     const addBtn = document.getElementById("addUserBtn");
     const closeBtn = document.getElementById("usersCloseBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-
     async function onAdd(){
-      const uname = newUserName.value.trim();
-      const pass = newUserPass.value;
+      const uname = nameInput.value.trim();
+      const pass = passInput.value;
+      const role = roleSelect.value;
       errorP.textContent = "";
       if(!uname){ errorP.textContent = "Ingresá un nombre de usuario."; return; }
       if(users.some(u=>u.username.toLowerCase()===uname.toLowerCase())){ errorP.textContent = "Ese usuario ya existe."; return; }
       if(pass.length < 4){ errorP.textContent = "La contraseña debe tener al menos 4 caracteres."; return; }
-      const hash = await hashPassword(uname, pass);
-      users.push({ username: uname, hash });
+      const hash = await hashUserPassword(uname, pass);
+      users.push({ username: uname, hash, role, active: true });
       const ok = await saveUsers(users);
-      if(!ok){ errorP.textContent = "No se pudo guardar el usuario, intentá de nuevo."; return; }
-      newUserName.value = "";
-      newUserPass.value = "";
+      if(!ok){ errorP.textContent = "No se pudo guardar, intentá de nuevo."; return; }
+      nameInput.value = ""; passInput.value = "";
       draw();
     }
     function onClose(){
       overlay.classList.remove("show");
       addBtn.removeEventListener("click", onAdd);
       closeBtn.removeEventListener("click", onClose);
-      logoutBtn.removeEventListener("click", onLogout);
-    }
-    async function onLogout(){
-      if(!confirm("¿Cerrar sesión?")) return;
-      await clearSession();
-      location.reload();
     }
     addBtn.addEventListener("click", onAdd);
     closeBtn.addEventListener("click", onClose);
-    logoutBtn.addEventListener("click", onLogout);
   }
   document.getElementById("usersBtn").addEventListener("click", openUsersModal);
 
-  document.getElementById("undoBtn").addEventListener("click", doUndo);
+  // ---- Historial de actividad (solo Admin) ----
+  async function openHistoryModal(){
+    if(!guardEdit()) return;
+    const overlay = document.getElementById("historyModal");
+    const listUpdates = document.getElementById("historyListUpdates");
+    const listAccess = document.getElementById("historyListAccess");
+    const tabUpdates = document.getElementById("historyTabUpdates");
+    const tabAccess = document.getElementById("historyTabAccess");
+
+    const updates = (await readLog(HISTORY_KEY)).slice().reverse();
+    const access = (await readLog(ACCESS_LOG_KEY)).slice().reverse();
+
+    listUpdates.innerHTML = updates.length ? updates.map(h=>`
+      <div class="historyItem">
+        <strong>${escapeHtml(h.placa)}</strong> movida por ${escapeHtml(h.username)}<br>
+        de ${escapeHtml(h.desde)} a ${escapeHtml(h.hasta)}
+        <div class="historyMeta">${escapeHtml(h.ts)}</div>
+      </div>
+    `).join("") : `<div class="dashEmptyNote">Todavía no hay movimientos registrados.</div>`;
+
+    const typeLabel = { login: "Inicio de sesión", logout: "Cierre de sesión", login_failed: "Intento fallido" };
+    listAccess.innerHTML = access.length ? access.map(a=>`
+      <div class="historyItem">
+        ${typeLabel[a.type] || a.type} — <strong>${escapeHtml(a.username)}</strong>
+        <div class="historyMeta">${escapeHtml(a.ts)}</div>
+      </div>
+    `).join("") : `<div class="dashEmptyNote">Todavía no hay accesos registrados.</div>`;
+
+    function showTab(which){
+      listUpdates.style.display = which==="updates" ? "flex" : "none";
+      listAccess.style.display = which==="access" ? "flex" : "none";
+      tabUpdates.classList.toggle("active", which==="updates");
+      tabAccess.classList.toggle("active", which==="access");
+    }
+    showTab("updates");
+    tabUpdates.onclick = ()=> showTab("updates");
+    tabAccess.onclick = ()=> showTab("access");
+
+    overlay.classList.add("show");
+    document.getElementById("historyCloseBtn").onclick = ()=> overlay.classList.remove("show");
+  }
+  document.getElementById("historyBtn").addEventListener("click", openHistoryModal);
+
+  // ---- Helpers de chips de zona tocables (reemplazan el <select> en el panel de Actualización) ----
+  function zoneChipsHtml(containerId, selectedKey){
+    return `<div class="zoneChipsRow" id="${containerId}">
+      ${ZONES.map(z=>`<button type="button" class="zoneChipBtn${z.key===selectedKey?' active':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>`).join("")}
+    </div>`;
+  }
+  function wireZoneChips(container, onSelect){
+    container.querySelectorAll(".zoneChipBtn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        container.querySelectorAll(".zoneChipBtn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        onSelect(btn.getAttribute("data-zone"));
+      });
+    });
+  }
+
+  // ---- Pantalla dedicada del rol Actualización ----
+  async function renderUpdaterPanel(){
+    if(!(currentUser && currentUser.role === "actualizacion")) return;
+    await loadState();
+    const holder = document.getElementById("updaterPanel");
+    holder.innerHTML = `
+      <div class="updaterCard">
+        <h2>Actualizar ubicación</h2>
+        <input type="text" id="updSearchInput" class="plate" placeholder="Buscar placa (te lleva a su espacio actual)…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
+        <label style="margin-top:14px;">Zona <span class="zoneConfirmHint" id="zoneConfirmHint" style="display:none;"></span></label>
+        <div class="zoneChipsRow" id="updSpaceZoneChips"></div>
+        <label id="updSpaceCampoLabel">Campos</label>
+        <div class="spaceGrid" id="updSpaceGrid"></div>
+        <div id="updSpaceInfo"></div>
+        <input type="text" id="updListFilter" placeholder="Filtrar el listado de abajo…" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #e2e3de; background:#fbfbfa; font-size:0.85rem; margin-top:18px;">
+        <div class="updaterZoneFilterRow" id="updZoneFilterRow"></div>
+        <div id="updAllList"></div>
+      </div>
+    `;
+    const searchInput = holder.querySelector("#updSearchInput");
+    const listFilterInput = holder.querySelector("#updListFilter");
+    const zoneFilterRow = holder.querySelector("#updZoneFilterRow");
+    const allListBox = holder.querySelector("#updAllList");
+    let selectedListZone = ""; // "" = todas las zonas
+
+    function drawZoneFilterRow(){
+      const allRows = buildResumenRows();
+      const totalCount = allRows.length;
+      const countsByZone = {};
+      allRows.forEach(r=>{ countsByZone[r.zoneKey] = (countsByZone[r.zoneKey]||0) + 1; });
+      zoneFilterRow.innerHTML = `
+        <button type="button" class="updaterZoneChip${selectedListZone==="" ? " active" : ""}" data-zone="">Todas <span class="count">${totalCount}</span></button>
+        ${ZONES.map(z=>`
+          <button type="button" class="updaterZoneChip${selectedListZone===z.key ? " active" : ""}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label} <span class="count">${countsByZone[z.key]||0}</span></button>
+        `).join("")}
+      `;
+      zoneFilterRow.querySelectorAll(".updaterZoneChip").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          selectedListZone = btn.getAttribute("data-zone");
+          zoneFilterRow.querySelectorAll(".updaterZoneChip").forEach(b=>b.classList.remove("active"));
+          btn.classList.add("active");
+          drawAllList();
+        });
+      });
+    }
+
+    function drawAllList(){
+      const q = listFilterInput.value.trim().toUpperCase();
+      let rows = buildResumenRows();
+      const totalCount = rows.length;
+      if(selectedListZone) rows = rows.filter(r => r.zoneKey === selectedListZone);
+      const countAfterZone = rows.length;
+      if(q){
+        rows = rows.filter(r =>
+          r.placa.toUpperCase().includes(q) ||
+          String(r.campo).toUpperCase().includes(q) ||
+          r.zoneLabel.toUpperCase().includes(q) ||
+          (r.aseguradora||"").toUpperCase().includes(q) ||
+          (r.modelo||"").toUpperCase().includes(q)
+        );
+      }
+      if(totalCount === 0){
+        allListBox.innerHTML = `<div class="dashEmptyNote">Todavía no hay vehículos registrados.</div>`;
+        return;
+      }
+      const zoneLabel = selectedListZone ? zoneInfo(selectedListZone).label : null;
+      const title = (q || selectedListZone)
+        ? `${rows.length} de ${zoneLabel ? countAfterZone : totalCount} vehículo(s)${zoneLabel ? ` en ${zoneLabel}` : ""}`
+        : `Todos los vehículos (${totalCount}) — tocá uno para ir a su espacio`;
+
+      function rowHtml(r){
+        return `
+          <div class="updaterAllListRow${wasUpdatedToday(r) ? ' updatedToday' : ''}" data-plate="${escapeAttrLike(r.placa)}">
+            <span class="plate">${escapeHtml(r.placa)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+            <span class="updaterAllListMeta">${r.zoneLabel} · campo ${escapeHtml(r.campo)}</span>
+          </div>
+        `;
+      }
+
+      let listHtml;
+      if(rows.length === 0){
+        listHtml = `<div class="dashEmptyNote">Sin resultados para ese filtro.</div>`;
+      } else if(!selectedListZone){
+        listHtml = ZONES.map(z=>{
+          const zoneRows = rows.filter(r => r.zoneKey === z.key);
+          if(zoneRows.length === 0) return "";
+          return `
+            <div class="updaterZoneGroupHeader"><span class="dot" style="background:${z.color}"></span>${z.label} <span class="count">${zoneRows.length}</span></div>
+            ${zoneRows.map(rowHtml).join("")}
+          `;
+        }).join("");
+      } else {
+        listHtml = rows.map(rowHtml).join("");
+      }
+
+      allListBox.innerHTML = `
+        <div class="updaterAllListTitle">${title}</div>
+        <div class="updaterAllListScroll">${listHtml}</div>
+      `;
+      allListBox.querySelectorAll(".updaterAllListRow").forEach(row=>{
+        row.addEventListener("click", ()=>{
+          goToPlate(row.getAttribute("data-plate"));
+        });
+      });
+    }
+    listFilterInput.addEventListener("input", drawAllList);
+    listFilterInput.addEventListener("keyup", drawAllList);
+
+    // ---- Zona + espacio: ver quién ya está ahí, editar/quitar, agregar o mover ----
+    const spaceZoneChipsBox = holder.querySelector("#updSpaceZoneChips");
+    const spaceCampoLabel = holder.querySelector("#updSpaceCampoLabel");
+    const spaceGridBox = holder.querySelector("#updSpaceGrid");
+    const spaceInfoBox = holder.querySelector("#updSpaceInfo");
+    const zoneConfirmHint = holder.querySelector("#zoneConfirmHint");
+    let spaceZone = ZONES[0].key;
+    let selectedCampo = ""; // campo/línea elegido dentro de la zona actual
+    let editingPlateIdx = null; // índice (dentro del campo) de la placa en edición, o null
+    let armedZoneKey = null; // zona "armada" esperando el segundo toque para confirmar el cambio
+
+    // Cambiar de zona pide tocar dos veces (para no perder de vista el
+    // espacio actual por un toque accidental cerca de otra zona).
+    function drawSpaceZoneChips(){
+      spaceZoneChipsBox.innerHTML = ZONES.map(z=>`
+        <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}${armedZoneKey===z.key?' armed':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}${armedZoneKey===z.key ? " ¿Cambiar?" : ""}</button>
+      `).join("");
+      zoneConfirmHint.style.display = armedZoneKey ? "inline" : "none";
+      if(armedZoneKey) zoneConfirmHint.textContent = "Tocá de nuevo para confirmar";
+      spaceZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const zoneKey = btn.getAttribute("data-zone");
+          if(zoneKey === spaceZone){
+            armedZoneKey = null;
+            drawSpaceZoneChips();
+            return;
+          }
+          if(armedZoneKey === zoneKey){
+            // segundo toque sobre la misma zona: confirma el cambio
+            spaceZone = zoneKey;
+            armedZoneKey = null;
+            selectedCampo = "";
+            editingPlateIdx = null;
+            drawSpaceZoneChips();
+            refreshSpaceGrid();
+          } else {
+            // primer toque: solo "arma" la zona, todavía no cambia
+            armedZoneKey = zoneKey;
+            drawSpaceZoneChips();
+          }
+        });
+      });
+    }
+
+    function refreshSpaceGrid(preselect){
+      const label = UNNUMBERED_ONLY_ZONES.has(spaceZone) ? "Líneas" : "Campos";
+      spaceCampoLabel.textContent = label;
+      if(preselect !== undefined) selectedCampo = preselect;
+      const arr = state.zones[spaceZone] || [];
+      spaceGridBox.innerHTML = arr.map(c=>{
+        const cap = c.capacidad;
+        const occ = c.plates.length;
+        let fillClass = "empty";
+        if(occ > 0){
+          fillClass = (cap && occ >= cap) ? "full" : "partial";
+        }
+        return `
+          <button type="button" class="spaceGridBtn ${fillClass}${selectedCampo===c.campo ? ' active' : ''}" data-campo="${escapeAttrLike(c.campo)}">
+            <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
+            <span class="spaceGridCount">${occ}${cap ? "/"+cap : ""}</span>
+          </button>
+        `;
+      }).join("");
+      spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          selectedCampo = btn.getAttribute("data-campo");
+          editingPlateIdx = null;
+          spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
+          btn.classList.add("active");
+          drawSpaceInfo();
+        });
+      });
+      editingPlateIdx = null;
+      drawSpaceInfo();
+    }
+
+    // Busca una placa y salta directo a su zona/espacio actual, listo para
+    // editarla, quitarla o simplemente verla junto a las demás de ese lugar.
+    function goToPlate(plateRaw){
+      const q = normalizePlate(plateRaw);
+      if(!q) return;
+      const found = findPlate(q);
+      if(!found){
+        showToast(`${q} no se encontró. Elegí zona y espacio para registrarla ahí.`);
+        return;
+      }
+      spaceZone = found.zoneKey;
+      armedZoneKey = null;
+      drawSpaceZoneChips();
+      const campoLabel = state.zones[found.zoneKey][found.campoIdx].campo;
+      refreshSpaceGrid(campoLabel);
+      if(typeof spaceInfoBox.scrollIntoView === "function") spaceInfoBox.scrollIntoView({behavior:"smooth", block:"start"});
+    }
+    searchInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") goToPlate(searchInput.value); });
+
+    function drawSpaceInfo(){
+      const campoLabel = selectedCampo;
+      if(!campoLabel){ spaceInfoBox.innerHTML = ""; return; }
+      const entry = (state.zones[spaceZone] || []).find(c => c.campo === campoLabel);
+      if(!entry){ spaceInfoBox.innerHTML = ""; return; }
+      const cap = entry.capacidad;
+      const occ = entry.plates.length;
+      const full = cap && occ >= cap;
+      const labelLower = UNNUMBERED_ONLY_ZONES.has(spaceZone) ? "línea" : "campo";
+
+      const plateRowsHtml = entry.plates.length ? entry.plates.map((p,idx)=>{
+        if(idx === editingPlateIdx){
+          return `
+            <div class="spaceEditForm" data-idx="${idx}">
+              <div class="spaceEditQuickRow">
+                <input type="text" id="spaceEditPlaca" class="plate" value="${escapeHtml(p.plate)}" placeholder="Placa">
+                <input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" placeholder="Aseguradora">
+                <input type="text" id="spaceEditModelo" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo">
+              </div>
+              <div class="dupWarn" id="spaceEditDupWarn" style="display:none;"></div>
+              <button type="button" class="linkBackBtn" id="spaceEditMoveToggle" style="text-decoration:none; font-weight:700; margin-top:6px;">📍 Cambiar de zona/campo</button>
+              <div id="spaceEditMoveBox" style="display:none;">
+                <label style="margin-top:8px;">Nueva zona</label>
+                <div class="zoneChipsRow" id="spaceEditZoneChips"></div>
+                <label for="spaceEditCampo" id="spaceEditCampoLabel">Nuevo ${labelLower}</label>
+                <input type="text" id="spaceEditCampo" class="plate" value="${escapeHtml(campoLabel)}">
+              </div>
+              <div class="modalActions" style="margin-top:10px; flex-direction:row; gap:8px;">
+                <button type="button" class="primaryBtn" id="spaceEditSaveBtn" style="flex:1;">Guardar</button>
+                <button type="button" class="secondaryBtn" id="spaceEditCancelBtn" style="flex:1;">Cancelar</button>
+                <button type="button" class="dangerBtn" id="spaceEditRemoveBtn" style="flex:0 0 auto;" title="Quitar">✕</button>
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="spacePlateRow" data-idx="${idx}">
+            <span class="orderBadge">${idx+1}</span>
+            <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}</span>
+            <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
+            <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
+          </div>
+        `;
+      }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
+
+      spaceInfoBox.innerHTML = `
+        <div class="spaceInfoHeader">
+          <strong>${zoneInfo(spaceZone).label} · ${escapeHtml(campoLabel)}</strong>
+          ${cap ? `<span class="spaceCapBadge${full ? " full" : ""}">${occ}/${cap}</span>` : ``}
+        </div>
+        ${plateRowsHtml}
+        ${full ? `<div class="similarWarn" style="margin-top:8px;"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
+        <label style="margin-top:12px;">Agregar o mover una placa acá</label>
+        <input type="text" id="updSpaceNewPlaca" class="plate" placeholder="Placa">
+        <input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" style="margin-top:6px;">
+        <input type="text" id="updSpaceNewModelo" placeholder="Modelo (opcional)" style="margin-top:6px;">
+        <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
+        <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
+        <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn">Agregar en este espacio</button>
+      `;
+
+      // Quita una placa de este espacio (compartido entre el botón de la fila y el de edición)
+      async function removePlateFromSpace(idx){
+        const plateToRemove = entry.plates[idx];
+        if(!confirm(`¿Quitar ${plateToRemove.plate} de este ${labelLower}?`)) return;
+        removePlateEntryByRef(spaceZone, entry, plateToRemove);
+        await saveState(true);
+        await appendLog(HISTORY_KEY, {
+          ts: nowStamp(),
+          username: currentUser.username,
+          placa: plateToRemove.plate,
+          desde: `${zoneInfo(spaceZone).label} · campo ${campoLabel}`,
+          hasta: "Eliminado del inventario"
+        }, 300);
+        showToast("Vehículo eliminado");
+        editingPlateIdx = null;
+        const stillExists = (state.zones[spaceZone] || []).some(c => c.campo === campoLabel);
+        refreshSpaceGrid(stillExists ? campoLabel : "");
+        drawZoneFilterRow();
+        drawAllList();
+      }
+
+      // --- edición inline de una placa ya existente ---
+      if(editingPlateIdx !== null){
+        let editTargetZone = spaceZone;
+        const editPlacaInput = spaceInfoBox.querySelector("#spaceEditPlaca");
+        const editDupWarn = spaceInfoBox.querySelector("#spaceEditDupWarn");
+        const editAsegInput = spaceInfoBox.querySelector("#spaceEditAseg");
+        const editModeloInput = spaceInfoBox.querySelector("#spaceEditModelo");
+        const editCampoInput = spaceInfoBox.querySelector("#spaceEditCampo");
+        const moveToggleBtn = spaceInfoBox.querySelector("#spaceEditMoveToggle");
+        const moveBox = spaceInfoBox.querySelector("#spaceEditMoveBox");
+        const originalPlate = entry.plates[editingPlateIdx].plate;
+
+        const editZoneChipsBox = spaceInfoBox.querySelector("#spaceEditZoneChips");
+        editZoneChipsBox.innerHTML = ZONES.map(z=>`
+          <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
+        `).join("");
+        editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(btn=>{
+          btn.addEventListener("click", ()=>{
+            editTargetZone = btn.getAttribute("data-zone");
+            editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(b=>b.classList.remove("active"));
+            btn.classList.add("active");
+            spaceInfoBox.querySelector("#spaceEditCampoLabel").textContent = `Nuevo ${UNNUMBERED_ONLY_ZONES.has(editTargetZone) ? "línea" : "campo"}`;
+            editCampoInput.value = (editTargetZone === spaceZone) ? campoLabel : "";
+          });
+        });
+
+        moveToggleBtn.addEventListener("click", ()=>{
+          const show = moveBox.style.display === "none";
+          moveBox.style.display = show ? "block" : "none";
+          moveToggleBtn.style.display = show ? "none" : "block";
+        });
+
+        function checkEditPlateDup(){
+          const v = normalizePlate(editPlacaInput.value);
+          if(!v || v === originalPlate){ editDupWarn.style.display = "none"; return; }
+          const dup = findPlate(v, spaceZone, state.zones[spaceZone].indexOf(entry), editingPlateIdx);
+          if(dup){
+            const dupInfo = zoneInfo(dup.zoneKey);
+            const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
+            editDupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya existe en ${dupInfo.label}, campo ${dupCampo}. Al guardar, se preguntará si se mueve.`;
+            editDupWarn.style.display = "flex";
+          } else {
+            editDupWarn.style.display = "none";
+          }
+        }
+        editPlacaInput.addEventListener("input", checkEditPlateDup);
+        editPlacaInput.addEventListener("keyup", checkEditPlateDup);
+
+        async function saveEdit(){
+          const newPlate = editPlacaInput.value;
+          const newAseguradora = editAsegInput.value.trim();
+          const newModelo = editModeloInput.value.trim();
+          const newCampo = normalizeCampo(editCampoInput.value);
+          if(!newCampo){ showToast("Ingresá un campo válido"); return; }
+          if(!normalizePlate(newPlate)){ showToast("Ingresá una placa válida"); return; }
+          const idxToEdit = editingPlateIdx;
+          const currentEntry = (state.zones[spaceZone] || []).find(c => c.campo === campoLabel);
+          const ci = state.zones[spaceZone].indexOf(currentEntry);
+          const ok = await updaterConfirmMove(spaceZone, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "last", newPlate);
+          if(!ok) return; // canceló el diálogo de mover, o no había nada que cambiar: seguimos en edición
+          showToast("Vehículo actualizado");
+          editingPlateIdx = null;
+          if(editTargetZone !== spaceZone){
+            spaceZone = editTargetZone;
+            drawSpaceZoneChips();
+            refreshSpaceGrid(newCampo);
+          } else {
+            refreshSpaceGrid(newCampo);
+          }
+          drawZoneFilterRow();
+          drawAllList();
+        }
+        spaceInfoBox.querySelector("#spaceEditSaveBtn").addEventListener("click", saveEdit);
+        spaceInfoBox.querySelector("#spaceEditCancelBtn").addEventListener("click", ()=>{
+          editingPlateIdx = null;
+          drawSpaceInfo();
+        });
+        spaceInfoBox.querySelector("#spaceEditRemoveBtn").addEventListener("click", ()=> removePlateFromSpace(editingPlateIdx));
+        [editPlacaInput, editAsegInput, editModeloInput, editCampoInput].forEach(inp=>{
+          inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") saveEdit(); });
+        });
+        editPlacaInput.focus();
+        editPlacaInput.select();
+      }
+
+      spaceInfoBox.querySelectorAll(".spaceEditBtn").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          editingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
+          drawSpaceInfo();
+        });
+      });
+      spaceInfoBox.querySelectorAll(".spaceRemoveBtn").forEach(b=>{
+        b.addEventListener("click", ()=> removePlateFromSpace(parseInt(b.getAttribute("data-idx"),10)));
+      });
+
+      // --- agregar o mover una placa a este espacio ---
+      const spacePlacaInput = spaceInfoBox.querySelector("#updSpaceNewPlaca");
+      const spaceDupWarn = spaceInfoBox.querySelector("#updSpaceDupWarn");
+      const spaceSimilarWarn = spaceInfoBox.querySelector("#updSpaceSimilarWarn");
+      const spaceAddBtn = spaceInfoBox.querySelector("#updSpaceAddBtn");
+
+      function checkSpacePlateInfo(){
+        const v = normalizePlate(spacePlacaInput.value);
+        if(!v){ spaceDupWarn.style.display = "none"; spaceSimilarWarn.style.display = "none"; return; }
+        const dup = findPlate(v);
+        if(dup){
+          const dupInfo = zoneInfo(dup.zoneKey);
+          const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
+          const yaAca = dup.zoneKey === spaceZone && dupCampo === campoLabel;
+          if(yaAca){
+            spaceDupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya está en este mismo ${labelLower}.`;
+          } else {
+            spaceDupWarn.innerHTML = `<span class="dupWarnIcon">🔁</span> ${v} está en ${dupInfo.label}, campo ${dupCampo}. Al confirmar, se moverá acá.`;
+          }
+          spaceDupWarn.style.display = "flex";
+          spaceSimilarWarn.style.display = "none";
+        } else {
+          spaceDupWarn.style.display = "none";
+          const similares = findSimilarPlates(v);
+          if(similares.length > 0){
+            const items = similares.map(s=>{
+              const zi = zoneInfo(s.zoneKey);
+              const campo = state.zones[s.zoneKey][s.campoIdx].campo;
+              return `<button type="button" class="useSimilarBtn" data-plate="${escapeAttrLike(s.plate)}">${s.plate}</button> (${zi.label}, campo ${campo})`;
+            }).join(", ");
+            spaceSimilarWarn.innerHTML = `<span class="dupWarnIcon">🔍</span><span class="similarList">¿Es alguna de estas? ${items}</span>`;
+            spaceSimilarWarn.style.display = "flex";
+            spaceSimilarWarn.querySelectorAll(".useSimilarBtn").forEach(b=>{
+              b.addEventListener("click", ()=>{
+                spacePlacaInput.value = b.getAttribute("data-plate");
+                checkSpacePlateInfo();
+              });
+            });
+          } else {
+            spaceSimilarWarn.style.display = "none";
+          }
+        }
+      }
+      spacePlacaInput.addEventListener("input", checkSpacePlateInfo);
+      spacePlacaInput.addEventListener("keyup", checkSpacePlateInfo);
+
+      async function confirmSpaceAdd(){
+        const plateRaw = spacePlacaInput.value;
+        if(!normalizePlate(plateRaw)){ showToast("Ingresá una placa válida"); return; }
+        const aseguradora = spaceInfoBox.querySelector("#updSpaceNewAseguradora").value;
+        const modelo = spaceInfoBox.querySelector("#updSpaceNewModelo").value;
+        const ok = await updaterAddNew(spaceZone, campoLabel, plateRaw, aseguradora, modelo, "last");
+        if(ok){
+          lastAddZoneKey = spaceZone;
+          showToast("Listo — vehículo en este espacio");
+          refreshSpaceGrid(campoLabel);
+          drawZoneFilterRow();
+          drawAllList();
+        }
+      }
+      spaceAddBtn.addEventListener("click", confirmSpaceAdd);
+      spacePlacaInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmSpaceAdd(); });
+    }
+
+    drawSpaceZoneChips();
+    refreshSpaceGrid();
+
+    drawZoneFilterRow();
+    drawAllList();
+  }
+
+  // Escape simple para usar dentro de un atributo data-*, igual que escapeHtml.
+  function escapeAttrLike(s){
+    return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  }
+
+  async function updaterConfirmMove(zoneKey, ci, pi, newZone, newCampo, newAseguradora, newModelo, position, newPlateRaw){
+    if(!(currentUser && currentUser.role === "actualizacion")){
+      showToast("Tu usuario no tiene permiso para esta acción");
+      return false;
+    }
+    const campoObj = state.zones[zoneKey][ci];
+    const entry = campoObj.plates[pi];
+    const fromCampo = campoObj.campo;
+    const newPlate = newPlateRaw ? normalizePlate(newPlateRaw) : entry.plate;
+    if(!newPlate){ showToast("Ingresá una placa válida"); return false; }
+
+    const plateChanged = newPlate !== entry.plate;
+    if(plateChanged){
+      const dup = findPlate(newPlate, zoneKey, ci, pi);
+      if(dup){
+        const dupInfo = zoneInfo(dup.zoneKey);
+        const dupCampoObj = state.zones[dup.zoneKey][dup.campoIdx];
+        const dupEntry = dupCampoObj.plates[dup.plateIdx];
+        const choice = await askMoveOrCancel(newPlate, dupInfo.label, dupCampoObj.campo, zoneInfo(newZone).label, newCampo);
+        if(choice !== "move") return false;
+        removePlateEntryByRef(dup.zoneKey, dupCampoObj, dupEntry);
+      }
+    }
+
+    const locationChanged = !(newZone === zoneKey && newCampo === fromCampo);
+    const aseguradoraChanged = newAseguradora !== (entry.aseguradora || "");
+    const modeloChanged = newModelo !== (entry.modelo || "");
+    if(!locationChanged && !aseguradoraChanged && !modeloChanged && !plateChanged) return false;
+
+    entry.plate = newPlate;
+    entry.aseguradora = newAseguradora;
+    entry.modelo = newModelo;
+    entry.lastUpdated = new Date().toISOString();
+
+    if(locationChanged){
+      removePlateEntryByRef(zoneKey, campoObj, entry);
+      insertPlateAtPosition(getOrCreateCampo(newZone, newCampo), entry, position || "last");
+    }
+    await saveState(true);
+    if(locationChanged){
+      await logUpdate(entry.plate, zoneKey, fromCampo, newZone, newCampo);
+    }
+    return true;
+  }
+
+  async function updaterAddNew(zoneKey, campoRaw, plateRaw, aseguradoraRaw, modeloRaw, position){
+    if(!(currentUser && currentUser.role === "actualizacion")){
+      showToast("Tu usuario no tiene permiso para esta acción");
+      return false;
+    }
+    const campo = campoRaw ? normalizeCampo(campoRaw) : nextAutoCampo(zoneKey);
+    const ok = await addPlateToZone(zoneKey, campo, plateRaw, aseguradoraRaw, modeloRaw, position);
+    if(ok){
+      await saveState(true);
+      await logUpdate(normalizePlate(plateRaw), null, null, zoneKey, campo);
+    }
+    return ok;
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", async ()=>{
+    if(!confirm("¿Cerrar sesión?")) return;
+    if(currentUser) await logAccess(currentUser.username, "logout");
+    if(clockInterval) clearInterval(clockInterval);
+    await clearSession();
+    location.reload();
+  });
+
+  document.getElementById("undoBtn").addEventListener("click", ()=>{ if(guardEdit()) doUndo(); });
 
   // ---- Init ----
   runAuthGate();
