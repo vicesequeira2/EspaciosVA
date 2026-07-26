@@ -1028,6 +1028,22 @@
     max-height:260px; overflow-y:auto;
     display:flex; flex-direction:column; gap:6px;
   }
+  #updSearchResults{
+    display:none;
+    flex-direction:column;
+    gap:4px;
+    margin-top:6px;
+    max-height:220px;
+    overflow-y:auto;
+  }
+  #updSearchResults.show{ display:flex; }
+  .updSearchResultRow{
+    display:flex; justify-content:space-between; align-items:center;
+    background:#f4f5f2; border-radius:8px; padding:8px 10px;
+    font-size:0.85rem; cursor:pointer;
+  }
+  .updSearchResultRow:active{ background:#eceee9; }
+  .updSearchResultMeta{ font-size:0.72rem; color:var(--muted); }
   .updaterAllListRow{
     display:flex; justify-content:space-between; align-items:center;
     background:#f4f5f2; border-radius:8px; padding:8px 10px;
@@ -1572,6 +1588,15 @@
   let activeTab = "__dashboard__";
   let dashboardCharts = []; // instancias Chart.js activas, para destruirlas antes de re-renderizar
   let lastAddZoneKey = ZONES[0].key; // última zona usada al agregar un vehículo nuevo (rol Actualización)
+  let lastAddAseguradora = ""; // última aseguradora usada al agregar un vehículo nuevo (rol Actualización)
+
+  // Vibración corta de confirmación (celulares/tablets); no hace nada si el
+  // dispositivo o navegador no lo soporta.
+  function vibrateSuccess(){
+    try{
+      if(navigator.vibrate) navigator.vibrate(120);
+    }catch(e){ /* no crítico */ }
+  }
   let storageAvailable = true;
   let storageWarned = false;
   let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
@@ -1827,6 +1852,9 @@
     await saveState(true);
   }
 
+  let saveRetryTimer = null;
+  let pendingSaveRetry = false;
+
   async function saveState(silent){
     state.updatedAt = new Date().toISOString();
 
@@ -1842,12 +1870,45 @@
         throw new Error("Unexpected response type");
       }
       if(!silent) showToast("Guardado");
+      if(pendingSaveRetry){
+        pendingSaveRetry = false;
+        if(saveRetryTimer){ clearInterval(saveRetryTimer); saveRetryTimer = null; }
+        showToast("Conexión recuperada: los cambios pendientes ya se guardaron.", 4000);
+      }
     }catch(e){
-      console.error("Error guardando", e);
-      storageAvailable = false;
-      if(!storageWarned){ storageWarned = true; showStorageBanner(); }
+      // No apagamos storageAvailable de forma permanente: la próxima acción
+      // vuelve a intentar guardar sola. Además, programamos un reintento de
+      // fondo para el cambio que quedó pendiente, por si la persona no
+      // vuelve a tocar nada por un rato.
+      console.error("Error guardando, se reintentará automáticamente", e);
+      if(!pendingSaveRetry){
+        pendingSaveRetry = true;
+        showToast("Sin conexión con el guardado — reintentando solo...", 4000);
+        scheduleSaveRetry();
+      }
     }
     renderMeta();
+  }
+
+  function scheduleSaveRetry(){
+    if(saveRetryTimer) return;
+    saveRetryTimer = setInterval(async ()=>{
+      if(!pendingSaveRetry){
+        clearInterval(saveRetryTimer);
+        saveRetryTimer = null;
+        return;
+      }
+      try{
+        const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+        if(result && typeof result === "object"){
+          pendingSaveRetry = false;
+          clearInterval(saveRetryTimer);
+          saveRetryTimer = null;
+          showToast("Conexión recuperada: los cambios pendientes ya se guardaron.", 4000);
+          renderMeta();
+        }
+      }catch(e){ /* seguimos intentando en el próximo ciclo */ }
+    }, 6000);
   }
 
   function renderMeta(){
@@ -2651,7 +2712,7 @@
       </div>
       <div class="resultsCount" id="resultsCount"></div>
       <table>
-        <thead><tr><th style="width:70px;">Campo</th><th>Placa</th><th>Zona</th><th>Aseguradora</th><th>Modelo</th></tr></thead>
+        <thead><tr><th style="width:70px;">Campo</th><th>Modelo</th><th>Placa</th><th>Zona</th><th>Aseguradora</th></tr></thead>
         <tbody id="resumenTbody"></tbody>
       </table>
       <div id="resumenEmpty"></div>
@@ -2696,10 +2757,10 @@
           tr.dataset.pi = r.pi;
           tr.innerHTML = `
             <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${escapeHtml(r.campo)}</span></td>
+            <td>${r.modelo ? escapeHtml(r.modelo) : '<span style="color:var(--muted);">—</span>'}</td>
             <td class="plate">${escapeHtml(r.placa)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</td>
             <td>${r.zoneLabel}</td>
             <td>${r.aseguradora ? escapeHtml(r.aseguradora) : '<span style="color:var(--muted);">—</span>'}</td>
-            <td>${r.modelo ? escapeHtml(r.modelo) : '<span style="color:var(--muted);">—</span>'}</td>
           `;
           tr.addEventListener("click", ()=>{
             if(currentUser && currentUser.role === "consulta"){
@@ -3685,17 +3746,21 @@
     holder.innerHTML = `
       <div class="updaterCard">
         <h2>Actualizar ubicación</h2>
-        <input type="text" id="updSearchInput" class="plate" placeholder="Buscar placa (te lleva a su espacio actual)…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
-        <label style="margin-top:14px;">Zona <span class="zoneConfirmHint" id="zoneConfirmHint" style="display:none;"></span></label>
-        <div class="zoneChipsRow" id="updSpaceZoneChips"></div>
-        <label id="updSpaceCampoLabel">Campos</label>
-        <div class="spaceGrid" id="updSpaceGrid"></div>
+        <div id="updBrowseSection">
+          <input type="text" id="updSearchInput" class="plate" placeholder="Buscar placa (te lleva a su espacio actual)…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
+          <div id="updSearchResults"></div>
+          <label style="margin-top:14px;">Zona <span class="zoneConfirmHint" id="zoneConfirmHint" style="display:none;"></span></label>
+          <div class="zoneChipsRow" id="updSpaceZoneChips"></div>
+          <label id="updSpaceCampoLabel">Campos</label>
+          <div class="spaceGrid" id="updSpaceGrid"></div>
+          <input type="text" id="updListFilter" placeholder="Filtrar el listado de abajo…" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #e2e3de; background:#fbfbfa; font-size:0.85rem; margin-top:18px;">
+          <div class="updaterZoneFilterRow" id="updZoneFilterRow"></div>
+          <div id="updAllList"></div>
+        </div>
         <div id="updSpaceInfo"></div>
-        <input type="text" id="updListFilter" placeholder="Filtrar el listado de abajo…" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #e2e3de; background:#fbfbfa; font-size:0.85rem; margin-top:18px;">
-        <div class="updaterZoneFilterRow" id="updZoneFilterRow"></div>
-        <div id="updAllList"></div>
       </div>
     `;
+    const browseSection = holder.querySelector("#updBrowseSection");
     const searchInput = holder.querySelector("#updSearchInput");
     const listFilterInput = holder.querySelector("#updListFilter");
     const zoneFilterRow = holder.querySelector("#updZoneFilterRow");
@@ -3878,13 +3943,58 @@
       refreshSpaceGrid(campoLabel);
       if(typeof spaceInfoBox.scrollIntoView === "function") spaceInfoBox.scrollIntoView({behavior:"smooth", block:"start"});
     }
-    searchInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") goToPlate(searchInput.value); });
+
+    // Sugerencias en vivo mientras se escribe (antes solo reaccionaba a Enter
+    // con coincidencia exacta, lo que parecía "no filtrar" al escribir).
+    const searchResultsBox = holder.querySelector("#updSearchResults");
+    function runUpdSearch(q){
+      q = q.trim().toUpperCase();
+      if(!q){ searchResultsBox.classList.remove("show"); searchResultsBox.innerHTML = ""; return; }
+      const rows = buildResumenRows().filter(r=>r.placa.toUpperCase().includes(q));
+      if(rows.length === 0){
+        searchResultsBox.innerHTML = `<div class="updSearchResultRow" style="cursor:default;">Sin coincidencias</div>`;
+      } else {
+        searchResultsBox.innerHTML = rows.slice(0,20).map(r=>`
+          <div class="updSearchResultRow" data-plate="${escapeAttrLike(r.placa)}">
+            <span class="plate">${escapeHtml(r.placa)}</span>
+            <span class="updSearchResultMeta">${r.zoneLabel} · campo ${escapeHtml(r.campo)}</span>
+          </div>
+        `).join("");
+        searchResultsBox.querySelectorAll(".updSearchResultRow[data-plate]").forEach(el=>{
+          el.addEventListener("click", ()=>{
+            searchInput.value = "";
+            searchResultsBox.classList.remove("show");
+            goToPlate(el.getAttribute("data-plate"));
+          });
+        });
+      }
+      searchResultsBox.classList.add("show");
+    }
+    searchInput.addEventListener("input", (e)=> runUpdSearch(e.target.value));
+    searchInput.addEventListener("keyup", (e)=> runUpdSearch(e.target.value));
+    searchInput.addEventListener("focus", (e)=> { if(e.target.value) runUpdSearch(e.target.value); });
+    searchInput.addEventListener("blur", ()=> setTimeout(()=> searchResultsBox.classList.remove("show"), 150));
+    searchInput.addEventListener("keydown", (e)=>{
+      if(e.key==="Enter"){
+        searchResultsBox.classList.remove("show");
+        goToPlate(searchInput.value);
+      }
+    });
 
     function drawSpaceInfo(){
       const campoLabel = selectedCampo;
-      if(!campoLabel){ spaceInfoBox.innerHTML = ""; return; }
+      if(!campoLabel){
+        browseSection.style.display = "block";
+        spaceInfoBox.innerHTML = "";
+        return;
+      }
       const entry = (state.zones[spaceZone] || []).find(c => c.campo === campoLabel);
-      if(!entry){ spaceInfoBox.innerHTML = ""; return; }
+      if(!entry){
+        browseSection.style.display = "block";
+        spaceInfoBox.innerHTML = "";
+        return;
+      }
+      browseSection.style.display = "none";
       const cap = entry.capacidad;
       const occ = entry.plates.length;
       const full = cap && occ >= cap;
@@ -3926,6 +4036,7 @@
       }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
 
       spaceInfoBox.innerHTML = `
+        <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">← Volver a la lista de espacios</button>
         <div class="spaceInfoHeader">
           <strong>${zoneInfo(spaceZone).label} · ${escapeHtml(campoLabel)}</strong>
           ${cap ? `<span class="spaceCapBadge${full ? " full" : ""}">${occ}/${cap}</span>` : ``}
@@ -3934,7 +4045,7 @@
         ${full ? `<div class="similarWarn" style="margin-top:8px;"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
         <label style="margin-top:12px;">Agregar o mover una placa acá</label>
         <input type="text" id="updSpaceNewPlaca" class="plate" placeholder="Placa">
-        <input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" style="margin-top:6px;">
+        <input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">
         <input type="text" id="updSpaceNewModelo" placeholder="Modelo (opcional)" style="margin-top:6px;">
         <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
         <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
@@ -3954,6 +4065,7 @@
           desde: `${zoneInfo(spaceZone).label} · campo ${campoLabel}`,
           hasta: "Eliminado del inventario"
         }, 300);
+        vibrateSuccess();
         showToast("Vehículo eliminado");
         editingPlateIdx = null;
         const stillExists = (state.zones[spaceZone] || []).some(c => c.campo === campoLabel);
@@ -4022,6 +4134,7 @@
           const ci = state.zones[spaceZone].indexOf(currentEntry);
           const ok = await updaterConfirmMove(spaceZone, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "last", newPlate);
           if(!ok) return; // canceló el diálogo de mover, o no había nada que cambiar: seguimos en edición
+          vibrateSuccess();
           showToast("Vehículo actualizado");
           editingPlateIdx = null;
           if(editTargetZone !== spaceZone){
@@ -4111,6 +4224,8 @@
         const ok = await updaterAddNew(spaceZone, campoLabel, plateRaw, aseguradora, modelo, "last");
         if(ok){
           lastAddZoneKey = spaceZone;
+          lastAddAseguradora = aseguradora.trim();
+          vibrateSuccess();
           showToast("Listo — vehículo en este espacio");
           refreshSpaceGrid(campoLabel);
           drawZoneFilterRow();
@@ -4119,6 +4234,13 @@
       }
       spaceAddBtn.addEventListener("click", confirmSpaceAdd);
       spacePlacaInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmSpaceAdd(); });
+
+      spaceInfoBox.querySelector("#spaceBackBtn").addEventListener("click", ()=>{
+        selectedCampo = "";
+        editingPlateIdx = null;
+        spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
+        drawSpaceInfo();
+      });
     }
 
     drawSpaceZoneChips();
