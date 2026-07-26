@@ -813,11 +813,11 @@
   }
   .authBtn{ width:100%; margin-top:18px; padding:11px 14px; }
   .roleLogos{
-    display:flex; gap:14px; justify-content:center;
+    display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
     margin: 6px 0 4px;
   }
   .roleLogoBtn{
-    flex:1;
+    flex:1 1 40%; min-width:110px;
     display:flex; flex-direction:column; align-items:center; gap:8px;
     background:#f4f5f2;
     border:1px solid #e6e7e2;
@@ -922,7 +922,7 @@
   .userRow .userRowName{ font-weight:600; }
   .userRow .userRowRole{ font-size:0.68rem; color:var(--muted); }
   .userRow .userRowMe{ color:var(--muted); font-size:0.68rem; font-weight:500; }
-  .userRow .userRowBtns{ display:flex; gap:8px; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; max-width:150px; }
+  .userRow .userRowBtns{ display:flex; gap:8px; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; max-width:180px; }
   .userRow button{
     background:none; border:none; color:var(--danger);
     cursor:pointer; font-size:0.72rem; font-weight:600;
@@ -930,6 +930,7 @@
   .userRow button.toggleActiveBtn{ color: var(--zone-color, var(--line-dim)); }
   .userRow button.resetPassBtn{ color: var(--muted); }
   .userRow button.renameUserBtn{ color: var(--ink); }
+  .userRow button.featureUserBtn{ color: #8a5a1c; }
   .userRow.inactive{ opacity:0.5; }
   .historyTabs{ display:flex; gap:6px; margin-bottom:10px; }
   .historyTabBtn{
@@ -3279,7 +3280,7 @@
     ]);
   }
 
-  function showLoginScreen(onRoleSubmit, onAdminSubmit){
+  function showLoginScreen(featuredUsers, onRoleSubmit, onUserSubmit, onAdminSubmit){
     document.getElementById("authChecking").style.display = "none";
     document.getElementById("authPasswordScreen").style.display = "block";
 
@@ -3298,7 +3299,25 @@
     const btn = document.getElementById("accessBtn");
     const adminBack = document.getElementById("adminLoginBack");
 
-    let selectedRole = null;
+    // Un logo propio por cada usuario "destacado", además de los 2 genéricos
+    // de rol que ya están en el HTML. Se agregan dinámicamente porque la
+    // lista de usuarios destacados puede cambiar en cualquier momento.
+    logosBox.querySelectorAll(".roleLogoBtn[data-featured-username]").forEach(b=>b.remove());
+    featuredUsers.forEach(u=>{
+      const btnEl = document.createElement("button");
+      btnEl.type = "button";
+      btnEl.className = "roleLogoBtn";
+      btnEl.setAttribute("data-featured-username", u.username);
+      btnEl.innerHTML = `
+        <span class="roleLogoIcon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        </span>
+        <span class="roleLogoLabel">${escapeHtml(u.username)}</span>
+      `;
+      logosBox.appendChild(btnEl);
+    });
+
+    let selectedTarget = null; // { kind: "role", role } o { kind: "user", username, role }
 
     function showLogos(){
       logosBox.style.display = "flex";
@@ -3306,9 +3325,10 @@
       adminForm.style.display = "none";
       adminLink.style.display = "block";
     }
-    function showRoleForm(role){
-      selectedRole = role;
-      roleLabel.textContent = role === "consulta" ? "Acceso de Búsqueda" : "Acceso de Actualización";
+    function showRoleForm(target){
+      selectedTarget = target;
+      const label = target.kind === "user" ? target.username : (target.role === "consulta" ? "Búsqueda" : "Actualización");
+      roleLabel.textContent = `Acceso de ${label}`;
       logosBox.style.display = "none";
       roleForm.style.display = "block";
       adminLink.style.display = "none";
@@ -3324,8 +3344,11 @@
       userInput.focus();
     }
 
-    logosBox.querySelectorAll(".roleLogoBtn").forEach(b=>{
-      b.addEventListener("click", ()=> showRoleForm(b.getAttribute("data-role")));
+    logosBox.querySelectorAll(".roleLogoBtn[data-role]").forEach(b=>{
+      b.addEventListener("click", ()=> showRoleForm({ kind: "role", role: b.getAttribute("data-role") }));
+    });
+    logosBox.querySelectorAll(".roleLogoBtn[data-featured-username]").forEach(b=>{
+      b.addEventListener("click", ()=> showRoleForm({ kind: "user", username: b.getAttribute("data-featured-username") }));
     });
     roleBack.addEventListener("click", showLogos);
     adminBack.addEventListener("click", showLogos);
@@ -3336,7 +3359,9 @@
       roleError.textContent = "";
       if(!p){ roleError.textContent = "Ingresá la contraseña."; return; }
       roleBtn.disabled = true;
-      const ok = await onRoleSubmit(selectedRole, p);
+      const ok = selectedTarget.kind === "user"
+        ? await onUserSubmit(selectedTarget.username, p)
+        : await onRoleSubmit(selectedTarget.role, p);
       roleBtn.disabled = false;
       if(!ok){
         roleError.textContent = "Contraseña incorrecta.";
@@ -3545,6 +3570,7 @@
     }
 
     showLoginScreen(
+      users.filter(u => u.featured && u.active !== false),
       // Logos de Consulta / Actualización: solo piden contraseña; se prueba
       // contra cualquier cuenta activa que tenga ese rol.
       async (role, password)=>{
@@ -3558,6 +3584,13 @@
         }
         if(storageAvailable) await logAccess(`(${ROLES[role]||role})`, "login_failed");
         return false;
+      },
+      // Logo propio de un usuario "destacado": se prueba solo contra ESA
+      // cuenta puntual, no contra todas las del rol.
+      async (username, password)=>{
+        const freshUsers = storageAvailable ? await loadUsers() : users;
+        const found = freshUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+        return await tryLogin(found, password);
       },
       // Acceso administrador, detrás del enlace discreto: usuario + contraseña.
       async (username, password)=>{
@@ -3586,11 +3619,12 @@
         <div class="userRow ${u.active===false ? 'inactive' : ''}">
           <div class="userRowInfo">
             <span class="userRowName">${escapeHtml(u.username)} ${currentUser.username.toLowerCase()===u.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
-            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}</span>
+            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}${u.featured ? ' · logo propio' : ''}</span>
           </div>
           <div class="userRowBtns">
             <button class="renameUserBtn" data-i="${i}">Renombrar</button>
             <button class="resetPassBtn" data-i="${i}">Restablecer clave</button>
+            <button class="featureUserBtn" data-i="${i}">${u.featured ? "Quitar logo" : "Dar logo propio"}</button>
             <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "Activar" : "Desactivar"}</button>
             <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
           </div>
@@ -3633,6 +3667,15 @@
           const ok = await saveUsers(users);
           errorP.textContent = ok ? "" : "No se pudo guardar, intentá de nuevo.";
           if(ok) showToast(`Contraseña de "${uname}" actualizada`);
+        });
+      });
+      listEl.querySelectorAll(".featureUserBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          if(users[i].role === "admin"){ showToast("El Admin ya entra por su enlace propio, no necesita logo."); return; }
+          users[i].featured = !users[i].featured;
+          await saveUsers(users);
+          draw();
         });
       });
       listEl.querySelectorAll(".toggleActiveBtn").forEach(b=>{
