@@ -922,7 +922,7 @@
   .userRow .userRowName{ font-weight:600; }
   .userRow .userRowRole{ font-size:0.68rem; color:var(--muted); }
   .userRow .userRowMe{ color:var(--muted); font-size:0.68rem; font-weight:500; }
-  .userRow .userRowBtns{ display:flex; gap:8px; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; max-width:180px; }
+  .userRow .userRowBtns{ display:flex; gap:8px; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; max-width:210px; }
   .userRow button{
     background:none; border:none; color:var(--danger);
     cursor:pointer; font-size:0.72rem; font-weight:600;
@@ -931,6 +931,7 @@
   .userRow button.resetPassBtn{ color: var(--muted); }
   .userRow button.renameUserBtn{ color: var(--ink); }
   .userRow button.featureUserBtn{ color: #8a5a1c; }
+  .userRow button.exportPermBtn{ color: #2f7a4a; }
   .userRow.inactive{ opacity:0.5; }
   .historyTabs{ display:flex; gap:6px; margin-bottom:10px; }
   .historyTabBtn{
@@ -3067,7 +3068,7 @@
   });
 
   document.getElementById("exportBtn").addEventListener("click", ()=>{
-    if(!guardEdit()) return;
+    if(!guardExport()) return;
     const wb = XLSX.utils.book_new();
     const now = new Date();
     const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
@@ -3268,6 +3269,17 @@
     return false;
   }
 
+  // Exportar a Excel: siempre para Admin, y además para cualquier usuario
+  // al que el Admin le haya dado ese permiso puntual (sin importar su rol).
+  function canExport(){
+    return !!(currentUser && (currentUser.role === "admin" || currentUser.canExport));
+  }
+  function guardExport(){
+    if(canExport()) return true;
+    showToast("Tu usuario no tiene permiso para exportar");
+    return false;
+  }
+
   function seedDefaultAdmin(){
     return Promise.all([
       hashUserPassword("Vicente", "Parqueos2026"),
@@ -3431,7 +3443,7 @@
     document.getElementById("backupBtn").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("restoreBtn").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("undoBtn").style.display = role === "admin" ? "inline-block" : "none";
-    document.getElementById("exportBtn").style.display = role === "admin" ? "inline-block" : "none";
+    document.getElementById("exportBtn").style.display = canExport() ? "inline-block" : "none";
 
     const nav = document.getElementById("tabs");
     const main = document.getElementById("mainArea");
@@ -3544,7 +3556,7 @@
     if(sessionUsername){
       const found = users.find(u => u.username.toLowerCase() === sessionUsername.toLowerCase() && u.active !== false);
       if(found){
-        currentUser = { username: found.username, role: found.role };
+        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport };
         revealApp();
         return;
       }
@@ -3560,7 +3572,7 @@
         if(storageAvailable) await logAccess(found.username, "login_failed");
         return false;
       }
-      currentUser = { username: found.username, role: found.role };
+      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport };
       if(storageAvailable){
         await setSessionUsername(found.username);
         await logAccess(found.username, "login");
@@ -3619,12 +3631,13 @@
         <div class="userRow ${u.active===false ? 'inactive' : ''}">
           <div class="userRowInfo">
             <span class="userRowName">${escapeHtml(u.username)} ${currentUser.username.toLowerCase()===u.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
-            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}${u.featured ? ' · logo propio' : ''}</span>
+            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}${u.featured ? ' · logo propio' : ''}${(u.role!=="admin" && u.canExport) ? ' · puede exportar' : ''}</span>
           </div>
           <div class="userRowBtns">
             <button class="renameUserBtn" data-i="${i}">Renombrar</button>
             <button class="resetPassBtn" data-i="${i}">Restablecer clave</button>
             <button class="featureUserBtn" data-i="${i}">${u.featured ? "Quitar logo" : "Dar logo propio"}</button>
+            ${u.role!=="admin" ? `<button class="exportPermBtn" data-i="${i}">${u.canExport ? "Quitar Excel" : "Dar acceso a Excel"}</button>` : ``}
             <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "Activar" : "Desactivar"}</button>
             <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
           </div>
@@ -3675,6 +3688,15 @@
           if(users[i].role === "admin"){ showToast("El Admin ya entra por su enlace propio, no necesita logo."); return; }
           users[i].featured = !users[i].featured;
           await saveUsers(users);
+          draw();
+        });
+      });
+      listEl.querySelectorAll(".exportPermBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          users[i].canExport = !users[i].canExport;
+          await saveUsers(users);
+          showToast(users[i].canExport ? `"${users[i].username}" ya puede exportar a Excel` : `Se le quitó el acceso a Excel a "${users[i].username}"`);
           draw();
         });
       });
