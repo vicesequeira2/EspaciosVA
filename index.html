@@ -1415,6 +1415,55 @@
     });
   }
 
+  // Cifrado de lo que se guarda en Firebase: así, quien mire la consola de
+  // Firebase directamente ve texto cifrado en vez de placas/zonas en claro.
+  // Aviso honesto: la clave vive en este mismo código (visible si alguien
+  // inspecciona el archivo), así que esto no es seguridad real contra un
+  // análisis técnico de la app — solo evita que la información se vea
+  // "tan concreta" a simple vista en la base de datos.
+  const ENCRYPTION_PASSPHRASE = "EspaciosV-Inventario-Parqueo-2026";
+  let encryptionKeyPromise = null;
+  function getEncryptionKey(){
+    if(!encryptionKeyPromise){
+      encryptionKeyPromise = (async ()=>{
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.digest("SHA-256", enc.encode(ENCRYPTION_PASSPHRASE));
+        return crypto.subtle.importKey("raw", keyMaterial, { name: "AES-GCM" }, false, ["encrypt","decrypt"]);
+      })();
+    }
+    return encryptionKeyPromise;
+  }
+  function bufToBase64(buf){
+    let bin = "";
+    new Uint8Array(buf).forEach(b => bin += String.fromCharCode(b));
+    return btoa(bin);
+  }
+  function base64ToBuf(b64){
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+    return arr;
+  }
+  async function encryptForFirebase(plainText){
+    const key = await getEncryptionKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const enc = new TextEncoder();
+    const cipherBuf = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(plainText));
+    return "ENC1:" + bufToBase64(iv) + ":" + bufToBase64(cipherBuf);
+  }
+  async function decryptFromFirebase(stored){
+    // Compatibilidad: datos guardados antes de activar el cifrado siguen
+    // leyéndose normal (texto plano), y quedan cifrados solos la próxima
+    // vez que se vuelvan a guardar.
+    if(typeof stored !== "string" || !stored.startsWith("ENC1:")) return stored;
+    const parts = stored.split(":");
+    const iv = base64ToBuf(parts[1]);
+    const cipherBytes = base64ToBuf(parts[2]);
+    const key = await getEncryptionKey();
+    const plainBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipherBytes);
+    return new TextDecoder().decode(plainBuf);
+  }
+
   const storage = {
     async get(key, shared){
       if(!shared){
@@ -1425,7 +1474,8 @@
       if(!fbReady) throw new Error("Firebase no está listo todavía");
       const snap = await fbDb.ref(key).once("value");
       if(!snap.exists()) throw new Error("Clave no encontrada: " + key);
-      return { key, value: snap.val(), shared: true };
+      const decrypted = await decryptFromFirebase(snap.val());
+      return { key, value: decrypted, shared: true };
     },
     async set(key, value, shared){
       if(!shared){
@@ -1433,7 +1483,8 @@
         return { key, value, shared: false };
       }
       if(!fbReady) throw new Error("Firebase no está listo todavía");
-      await fbDb.ref(key).set(value);
+      const encrypted = await encryptForFirebase(value);
+      await fbDb.ref(key).set(encrypted);
       return { key, value, shared: true };
     },
     async delete(key, shared){
