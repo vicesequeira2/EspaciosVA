@@ -6,9 +6,9 @@
 <title>Inventario de Parqueo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.15.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.15.0/firebase-database-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.15.0/firebase-auth-compat.min.js"></script>
 <style>
   :root{
     --asphalt: #24272b;
@@ -1346,23 +1346,50 @@
   let fbDb = null;
   let fbReady = false;
 
-  // Inicio de sesión anónimo de Firebase: no pide nada al usuario, pero
-  // exige que el llamado venga de un cliente autenticado (bloquea llamadas
-  // directas a la API REST de la base de datos sin pasar por esta app).
+  // Corta cualquier promesa que tarde demasiado (evita que la app se quede
+  // esperando para siempre "Verificando acceso…" si Firebase no responde).
+  function withTimeout(promise, ms, message){
+    return Promise.race([
+      promise,
+      new Promise((_, reject)=> setTimeout(()=> reject(new Error(message)), ms))
+    ]);
+  }
+
+  // Intenta el inicio de sesión anónimo de Firebase (no pide nada al
+  // usuario). Es "mejor esfuerzo": si el SDK cargó, igual dejamos lista la
+  // conexión a la base de datos aunque el inicio de sesión falle o tarde
+  // demasiado (por ejemplo, por una red que bloquea los servidores de
+  // autenticación de Google) — la propia prueba de guardado que ya hace
+  // checkStorageAvailable() se encarga de detectar si de verdad se puede
+  // leer/escribir o no.
   function ensureFirebaseAuth(){
-    return new Promise((resolve, reject)=>{
+    return new Promise((resolve)=>{
       if(typeof firebase === "undefined"){
-        reject(new Error("El SDK de Firebase no cargó (revisá la pestaña Network del navegador: gstatic.com puede estar bloqueado, sin internet, o la página en caché)."));
+        fbReady = false;
+        resolve();
         return;
       }
       try{
         firebase.initializeApp(firebaseConfig);
         fbDb = firebase.database();
-        firebase.auth().onAuthStateChanged(user=>{
-          if(user){ fbReady = true; resolve(user); }
-        }, reject);
-        firebase.auth().signInAnonymously().catch(reject);
-      }catch(e){ reject(e); }
+      }catch(e){
+        console.error("No se pudo inicializar Firebase", e);
+        fbReady = false;
+        resolve();
+        return;
+      }
+      let settled = false;
+      function finish(){
+        if(settled) return;
+        settled = true;
+        fbReady = true; // la base de datos ya se puede intentar usar, con o sin sesión anónima
+        resolve();
+      }
+      try{
+        firebase.auth().onAuthStateChanged(()=> finish(), ()=> finish());
+        firebase.auth().signInAnonymously().catch(()=> finish());
+      }catch(e){ finish(); }
+      setTimeout(finish, 4000); // no esperar más de 4s por la sesión anónima
     });
   }
 
@@ -3406,7 +3433,7 @@
     storageAvailable = false;
     let sessionUsername = null;
     try{
-      await ensureFirebaseAuth();
+      await withTimeout(ensureFirebaseAuth(), 6000, "Firebase tardó demasiado en responder.").catch(()=>{ fbReady = !!fbDb; });
       storageAvailable = await checkStorageAvailable();
       if(storageAvailable){
         sessionUsername = await getSessionUsername();
