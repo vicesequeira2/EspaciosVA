@@ -20,7 +20,7 @@
     --asphalt-3: #3a3f45;
     --line: #f2c230;
     --line-dim: #b8912a;
-    --paper: #f4f5f2;
+    --paper: var(--surface-2);
     --ink: #1b1e21;
     --muted: #8b9198;
     --ok: #4caf7d;
@@ -35,7 +35,29 @@
     --z-neon: #e0529c;
     --z-pge: #e2843a;
     --radius: 10px;
+    /* Superficies (para que el modo oscuro sea un simple cambio de variables) */
+    --surface: #ffffff;
+    --surface-2: #f4f5f2;
+    --surface-3: #eceee9;
+    --border: #e2e3de;
+    --border-soft: #f0f1ed;
+    --input-bg: #fbfbfa;
   }
+  html[data-theme="dark"]{
+    --paper: #1b1e21;
+    --ink: #eef0f2;
+    --muted: #9aa2ab;
+    --surface: #26292e;
+    --surface-2: #2f3338;
+    --surface-3: #3a3f45;
+    --border: #40454b;
+    --border-soft: #34383e;
+    --input-bg: #2a2e33;
+  }
+  html[data-theme="dark"] .authCard{ background: var(--surface); }
+  html[data-theme="dark"] .plateChip.updatedToday{ background:#1d3327; }
+  html[data-theme="dark"] .resumenRow.updatedToday{ background:#1d3327; }
+  html[data-theme="dark"] .updaterAllListRow.updatedToday{ background:#1d3327; }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -72,7 +94,7 @@
     color: var(--muted);
     margin-top:2px;
   }
-  #exportBtn{
+  #exportBtn, #shareExportBtn{
     background: var(--line);
     color: var(--asphalt);
     border:none;
@@ -83,7 +105,7 @@
     cursor:pointer;
     white-space:nowrap;
   }
-  #exportBtn:active{transform: translateY(1px);}
+  #exportBtn:active, #shareExportBtn:active{transform: translateY(1px);}
   .headerBtns{
     display:flex; flex-direction:column; gap:6px; align-items:stretch;
   }
@@ -156,7 +178,7 @@
     padding: 8px 14px;
     border-radius: 999px 999px 0 0;
     border: none;
-    background: #e6e7e2;
+    background: var(--border);
     color: var(--ink);
     font-weight:600;
     font-size: 0.82rem;
@@ -180,7 +202,7 @@
   .zonePanel{display:none;}
   .zonePanel.active{display:block;}
   .zoneHeadCard{
-    background:white;
+    background:var(--surface);
     border-radius: var(--radius);
     padding:14px 16px;
     margin-bottom:14px;
@@ -197,7 +219,7 @@
     flex:1;
     height:7px;
     border-radius:999px;
-    background:#eceee9;
+    background:var(--surface-3);
     overflow:hidden;
   }
   .occupancyBarFill{
@@ -231,7 +253,7 @@
   .addRow input{
     padding:10px 12px;
     border-radius: var(--radius);
-    border:1px solid #d7d8d3;
+    border:1px solid var(--border);
     font-size:0.95rem;
   }
   .addRow input.plateInputAdd{ flex:1; }
@@ -254,14 +276,14 @@
     min-width:0;
     padding:8px 12px;
     border-radius: var(--radius);
-    border:1px solid #e2e3de;
-    background:#fbfbfa;
+    border:1px solid var(--border);
+    background:var(--input-bg);
     font-size:0.85rem;
   }
   .addRowSecondary input:focus{
     outline:none;
     border-color: var(--line-dim);
-    background:white;
+    background:var(--surface);
   }
   .addHint{
     font-size:0.72rem;
@@ -326,7 +348,7 @@
     width:100%;
     min-height:80px;
     border-radius: var(--radius);
-    border:1px solid #d7d8d3;
+    border:1px solid var(--border);
     padding:10px 12px;
     font-family: ui-monospace, monospace;
     font-size:0.85rem;
@@ -349,7 +371,7 @@
     gap:8px;
   }
   .campoCard{
-    background:white;
+    background:var(--surface);
     border-radius: var(--radius);
     padding: 10px 12px;
     display:flex;
@@ -375,12 +397,12 @@
   .campoBody{flex:1; min-width:0;}
   .campoCapBadge{
     display:inline-block;
-    font-size:0.66rem;
-    font-weight:700;
+    font-size:0.68rem;
+    font-weight:800;
     color:var(--muted);
-    background:#eceee9;
-    border-radius:5px;
-    padding:1px 6px;
+    background:var(--surface-3);
+    border-radius:999px;
+    padding:2px 8px;
     margin-bottom:4px;
   }
   .campoCapBadge.overCap{
@@ -393,7 +415,7 @@
   }
   .plateChip{
     display:flex; flex-direction:column;
-    background:#eceee9;
+    background:var(--surface-3);
     border-radius: 7px;
     padding: 5px 4px 6px 10px;
     font-size:0.85rem;
@@ -407,14 +429,14 @@
   }
   .plateChip.updatedToday:active{ background:#d3ebdc; }
   .updatedTodayTag{
-    font-size:0.62rem;
+    font-size:0.68rem;
     font-weight:800;
     text-transform:uppercase;
     letter-spacing:0.02em;
     color:white;
     background:#2f9e5e;
-    border-radius:5px;
-    padding:2px 6px;
+    border-radius:999px;
+    padding:2px 8px;
   }
   .plateChipMain{
     display:flex; align-items:center; gap:6px;
@@ -517,11 +539,11 @@
   .resumenToolbar{
     display:flex; gap:10px; margin-bottom:8px; flex-wrap:wrap;
     align-items:center;
-    background:white;
+    background:var(--surface);
     border-radius: var(--radius);
     padding:12px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    border:1px solid #eceee9;
+    border:1px solid var(--surface-3);
   }
   .filterField{
     position:relative;
@@ -539,23 +561,23 @@
     width:100%;
     padding:9px 12px 9px 34px;
     border-radius:8px;
-    border:1px solid #d7d8d3;
-    background:#fbfbfa;
+    border:1px solid var(--border);
+    background:var(--input-bg);
     font-size:0.9rem;
     transition: border-color 0.15s, background 0.15s;
   }
   .resumenToolbar input:focus{
     outline:none;
     border-color: var(--line-dim);
-    background:white;
+    background:var(--surface);
   }
   .selectField{ flex: 0 1 190px; min-width:150px; }
   .resumenToolbar select{
     width:100%;
     padding:9px 30px 9px 12px;
     border-radius:8px;
-    border:1px solid #d7d8d3;
-    background:#fbfbfa;
+    border:1px solid var(--border);
+    background:var(--input-bg);
     font-size:0.9rem;
     appearance:none;
     -webkit-appearance:none;
@@ -596,7 +618,7 @@
     margin-bottom:18px;
   }
   .dashCard{
-    background:white;
+    background:var(--surface);
     border-radius: var(--radius);
     padding:14px 12px;
     text-align:center;
@@ -615,7 +637,7 @@
     font-weight:600;
   }
   .chartCard{
-    background:white;
+    background:var(--surface);
     border-radius: var(--radius);
     padding:14px;
     margin-bottom:16px;
@@ -642,7 +664,7 @@
   .capacityByZoneRow{
     display:flex; align-items:center; gap:8px;
     padding:9px 2px;
-    border-bottom:1px solid #f0f1ed;
+    border-bottom:1px solid var(--border-soft);
     font-size:0.85rem;
   }
   .capacityByZoneRow:last-child{ border-bottom:none; }
@@ -656,11 +678,26 @@
     cursor:pointer;
     flex:0 0 auto;
   }
+  .capacityProgressBar{
+    height:6px;
+    border-radius:999px;
+    background: var(--surface-3);
+    margin: 0 0 9px 20px;
+    overflow:hidden;
+  }
+  .capacityProgressFill{
+    height:100%;
+    border-radius:999px;
+    background: var(--ok);
+    transition: width 0.3s ease;
+  }
+  .capacityProgressFill.high{ background:#e0a63a; }
+  .capacityProgressFill.full{ background: var(--danger); }
   .chip{
     display:flex; align-items:center; gap:6px;
     padding:5px 10px;
     border-radius:999px;
-    background:white;
+    background:var(--surface);
     font-size:0.75rem;
     font-weight:600;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -669,7 +706,7 @@
   table{
     width:100%;
     border-collapse: collapse;
-    background:white;
+    background:var(--surface);
     border-radius: var(--radius);
     overflow:hidden;
   }
@@ -680,11 +717,11 @@
     letter-spacing:0.04em;
     color: var(--muted);
     padding:8px 10px;
-    border-bottom:2px solid #eceee9;
+    border-bottom:2px solid var(--surface-3);
   }
   tbody td{
     padding:9px 10px;
-    border-bottom:1px solid #f0f1ed;
+    border-bottom:1px solid var(--border-soft);
     font-size:0.92rem;
     vertical-align:top;
   }
@@ -692,7 +729,7 @@
   .resumenRow{cursor:pointer;}
   .resumenRow.updatedToday{ background:#e3f3ea; }
   .resumenRow.updatedToday:hover{ background:#d3ebdc; }
-  .resumenRow:active{background:#f0f1ed;}
+  .resumenRow:active{background:var(--border-soft);}
   .spotNum{
     display:inline-flex;
     align-items:center;
@@ -741,7 +778,7 @@
   }
   .modalOverlay.show{display:flex;}
   .modalCard{
-    background:white;
+    background:var(--surface);
     border-radius: 14px;
     max-width: 360px;
     width:100%;
@@ -756,7 +793,7 @@
     padding:11px 14px; font-weight:700; font-size:0.88rem; cursor:pointer;
   }
   .modalCard .primaryBtn{background: var(--ink); color:white;}
-  .modalCard .secondaryBtn{background:#eceee9; color:var(--ink);}
+  .modalCard .secondaryBtn{background:var(--surface-3); color:var(--ink);}
   .modalCard .dangerBtn{background:none; color:var(--danger); text-decoration:underline; padding:8px 0;}
   .modalCard label{
     display:block; font-size:0.76rem; font-weight:700; color:var(--muted);
@@ -766,27 +803,58 @@
     width:100%;
     padding:10px 12px;
     border-radius: var(--radius);
-    border:1px solid #d7d8d3;
+    border:1px solid var(--border);
     font-size:0.95rem;
+    background: var(--input-bg);
+    color: var(--ink);
   }
   @media (max-width:480px){
     header h1{font-size:1rem;}
   }
   .authGate{
     position:fixed; inset:0;
-    background: linear-gradient(180deg, var(--asphalt) 0%, var(--asphalt-2) 100%);
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 28px),
+      linear-gradient(180deg, var(--asphalt) 0%, var(--asphalt-2) 100%);
     display:flex; align-items:center; justify-content:center;
     z-index:100;
     padding:20px;
   }
   .authCard{
-    background:white;
+    background:var(--surface);
     border-radius:14px;
     max-width:360px;
     width:100%;
     padding:28px 24px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.35);
   }
+  .authGreeting{
+    font-size:0.78rem;
+    font-weight:700;
+    color:var(--muted);
+    margin:0 0 2px;
+    text-transform:capitalize;
+  }
+  .offlineBanner{
+    background:#fbdedb;
+    color:#a13d33;
+    border:1px solid #e79a92;
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:0.78rem;
+    font-weight:700;
+    margin:0 0 12px;
+  }
+  .guestBanner{
+    background:#fff6e0;
+    color:#8a5a1c;
+    border-bottom:1px solid #f2d98a;
+    padding:8px 20px;
+    font-size:0.78rem;
+    font-weight:700;
+    text-align:center;
+  }
+  .guestBanner a{ color:#8a5a1c; text-decoration:underline; margin-left:4px; }
   .authTitle{
     font-size:1.15rem;
     font-weight:800;
@@ -808,7 +876,7 @@
     width:100%;
     padding:10px 12px;
     border-radius: var(--radius);
-    border:1px solid #d7d8d3;
+    border:1px solid var(--border);
     font-size:0.95rem;
   }
   .authBtn{ width:100%; margin-top:18px; padding:11px 14px; }
@@ -819,14 +887,32 @@
   .roleLogoBtn{
     flex:1 1 40%; min-width:110px;
     display:flex; flex-direction:column; align-items:center; gap:8px;
-    background:#f4f5f2;
-    border:1px solid #e6e7e2;
+    background:var(--surface-2);
+    border:1px solid var(--border);
     border-radius:14px;
     padding:18px 10px;
     cursor:pointer;
     transition: background 0.15s, transform 0.1s;
+    opacity:0;
+    animation: roleLogoFadeIn 0.35s ease forwards;
   }
-  .roleLogoBtn:active{ transform: scale(0.97); background:#eceee9; }
+  .roleLogoBtn:nth-child(1){ animation-delay: 0.05s; }
+  .roleLogoBtn:nth-child(2){ animation-delay: 0.12s; }
+  .roleLogoBtn:nth-child(3){ animation-delay: 0.19s; }
+  .roleLogoBtn:nth-child(4){ animation-delay: 0.26s; }
+  .roleLogoBtn:nth-child(5){ animation-delay: 0.33s; }
+  @keyframes roleLogoFadeIn{
+    from{ opacity:0; transform: translateY(8px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  .viewFadeIn{
+    animation: viewFadeIn 0.22s ease;
+  }
+  @keyframes viewFadeIn{
+    from{ opacity:0; transform: translateY(6px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  .roleLogoBtn:active{ transform: scale(0.97); background:var(--surface-3); }
   .roleLogoIcon{
     width:44px; height:44px;
     border-radius:50%;
@@ -854,7 +940,7 @@
     display:block;
     margin: 22px auto 0;
     background:none; border:none;
-    color:#d7d8d3;
+    color:var(--border);
     font-size:0.9rem;
     letter-spacing:0.3em;
     cursor:pointer;
@@ -868,6 +954,13 @@
     min-height:0;
   }
   .authError:empty{ margin:0; }
+  .authHelpHint{
+    color:var(--muted);
+    font-size:0.74rem;
+    font-weight:600;
+    margin: 6px 0 0;
+    line-height:1.4;
+  }
   #authChecking{ display:none; }
   #logoutBtn{
     background: transparent;
@@ -880,7 +973,7 @@
     cursor:pointer;
     white-space:nowrap;
   }
-  #usersBtn, #historyBtn, #backupBtn, #restoreBtn, #refreshBtn{
+  #usersBtn, #historyBtn, #backupBtn, #restoreBtn, #refreshBtn, #themeToggleBtn, #guestLinksBtn{
     background: transparent;
     color: var(--paper);
     border:1px solid var(--asphalt-3);
@@ -898,13 +991,20 @@
     color: var(--muted);
     flex-wrap:wrap;
   }
+  .identityRow .idRoleIcon{
+    width:16px; height:16px;
+    color: var(--line);
+    display:flex; align-items:center; justify-content:center;
+    flex:0 0 auto;
+  }
+  .identityRow .idRoleIcon svg{ width:100%; height:100%; }
   .identityRow .idName{ color: var(--paper); font-weight:700; }
   .identityRow .idRole{
     background: var(--line);
     color: var(--asphalt);
     padding:2px 8px;
     border-radius:999px;
-    font-weight:700;
+    font-weight:800;
     font-size:0.68rem;
   }
   .identityRow .idClock{ margin-left:auto; }
@@ -915,7 +1015,7 @@
   }
   .userRow{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
-    background:#f4f5f2; border-radius:8px; padding:8px 10px;
+    background:var(--surface-2); border-radius:8px; padding:8px 10px;
     font-size:0.85rem;
   }
   .userRow .userRowInfo{ display:flex; flex-direction:column; }
@@ -935,7 +1035,7 @@
   .userRow.inactive{ opacity:0.5; }
   .historyTabs{ display:flex; gap:6px; margin-bottom:10px; }
   .historyTabBtn{
-    flex:1; background:#eceee9; border:none; border-radius:8px;
+    flex:1; background:var(--surface-3); border:none; border-radius:8px;
     padding:8px; font-size:0.78rem; font-weight:700; color:var(--muted); cursor:pointer;
   }
   .historyTabBtn.active{ background: var(--ink); color:white; }
@@ -944,23 +1044,23 @@
     max-height:320px; overflow-y:auto;
   }
   .historyItem{
-    background:#f4f5f2; border-radius:8px; padding:8px 10px;
+    background:var(--surface-2); border-radius:8px; padding:8px 10px;
     font-size:0.78rem; line-height:1.4;
   }
   .historyItem .historyMeta{ color:var(--muted); font-size:0.68rem; }
   .updaterCard{
-    max-width:420px; margin:20px auto; background:white;
+    max-width:420px; margin:20px auto; background:var(--surface);
     border-radius: var(--radius); padding:18px; box-shadow:0 1px 2px rgba(0,0,0,0.05);
   }
   .updaterCard h2{ margin:0 0 12px; font-size:1rem; }
-  .updaterInfoRow{ display:flex; justify-content:space-between; font-size:0.85rem; padding:6px 0; border-bottom:1px solid #f0f1ed; }
+  .updaterInfoRow{ display:flex; justify-content:space-between; font-size:0.85rem; padding:6px 0; border-bottom:1px solid var(--border-soft); }
   .zoneChipsRow{
     display:flex; flex-wrap:wrap; gap:6px;
     margin-top:4px;
   }
   .zoneChipBtn{
-    border:1.5px solid #e2e3de;
-    background:white;
+    border:1.5px solid var(--border);
+    background:var(--surface);
     color:var(--ink);
     padding:8px 12px;
     border-radius:999px;
@@ -1004,8 +1104,8 @@
   }
   .positionChipBtn{
     flex:1;
-    border:1.5px solid #e2e3de;
-    background:white;
+    border:1.5px solid var(--border);
+    background:var(--surface);
     color:var(--ink);
     padding:8px 6px;
     border-radius:8px;
@@ -1028,7 +1128,7 @@
   .updaterAllListTitle{
     font-size:0.72rem; color:var(--muted); font-weight:700;
     text-transform:uppercase; letter-spacing:0.03em;
-    margin: 18px 0 8px; padding-top:14px; border-top:1px solid #f0f1ed;
+    margin: 18px 0 8px; padding-top:14px; border-top:1px solid var(--border-soft);
   }
   .updaterAllListScroll{
     max-height:260px; overflow-y:auto;
@@ -1045,17 +1145,17 @@
   #updSearchResults.show{ display:flex; }
   .updSearchResultRow{
     display:flex; justify-content:space-between; align-items:center;
-    background:#f4f5f2; border-radius:8px; padding:8px 10px;
+    background:var(--surface-2); border-radius:8px; padding:8px 10px;
     font-size:0.85rem; cursor:pointer;
   }
-  .updSearchResultRow:active{ background:#eceee9; }
+  .updSearchResultRow:active{ background:var(--surface-3); }
   .updSearchResultMeta{ font-size:0.72rem; color:var(--muted); }
   .updaterAllListRow{
     display:flex; justify-content:space-between; align-items:center;
-    background:#f4f5f2; border-radius:8px; padding:8px 10px;
+    background:var(--surface-2); border-radius:8px; padding:8px 10px;
     font-size:0.85rem; cursor:pointer;
   }
-  .updaterAllListRow:active{ background:#eceee9; }
+  .updaterAllListRow:active{ background:var(--surface-3); }
   .updaterAllListRow.updatedToday{ background:#e3f3ea; }
   .updaterAllListRow.updatedToday:active{ background:#d3ebdc; }
   .updaterAllListMeta{ font-size:0.72rem; color:var(--muted); }
@@ -1064,8 +1164,8 @@
     margin-top:14px;
   }
   .updaterZoneChip{
-    border:1.5px solid #e2e3de;
-    background:white;
+    border:1.5px solid var(--border);
+    background:var(--surface);
     color:var(--ink);
     padding:6px 10px;
     border-radius:999px;
@@ -1096,7 +1196,7 @@
     text-transform:uppercase; letter-spacing:0.02em;
     margin: 10px 0 2px;
     padding-top:8px;
-    border-top:1px solid #f0f1ed;
+    border-top:1px solid var(--border-soft);
   }
   .updaterZoneGroupHeader:first-child{ border-top:none; padding-top:0; margin-top:0; }
   .updaterZoneGroupHeader .count{
@@ -1111,7 +1211,7 @@
   .spaceGridBtn{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:2px;
-    border:1.5px solid #e2e3de;
+    border:1.5px solid var(--border);
     background:#fafaf9;
     border-radius:10px;
     padding:8px 4px;
@@ -1120,7 +1220,7 @@
   }
   .spaceGridLabel{ font-size:0.78rem; font-weight:800; color:var(--ink); }
   .spaceGridCount{ font-size:0.64rem; color:var(--muted); font-weight:600; }
-  .spaceGridBtn.empty{ background:#fafaf9; border-color:#e2e3de; }
+  .spaceGridBtn.empty{ background:#fafaf9; border-color:var(--border); }
   .spaceGridBtn.partial{ background:#fff3d6; border-color:#f0cd6e; }
   .spaceGridBtn.partial .spaceGridCount{ color:#8a6a1c; }
   .spaceGridBtn.full{ background:#fbdedb; border-color:#e79a92; }
@@ -1136,8 +1236,8 @@
     font-size:0.9rem;
   }
   .spaceCapBadge{
-    background:#eceee9; color:var(--muted);
-    font-size:0.72rem; font-weight:800;
+    background:var(--surface-3); color:var(--muted);
+    font-size:0.68rem; font-weight:800;
     padding:2px 8px; border-radius:999px;
   }
   .spaceCapBadge.full{ background: var(--danger); color:white; }
@@ -1145,7 +1245,7 @@
     display:flex; align-items:center; gap:8px;
     font-size:0.85rem;
     padding:6px 0;
-    border-bottom:1px solid #f0f1ed;
+    border-bottom:1px solid var(--border-soft);
   }
   .spacePlateRow:last-of-type{ border-bottom:none; }
   .spacePlateInfo{ flex:1; min-width:0; }
@@ -1162,19 +1262,72 @@
     flex:1; min-width:90px;
     padding:8px 10px;
     border-radius:8px;
-    border:1px solid #d7d8d3;
+    border:1px solid var(--border);
     font-size:0.85rem;
   }
   .spaceEditForm .modalActions button{
     padding:9px 10px;
     font-size:0.8rem;
   }
+
+  /* Cobertura general de modo oscuro: muchos campos/tarjetas se arman con
+     estilo en línea directo desde JS (no desde esta hoja de estilos), así
+     que estas reglas los alcanzan igual, sin tener que tocar cada uno. */
+  html[data-theme="dark"] input[type="text"],
+  html[data-theme="dark"] input[type="password"],
+  html[data-theme="dark"] select,
+  html[data-theme="dark"] textarea{
+    background: var(--input-bg) !important;
+    color: var(--ink) !important;
+    border-color: var(--border) !important;
+  }
+  html[data-theme="dark"] .dashCard,
+  html[data-theme="dark"] .chartCard,
+  html[data-theme="dark"] .updaterCard,
+  html[data-theme="dark"] .zoneHeadCard,
+  html[data-theme="dark"] .campoCard,
+  html[data-theme="dark"] .updSearchResults,
+  html[data-theme="dark"] table{
+    background: var(--surface) !important;
+    color: var(--ink);
+  }
+  html[data-theme="dark"] .spaceEditForm,
+  html[data-theme="dark"] .updaterAllListRow,
+  html[data-theme="dark"] .updSearchResultRow,
+  html[data-theme="dark"] .plateChip,
+  html[data-theme="dark"] .userRow,
+  html[data-theme="dark"] .historyItem,
+  html[data-theme="dark"] .campoNum.sinAsignar{
+    background: var(--surface-2) !important;
+    color: var(--ink);
+  }
+  html[data-theme="dark"] thead, html[data-theme="dark"] th{
+    background: var(--surface-2) !important;
+    color: var(--ink) !important;
+  }
+
+  /* Modo kiosco: oculta el encabezado (evita toques accidentales de
+     cerrar sesión, refrescar, etc.) y deja solo un botón chico y discreto
+     para salir, en la esquina inferior. */
+  .kioskFloatingExit{ display:none; }
+  body.kiosk-mode header{ display:none !important; }
+  body.kiosk-mode .kioskFloatingExit{
+    display:flex; align-items:center; justify-content:center;
+    position:fixed; bottom:12px; right:12px; z-index:500;
+    width:32px; height:32px; border-radius:50%;
+    background: rgba(27,30,33,0.12); color: var(--muted);
+    border:none; font-size:0.72rem; cursor:pointer;
+  }
+  body.kiosk-mode .kioskFloatingExit:active{ background: rgba(27,30,33,0.45); color:white; }
 </style>
 </head>
 <body>
 
 <div class="authGate" id="authGate">
   <div class="authCard">
+    <div class="authGreeting" id="authGreeting"></div>
+    <div class="offlineBanner" id="offlineBanner" style="display:none;">📵 Sin conexión a internet — revisá tu wifi o datos móviles</div>
+    <div class="offlineBanner" id="guestLinkError" style="display:none;"></div>
     <h1 class="authTitle">Inventario <span class="dash">·</span> Parqueo</h1>
 
     <div id="authPasswordScreen" style="display:none;">
@@ -1199,6 +1352,7 @@
         <label for="rolePass">Contraseña</label>
         <input type="password" id="rolePass" autocomplete="current-password">
         <p class="authError" id="roleLoginError"></p>
+        <p class="authHelpHint" id="roleLoginHelp" style="display:none;"></p>
         <button class="primaryBtn authBtn" id="roleLoginBtn">Entrar</button>
         <button type="button" class="linkBackBtn" id="roleLoginBack">Volver</button>
       </div>
@@ -1225,6 +1379,7 @@
 </div>
 
 <div id="appRoot" style="display:none;">
+<button type="button" id="kioskFloatingExitBtn" class="kioskFloatingExit" title="Salir del modo kiosco">✕</button>
 
 <header>
   <div class="top-row">
@@ -1234,17 +1389,21 @@
     </div>
     <div class="headerBtns">
       <button id="refreshBtn">🔄 Actualizar</button>
+      <button id="themeToggleBtn">🌙 Oscuro</button>
       <button id="usersBtn" style="display:none;">Usuarios</button>
       <button id="historyBtn" style="display:none;">Historial</button>
+      <button id="guestLinksBtn" style="display:none;">Invitados</button>
       <button id="backupBtn" style="display:none;">Respaldo</button>
       <button id="restoreBtn" style="display:none;">Restaurar</button>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
       <button id="logoutBtn">Cerrar sesión</button>
       <button id="undoBtn" disabled style="display:none;">Deshacer</button>
       <button id="exportBtn" style="display:none;">Exportar a Excel</button>
+      <button id="shareExportBtn" style="display:none;">📤 Compartir Excel</button>
     </div>
   </div>
   <div class="identityRow" id="identityRow"></div>
+  <div class="guestBanner" id="guestBanner" style="display:none;"></div>
   <div class="searchWrap" id="searchWrap">
     <input id="globalSearch" type="text" placeholder="Buscar placa en todas las zonas…" autocomplete="off">
     <div id="searchResults"></div>
@@ -1339,6 +1498,30 @@
     <div id="historyListAccess" class="historyList" style="display:none;"></div>
     <div class="modalActions" style="margin-top:14px;">
       <button class="secondaryBtn" id="historyCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="guestLinksModal">
+  <div class="modalCard modalCardWide">
+    <h3>Enlaces de invitado</h3>
+    <p>Da acceso de solo lectura (como Búsqueda) a alguien sin cuenta, por un tiempo limitado. Vencido ese tiempo, el enlace deja de funcionar solo.</p>
+    <label for="guestLinkDuration">Duración</label>
+    <select id="guestLinkDuration">
+      <option value="1">1 hora</option>
+      <option value="24" selected>24 horas</option>
+      <option value="168">7 días</option>
+    </select>
+    <label for="guestLinkLabel">Para quién es (opcional, para identificarlo)</label>
+    <input type="text" id="guestLinkLabel" placeholder="Ej: Dueño del lote, Auditor…">
+    <button class="primaryBtn" id="generateGuestLinkBtn" style="margin-top:12px;">Generar enlace</button>
+    <div id="guestLinkResult"></div>
+    <div class="historyTabs" style="margin-top:16px;">
+      <span style="font-size:0.76rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em;">Enlaces activos</span>
+    </div>
+    <div id="guestLinksList" class="historyList"></div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="secondaryBtn" id="guestLinksCloseBtn">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1641,11 +1824,67 @@
   const USERS_KEY = "inventario_parqueo_users_v2"; // compartido: cuentas {username, hash, role, active}
   const HISTORY_KEY = "inventario_parqueo_history_v1"; // compartido: movimientos de placas
   const ACCESS_LOG_KEY = "inventario_parqueo_access_v1"; // compartido: inicios/cierres de sesión e intentos fallidos
+  const GUEST_LINKS_KEY = "inventario_parqueo_guest_links_v1"; // compartido: enlaces de invitado temporales
   let state = null; // { zones: { zoneKey: [ {campo, plates:[]}, ... ] }, capacities:{zoneKey:number}, updatedAt }
   let activeTab = "__dashboard__";
   let dashboardCharts = []; // instancias Chart.js activas, para destruirlas antes de re-renderizar
   let lastAddZoneKey = ZONES[0].key; // última zona usada al agregar un vehículo nuevo (rol Actualización)
   let lastAddAseguradora = ""; // última aseguradora usada al agregar un vehículo nuevo (rol Actualización)
+
+  // ---- Modo kiosco (pensado para el rol Actualización en una tablet fija) ----
+  // Aviso honesto: esto es lo máximo que se puede lograr desde una página
+  // web (pantalla completa + pantalla sin apagarse + ocultar el encabezado).
+  // No bloquea el botón de inicio ni la barra de notificaciones del sistema
+  // operativo — para eso hace falta configurar el modo kiosco del propio
+  // dispositivo Android, algo que ya queda fuera de lo que la app controla.
+  let kioskModeActive = false;
+  let wakeLockSentinel = null;
+
+  function updateKioskButtonLabel(){
+    const btn = document.getElementById("kioskToggleBtn");
+    if(btn) btn.textContent = kioskModeActive ? "🖥️ Salir de kiosco" : "🖥️ Modo kiosco";
+  }
+
+  async function enterKioskMode(){
+    try{
+      if(document.documentElement.requestFullscreen){
+        await document.documentElement.requestFullscreen();
+      }
+    }catch(e){ console.error("No se pudo entrar en pantalla completa", e); }
+    try{
+      if("wakeLock" in navigator){
+        wakeLockSentinel = await navigator.wakeLock.request("screen");
+      }
+    }catch(e){ console.error("No se pudo mantener la pantalla encendida", e); }
+    kioskModeActive = true;
+    document.body.classList.add("kiosk-mode");
+    updateKioskButtonLabel();
+  }
+
+  async function exitKioskMode(){
+    try{
+      if(document.fullscreenElement && document.exitFullscreen){
+        await document.exitFullscreen();
+      }
+    }catch(e){ /* no crítico */ }
+    if(wakeLockSentinel){
+      try{ await wakeLockSentinel.release(); }catch(e){ /* no crítico */ }
+      wakeLockSentinel = null;
+    }
+    kioskModeActive = false;
+    document.body.classList.remove("kiosk-mode");
+    updateKioskButtonLabel();
+  }
+
+  document.addEventListener("fullscreenchange", ()=>{
+    // Si la persona sale de pantalla completa con un gesto del sistema (no
+    // con nuestro botón), sincronizamos el resto del modo kiosco con eso.
+    if(!document.fullscreenElement && kioskModeActive){
+      exitKioskMode();
+    }
+  });
+  document.getElementById("kioskFloatingExitBtn").addEventListener("click", exitKioskMode);
+
 
   // Vibración corta de confirmación (celulares/tablets); no hace nada si el
   // dispositivo o navegador no lo soporta.
@@ -2414,7 +2653,7 @@
     const campos = state.zones[zone.key] || [];
     const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
     const wrap = document.createElement("div");
-    wrap.className = "zonePanel active";
+    wrap.className = "zonePanel active viewFadeIn";
     wrap.style.setProperty("--zone-color", info.color);
 
     if(!canEdit()){
@@ -2742,7 +2981,7 @@
 
   function renderResumenPanel(){
     const wrap = document.createElement("div");
-    wrap.className = "zonePanel active";
+    wrap.className = "zonePanel active viewFadeIn";
 
     const chips = ZONES.map(z=>{
       const camposCount = occupancyCountForZone(z.key);
@@ -2845,7 +3084,7 @@
 
   function renderDashboardPanel(){
     const wrap = document.createElement("div");
-    wrap.className = "zonePanel active";
+    wrap.className = "zonePanel active viewFadeIn";
 
     const totalVeh = ZONES.reduce((a,z)=> a + (state.zones[z.key]||[]).reduce((aa,c)=>aa+c.plates.length,0), 0);
     const totalCampos = ZONES.reduce((a,z)=> a + occupancyCountForZone(z.key), 0);
@@ -2874,25 +3113,50 @@
       <div class="chartCard">
         <h3>Capacidad por zona</h3>
         <div class="capacityByZoneList">
-          ${ZONES.map(z=>{
-            const ocupados = occupancyCountForZone(z.key);
-            const cap = state.capacities[z.key];
-            return `
-              <div class="capacityByZoneRow">
-                <span class="dot" style="background:${z.color}"></span>
-                <span class="capacityByZoneName">${z.label}</span>
-                <span class="capacityByZoneValue">${cap && cap>0 ? `${ocupados}/${cap} campos` : `${ocupados} campos · sin capacidad`}</span>
-                <button type="button" class="capacityEditBtn" data-zone="${z.key}">${cap && cap>0 ? "Editar" : "Definir"}</button>
-              </div>
-            `;
-          }).join("")}
+          ${(()=>{
+            const zonasConDatos = ZONES.map(z=>{
+              const ocupados = occupancyCountForZone(z.key);
+              const cap = state.capacities[z.key];
+              const hasCap = cap && cap > 0;
+              const pct = hasCap ? Math.min(100, Math.round((ocupados/cap)*100)) : -1;
+              return { z, ocupados, cap, hasCap, pct };
+            });
+            // Las zonas con capacidad definida van primero, de más llena a
+            // menos llena; las que todavía no tienen capacidad quedan al final.
+            zonasConDatos.sort((a,b)=>{
+              if(a.hasCap && !b.hasCap) return -1;
+              if(!a.hasCap && b.hasCap) return 1;
+              return b.pct - a.pct;
+            });
+            return zonasConDatos.map(({z, ocupados, cap, hasCap, pct})=>{
+              const barClass = pct >= 100 ? "full" : (pct >= 70 ? "high" : "ok");
+              return `
+                <div class="capacityByZoneRow">
+                  <span class="dot" style="background:${z.color}"></span>
+                  <span class="capacityByZoneName">${z.label}</span>
+                  <span class="capacityByZoneValue">${hasCap ? `${ocupados}/${cap} campos` : `${ocupados} campos · sin capacidad`}</span>
+                  <button type="button" class="capacityEditBtn" data-zone="${z.key}">${hasCap ? "Editar" : "Definir"}</button>
+                </div>
+                ${hasCap ? `
+                  <div class="capacityProgressBar"><div class="capacityProgressFill ${barClass}" style="width:${pct}%"></div></div>
+                ` : ``}
+              `;
+            }).join("");
+          })()}
         </div>
+      </div>
+      ` : ``}
+      ${canEdit() ? `
+      <div class="chartCard">
+        <h3>Actividad reciente</h3>
+        <div id="recentActivityCard" class="dashEmptyNote">Cargando…</div>
       </div>
       ` : ``}
     `;
     document.getElementById("mainArea").appendChild(wrap);
 
     if(canEdit()){
+      loadRecentActivity();
       wrap.querySelectorAll(".capacityByZoneList .capacityEditBtn").forEach(btn=>{
         btn.addEventListener("click", ()=>{
           const zoneKey = btn.getAttribute("data-zone");
@@ -3118,8 +3382,7 @@
     reader.readAsText(file);
   });
 
-  document.getElementById("exportBtn").addEventListener("click", ()=>{
-    if(!guardExport()) return;
+  function buildInventoryWorkbook(){
     const wb = XLSX.utils.book_new();
     const now = new Date();
     const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
@@ -3230,9 +3493,50 @@
     }
 
     const fecha = now.toISOString().slice(0,10);
-    XLSX.writeFile(wb, `Inventario_Parqueo_${fecha}.xlsx`);
-    showToast(duplicadas.length > 0 ? `Excel generado — se detectaron ${duplicadas.length} placa(s) duplicada(s)` : "Excel generado");
+    return { wb, duplicadasCount: duplicadas.length, fileName: `Inventario_Parqueo_${fecha}.xlsx` };
+  }
+
+  document.getElementById("exportBtn").addEventListener("click", ()=>{
+    if(!guardExport()) return;
+    const { wb, duplicadasCount, fileName } = buildInventoryWorkbook();
+    XLSX.writeFile(wb, fileName);
+    showToast(duplicadasCount > 0 ? `Excel generado — se detectaron ${duplicadasCount} placa(s) duplicada(s)` : "Excel generado");
   });
+
+  // ---- Compartir el Excel directo (WhatsApp, Gmail, etc., vía el menú
+  // nativo de compartir del celular). Solo aparece si el navegador lo
+  // soporta — no todos los navegadores/dispositivos tienen esta función.
+  function supportsFileShare(){
+    try{
+      const testFile = new File(["x"], "test.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      return !!(navigator.canShare && navigator.canShare({ files: [testFile] }));
+    }catch(e){ return false; }
+  }
+  const shareBtn = document.getElementById("shareExportBtn");
+  if(shareBtn){
+    shareBtn.addEventListener("click", async ()=>{
+      if(!guardExport()) return;
+      try{
+        const { wb, fileName } = buildInventoryWorkbook();
+        const arrayBuf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+        const file = new File([arrayBuf], fileName, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        if(!navigator.canShare({ files: [file] })){
+          showToast("Tu navegador no puede compartir archivos. Usá 'Exportar a Excel' y compartilo manualmente.", 5000);
+          return;
+        }
+        await navigator.share({
+          files: [file],
+          title: "Inventario de Parqueo",
+          text: "Inventario de Parqueo — " + new Date().toLocaleDateString("es-CR")
+        });
+      }catch(e){
+        if(e && e.name === "AbortError") return; // la persona cerró el menú de compartir sin elegir nada
+        console.error("Error al compartir el Excel", e);
+        showToast("No se pudo compartir el archivo. Probá con 'Exportar a Excel'.");
+      }
+    });
+  }
+
 
   // ==================== Control de acceso con roles ====================
   // Aviso: esto sigue siendo un candado del lado del cliente (sin servidor).
@@ -3271,6 +3575,25 @@
     }catch(e){ console.error("Error guardando usuarios", e); return false; }
   }
 
+  async function loadGuestLinks(){
+    try{
+      const res = await window.storage.get(GUEST_LINKS_KEY, true);
+      if(res && res.value) return JSON.parse(res.value);
+    }catch(e){ /* no existen todavía */ }
+    return [];
+  }
+  async function saveGuestLinks(list){
+    try{
+      const result = await window.storage.set(GUEST_LINKS_KEY, JSON.stringify(list), true);
+      return !!(result && typeof result === "object");
+    }catch(e){ console.error("Error guardando enlaces de invitado", e); return false; }
+  }
+  function generateGuestToken(){
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+
   async function appendLog(key, entry, limit){
     let list = [];
     try{
@@ -3290,6 +3613,37 @@
     }catch(e){ /* sin historial todavía */ }
     return [];
   }
+
+  // Cuenta cuántas cuentas distintas iniciaron sesión en las últimas 2 horas,
+  // como referencia de actividad reciente del equipo (no es "en línea ahora
+  // mismo": no hay forma de saber si esa persona sigue con la app abierta).
+  async function loadRecentActivity(){
+    const el = document.getElementById("recentActivityCard");
+    if(!el) return;
+    try{
+      const access = await readLog(ACCESS_LOG_KEY);
+      const dosHoras = 2 * 60 * 60 * 1000;
+      const ahora = Date.now();
+      const recientes = access.filter(a => a.type === "login" && typeof a.tsMillis === "number" && (ahora - a.tsMillis) <= dosHoras);
+      const usuariosDistintos = [...new Set(recientes.map(a=>a.username))];
+      if(!el) return; // por si el panel ya cambió mientras esto cargaba
+      if(usuariosDistintos.length === 0){
+        el.innerHTML = `<div class="dashEmptyNote">Nadie inició sesión en las últimas 2 horas.</div>`;
+        return;
+      }
+      el.className = "";
+      el.innerHTML = `
+        <div class="updaterInfoRow" style="border-bottom:none;">
+          <span>Sesiones iniciadas (últimas 2 h)</span>
+          <strong>${usuariosDistintos.length}</strong>
+        </div>
+        <div style="font-size:0.78rem; color:var(--muted); margin-top:4px;">${usuariosDistintos.map(u=>escapeHtml(u)).join(", ")}</div>
+      `;
+    }catch(e){
+      console.error("Error cargando actividad reciente", e);
+      el.innerHTML = `<div class="dashEmptyNote">No se pudo cargar la actividad reciente.</div>`;
+    }
+  }
   function nowStamp(){
     return new Date().toLocaleString("es-CR", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
   }
@@ -3306,7 +3660,7 @@
     }, 300);
   }
   async function logAccess(username, type){
-    await appendLog(ACCESS_LOG_KEY, { ts: nowStamp(), username, type }, 300);
+    await appendLog(ACCESS_LOG_KEY, { ts: nowStamp(), tsMillis: Date.now(), username, type }, 300);
   }
 
   // Permite editar/borrar/agregar/exportar/deshacer/gestionar: solo admin.
@@ -3381,6 +3735,8 @@
     });
 
     let selectedTarget = null; // { kind: "role", role } o { kind: "user", username, role }
+    let failedAttemptsInARow = 0;
+    const roleHelpHint = document.getElementById("roleLoginHelp");
 
     function showLogos(){
       logosBox.style.display = "flex";
@@ -3390,6 +3746,8 @@
     }
     function showRoleForm(target){
       selectedTarget = target;
+      failedAttemptsInARow = 0;
+      roleHelpHint.style.display = "none";
       const label = target.kind === "user" ? target.username : (target.role === "consulta" ? "Búsqueda" : "Actualización");
       roleLabel.textContent = `Acceso de ${label}`;
       logosBox.style.display = "none";
@@ -3430,6 +3788,13 @@
         roleError.textContent = "Contraseña incorrecta.";
         rolePass.value = "";
         rolePass.focus();
+        failedAttemptsInARow++;
+        if(failedAttemptsInARow >= 3){
+          roleHelpHint.textContent = "¿Seguro que elegiste el logo correcto? Si olvidaste tu clave, pedile al Admin que te la restablezca.";
+          roleHelpHint.style.display = "block";
+        }
+      } else {
+        failedAttemptsInARow = 0;
       }
     }
     roleBtn.addEventListener("click", submitRole);
@@ -3480,21 +3845,41 @@
     clockInterval = setInterval(tick, 30000);
   }
 
+  const ROLE_ICONS = {
+    admin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+    consulta: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    actualizacion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>`
+  };
+
   function applyRoleUI(){
     const role = currentUser.role;
     document.getElementById("identityRow").innerHTML = `
+      <span class="idRoleIcon">${ROLE_ICONS[role] || ""}</span>
       <span class="idName">${escapeHtml(currentUser.username)}</span>
       <span class="idRole">${ROLES[role] || role}</span>
       <span class="idClock"></span>
     `;
     startClock();
 
+    document.getElementById("logoutBtn").style.display = currentUser.isGuest ? "none" : "inline-block";
+
+    const guestBanner = document.getElementById("guestBanner");
+    if(currentUser.isGuest){
+      const fecha = new Date(currentUser.guestExpiresAt).toLocaleString("es-CR", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+      guestBanner.innerHTML = `👁️ Acceso de invitado (solo lectura) — vence el ${fecha}. <a href="${location.pathname}" id="guestExitLink">Salir</a>`;
+      guestBanner.style.display = "block";
+    } else {
+      guestBanner.style.display = "none";
+    }
+
     document.getElementById("usersBtn").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("historyBtn").style.display = role === "admin" ? "inline-block" : "none";
+    document.getElementById("guestLinksBtn").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("backupBtn").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("restoreBtn").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("undoBtn").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("exportBtn").style.display = canExport() ? "inline-block" : "none";
+    document.getElementById("shareExportBtn").style.display = (canExport() && supportsFileShare()) ? "inline-block" : "none";
 
     const nav = document.getElementById("tabs");
     const main = document.getElementById("mainArea");
@@ -3601,6 +3986,26 @@
       users = await seedDefaultAdmin();
       if(storageAvailable){
         await saveUsers(users);
+      }
+    }
+
+    // Enlace de invitado: acceso de solo lectura temporal, sin usuario ni
+    // contraseña, mientras el token exista y no haya vencido.
+    const guestToken = new URLSearchParams(location.search).get("guest");
+    if(guestToken){
+      if(!storageAvailable){
+        showLoginScreenError("No se pudo verificar el enlace de invitado (sin conexión). Probá de nuevo en un rato.");
+      } else {
+        const guestLinks = await loadGuestLinks();
+        const link = guestLinks.find(l => l.token === guestToken);
+        if(link && Date.now() < link.expiresAt){
+          currentUser = { username: "Invitado", role: "consulta", canExport: false, isGuest: true, guestExpiresAt: link.expiresAt };
+          await logAccess(`Invitado (${link.label || "enlace temporal"})`, "login");
+          revealApp();
+          return;
+        } else {
+          showLoginScreenError(link ? "Este enlace de invitado ya venció. Pedile al Admin uno nuevo." : "Este enlace de invitado no es válido.");
+        }
       }
     }
 
@@ -3842,6 +4247,91 @@
   }
   document.getElementById("historyBtn").addEventListener("click", openHistoryModal);
 
+  // ---- Enlaces de invitado (solo Admin) ----
+  async function openGuestLinksModal(){
+    if(!guardEdit()) return;
+    const overlay = document.getElementById("guestLinksModal");
+    const listEl = document.getElementById("guestLinksList");
+    const resultEl = document.getElementById("guestLinkResult");
+    resultEl.innerHTML = "";
+
+    let links = await loadGuestLinks();
+
+    function drawList(){
+      const activos = links.filter(l => l.expiresAt > Date.now());
+      listEl.innerHTML = activos.length ? activos.map((l,idx)=>{
+        const i = links.indexOf(l);
+        const fecha = new Date(l.expiresAt).toLocaleString("es-CR", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+        return `
+          <div class="historyItem">
+            <strong>${escapeHtml(l.label || "Sin nombre")}</strong> · vence ${fecha}
+            <div class="historyMeta">Creado por ${escapeHtml(l.createdBy)} el ${escapeHtml(l.createdAtText)}</div>
+            <button type="button" class="revokeGuestLinkBtn" data-i="${i}" style="background:none;border:none;color:var(--danger);font-weight:700;font-size:0.76rem;text-decoration:underline;cursor:pointer;margin-top:4px;padding:0;">Revocar</button>
+          </div>
+        `;
+      }).join("") : `<div class="dashEmptyNote">No hay enlaces activos en este momento.</div>`;
+      listEl.querySelectorAll(".revokeGuestLinkBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          if(!confirm("¿Revocar este enlace? Deja de funcionar al instante.")) return;
+          links.splice(i,1);
+          await saveGuestLinks(links);
+          drawList();
+        });
+      });
+    }
+    drawList();
+
+    const genBtn = document.getElementById("generateGuestLinkBtn");
+    async function onGenerate(){
+      const horas = parseInt(document.getElementById("guestLinkDuration").value, 10);
+      const label = document.getElementById("guestLinkLabel").value.trim();
+      const token = generateGuestToken();
+      const expiresAt = Date.now() + horas * 60 * 60 * 1000;
+      links.push({
+        token,
+        label,
+        expiresAt,
+        createdBy: currentUser.username,
+        createdAtText: nowStamp()
+      });
+      const ok = await saveGuestLinks(links);
+      if(!ok){ showToast("No se pudo guardar el enlace, intentá de nuevo."); return; }
+      const url = `${location.origin}${location.pathname}?guest=${token}`;
+      resultEl.innerHTML = `
+        <div class="dupWarn" style="display:flex; margin-top:12px;">
+          <span class="dupWarnIcon">🔗</span>
+          <span style="word-break:break-all;">${escapeHtml(url)}</span>
+        </div>
+        <button type="button" class="secondaryBtn" id="copyGuestLinkBtn" style="width:100%; margin-top:6px;">Copiar enlace</button>
+      `;
+      document.getElementById("copyGuestLinkBtn").addEventListener("click", async ()=>{
+        try{
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            await navigator.clipboard.writeText(url);
+          } else {
+            const ta = document.createElement("textarea");
+            ta.value = url; ta.style.position = "fixed"; ta.style.opacity = "0";
+            document.body.appendChild(ta); ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+          }
+          showToast("Enlace copiado");
+        }catch(e){ showToast("No se pudo copiar. Copiá el texto manualmente."); }
+      });
+      document.getElementById("guestLinkLabel").value = "";
+      drawList();
+    }
+    genBtn.addEventListener("click", onGenerate);
+
+    overlay.classList.add("show");
+    document.getElementById("guestLinksCloseBtn").onclick = ()=>{
+      overlay.classList.remove("show");
+      genBtn.removeEventListener("click", onGenerate);
+    };
+  }
+  document.getElementById("guestLinksBtn").addEventListener("click", openGuestLinksModal);
+
   // ---- Helpers de chips de zona tocables (reemplazan el <select> en el panel de Actualización) ----
   function zoneChipsHtml(containerId, selectedKey){
     return `<div class="zoneChipsRow" id="${containerId}">
@@ -3865,7 +4355,10 @@
     const holder = document.getElementById("updaterPanel");
     holder.innerHTML = `
       <div class="updaterCard">
-        <h2>Actualizar ubicación</h2>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <h2 style="margin:0;">Actualizar ubicación</h2>
+          <button type="button" id="kioskToggleBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🖥️ Modo kiosco</button>
+        </div>
         <div id="updBrowseSection">
           <input type="text" id="updSearchInput" class="plate" placeholder="Buscar placa (te lleva a su espacio actual)…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
           <div id="updSearchResults"></div>
@@ -4155,6 +4648,9 @@
         `;
       }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
 
+      spaceInfoBox.classList.remove("viewFadeIn");
+      void spaceInfoBox.offsetWidth; // fuerza el reflujo para poder repetir la animación
+      spaceInfoBox.classList.add("viewFadeIn");
       spaceInfoBox.innerHTML = `
         <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">← Volver a la lista de espacios</button>
         <div class="spaceInfoHeader">
@@ -4163,14 +4659,23 @@
         </div>
         ${plateRowsHtml}
         ${full ? `<div class="similarWarn" style="margin-top:8px;"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
-        <label style="margin-top:12px;">Agregar o mover una placa acá</label>
-        <input type="text" id="updSpaceNewPlaca" class="plate" placeholder="Placa">
-        <input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">
-        <input type="text" id="updSpaceNewModelo" placeholder="Modelo (opcional)" style="margin-top:6px;">
-        <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
-        <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
-        <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn">Agregar en este espacio</button>
+        <button type="button" class="linkBackBtn" id="updSpaceAddToggle" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
+        <div id="updSpaceAddBox" style="display:none;">
+          <input type="text" id="updSpaceNewPlaca" class="plate" placeholder="Placa">
+          <input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">
+          <input type="text" id="updSpaceNewModelo" placeholder="Modelo (opcional)" style="margin-top:6px;">
+          <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
+          <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
+          <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn">Agregar en este espacio</button>
+        </div>
       `;
+      const addToggleBtn = spaceInfoBox.querySelector("#updSpaceAddToggle");
+      const addBox = spaceInfoBox.querySelector("#updSpaceAddBox");
+      addToggleBtn.addEventListener("click", ()=>{
+        addBox.style.display = "block";
+        addToggleBtn.style.display = "none";
+        spaceInfoBox.querySelector("#updSpaceNewPlaca").focus();
+      });
 
       // Quita una placa de este espacio (compartido entre el botón de la fila y el de edición)
       async function removePlateFromSpace(idx){
@@ -4368,6 +4873,14 @@
 
     drawZoneFilterRow();
     drawAllList();
+
+    const kioskBtn = holder.querySelector("#kioskToggleBtn");
+    if(kioskBtn){
+      updateKioskButtonLabel();
+      kioskBtn.addEventListener("click", ()=>{
+        if(kioskModeActive) exitKioskMode(); else enterKioskMode();
+      });
+    }
   }
 
   // Escape simple para usar dentro de un atributo data-*, igual que escapeHtml.
@@ -4446,6 +4959,57 @@
   document.getElementById("undoBtn").addEventListener("click", ()=>{ if(guardEdit()) doUndo(); });
 
   // ---- Init ----
+  // Saludo según la hora + fecha de hoy, arriba del título de la pantalla de inicio.
+  function renderAuthGreeting(){
+    const el = document.getElementById("authGreeting");
+    if(!el) return;
+    const now = new Date();
+    const h = now.getHours();
+    const saludo = (h >= 5 && h < 12) ? "Buenos días"
+      : (h >= 12 && h < 19) ? "Buenas tardes"
+      : "Buenas noches";
+    const fecha = now.toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
+    el.textContent = `${saludo} · ${fecha}`;
+  }
+  renderAuthGreeting();
+
+  // Aviso básico de "sin internet en absoluto" (distinto de si Firebase
+  // responde o no) — se actualiza solo si la conexión cambia mientras la
+  // pantalla de inicio sigue abierta.
+  function showLoginScreenError(msg){
+    const el = document.getElementById("guestLinkError");
+    if(!el) return;
+    el.textContent = "⚠️ " + msg;
+    el.style.display = "block";
+  }
+
+  function updateOfflineBanner(){
+    const el = document.getElementById("offlineBanner");
+    if(!el) return;
+    el.style.display = navigator.onLine === false ? "block" : "none";
+  }
+  updateOfflineBanner();
+
+  // Modo oscuro: se recuerda por navegador (localStorage), independiente
+  // de Firebase, y se aplica con un simple atributo en <html>.
+  function applyTheme(theme){
+    document.documentElement.setAttribute("data-theme", theme);
+    const btn = document.getElementById("themeToggleBtn");
+    if(btn) btn.textContent = theme === "dark" ? "☀️ Claro" : "🌙 Oscuro";
+    try{ localStorage.setItem("inv_local_theme", theme); }catch(e){ /* no crítico */ }
+  }
+  (function initTheme(){
+    let saved = "light";
+    try{ saved = localStorage.getItem("inv_local_theme") || "light"; }catch(e){ /* no crítico */ }
+    applyTheme(saved);
+  })();
+  document.getElementById("themeToggleBtn").addEventListener("click", ()=>{
+    const current = document.documentElement.getAttribute("data-theme");
+    applyTheme(current === "dark" ? "light" : "dark");
+  });
+  window.addEventListener("online", updateOfflineBanner);
+  window.addEventListener("offline", updateOfflineBanner);
+
   runAuthGate();
 
 
