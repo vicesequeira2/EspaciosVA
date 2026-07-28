@@ -3400,6 +3400,13 @@
     draw();
   }
 
+  function getDashboardViewMode(){
+    try{ return localStorage.getItem("inv_local_dash_view") || "full"; }catch(e){ return "full"; }
+  }
+  function setDashboardViewMode(mode){
+    try{ localStorage.setItem("inv_local_dash_view", mode); }catch(e){ /* no crítico */ }
+  }
+
   function renderDashboardPanel(){
     const wrap = document.createElement("div");
     wrap.className = "zonePanel active viewFadeIn";
@@ -3412,7 +3419,32 @@
     }, 0);
     const zonasConCapacidad = ZONES.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0).length;
 
+    const viewMode = getDashboardViewMode();
+    const toggleBtnHtml = `<button type="button" id="dashViewToggle" class="linkBackBtn" style="text-decoration:none; font-weight:700; margin-bottom:10px;">${viewMode === "compact" ? "📊 Ver Dashboard completo" : "🔎 Ver solo lo esencial"}</button>`;
+
+    if(viewMode === "compact"){
+      const capZones = ZONES.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0);
+      const capTotal = capZones.reduce((a,z)=> a + state.capacities[z.key], 0);
+      const ocupadosEnConCap = capZones.reduce((a,z)=> a + occupancyCountForZone(z.key), 0);
+      const librres = Math.max(0, capTotal - ocupadosEnConCap);
+      wrap.innerHTML = `
+        ${toggleBtnHtml}
+        <div class="dashboardGrid">
+          <div class="dashCard"><div class="dashCardValue">${totalVeh}</div><div class="dashCardLabel">Vehículos totales</div></div>
+          ${capZones.length > 0 ? `<div class="dashCard"><div class="dashCardValue">${librres}</div><div class="dashCardLabel">Espacios libres</div></div>` : ``}
+          <div class="dashCard"><div class="dashCardValue">${totalSinAsignar}</div><div class="dashCardLabel">Sin asignar</div></div>
+        </div>
+      `;
+      document.getElementById("mainArea").appendChild(wrap);
+      wrap.querySelector("#dashViewToggle").addEventListener("click", ()=>{
+        setDashboardViewMode("full");
+        renderAll();
+      });
+      return wrap;
+    }
+
     wrap.innerHTML = `
+      ${toggleBtnHtml}
       <div class="dashboardGrid">
         <div class="dashCard"><div class="dashCardValue">${totalVeh}</div><div class="dashCardLabel">Vehículos totales</div></div>
         <div class="dashCard"><div class="dashCardValue">${totalCampos}</div><div class="dashCardLabel">Campos numerados en uso</div></div>
@@ -3472,6 +3504,10 @@
       ` : ``}
     `;
     document.getElementById("mainArea").appendChild(wrap);
+    wrap.querySelector("#dashViewToggle").addEventListener("click", ()=>{
+      setDashboardViewMode("compact");
+      renderAll();
+    });
 
     if(canEdit()){
       loadRecentActivity();
@@ -3539,8 +3575,9 @@
     } else {
       try{
         if(typeof Chart === "undefined") throw new Error("Chart.js no está disponible");
-        holder.innerHTML = `<div class="chartCanvasWrap"><canvas id="chartOccupancy"></canvas></div>`;
+        holder.innerHTML = `<div class="chartCanvasWrap"><canvas id="chartOccupancy"></canvas></div><div id="occupancyBarDetail" class="dashEmptyNote" style="display:none; margin-top:8px;"></div>`;
         const ctx2 = holder.querySelector("#chartOccupancy").getContext("2d");
+        const detailBox = holder.querySelector("#occupancyBarDetail");
         const chart2 = new Chart(ctx2, {
           type: "bar",
           data: {
@@ -3567,7 +3604,18 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
-            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+            onClick: (evt, elements) => {
+              if(!elements || elements.length === 0) return;
+              const idx = elements[0].index;
+              const z = zonasConCap[idx];
+              const ocupados = occupancyCountForZone(z.key);
+              const cap = state.capacities[z.key];
+              const libres = Math.max(0, cap - ocupados);
+              const pct = cap ? Math.round((ocupados/cap)*100) : 0;
+              detailBox.innerHTML = `<strong>${escapeHtml(z.label)}</strong> — ${ocupados} de ${cap} (${pct}%) · ${libres} libre(s)`;
+              detailBox.style.display = "block";
+            }
           }
         });
         dashboardCharts.push(chart2);
@@ -3839,26 +3887,35 @@
   }
   const shareBtn = document.getElementById("shareExportBtn");
   if(shareBtn){
-    shareBtn.addEventListener("click", async ()=>{
+    shareBtn.addEventListener("click", function(){
       if(!guardExport()) return;
+      let file;
       try{
         const { wb, fileName } = buildInventoryWorkbook();
         const arrayBuf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-        const file = new File([arrayBuf], fileName, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-        if(!navigator.canShare({ files: [file] })){
-          showToast("Tu navegador no puede compartir archivos. Usá 'Exportar a Excel' y compartilo manualmente.", 5000);
-          return;
-        }
-        await navigator.share({
-          files: [file],
-          title: "Inventario de Parqueo",
-          text: "Inventario de Parqueo — " + new Date().toLocaleDateString("es-CR")
-        });
+        file = new File([arrayBuf], fileName, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       }catch(e){
+        console.error("Error armando el Excel para compartir", e);
+        showToast("No se pudo armar el archivo para compartir.");
+        return;
+      }
+      if(!navigator.canShare || !navigator.canShare({ files: [file] })){
+        showToast("Tu navegador no puede compartir archivos. Usá 'Exportar a Excel' y compartilo manualmente.", 5000);
+        return;
+      }
+      // Llamado directo, sin "await" ni función async por medio: algunos
+      // Android/Chrome pierden el permiso de "gesto del usuario" si
+      // navigator.share() no queda como la continuación más directa posible
+      // del clic.
+      navigator.share({
+        files: [file],
+        title: "Inventario de Parqueo",
+        text: "Inventario de Parqueo — " + new Date().toLocaleDateString("es-CR")
+      }).catch(e=>{
         if(e && e.name === "AbortError") return; // la persona cerró el menú de compartir sin elegir nada
         console.error("Error al compartir el Excel", e);
-        showToast("No se pudo compartir el archivo. Probá con 'Exportar a Excel'.");
-      }
+        showToast(`No se pudo compartir: ${e && e.name ? e.name : ""} ${e && e.message ? e.message : "error desconocido"}`, 6000);
+      });
     });
   }
 
@@ -4359,7 +4416,7 @@
     if(sessionData){
       const found = users.find(u => u.username.toLowerCase() === sessionData.username.toLowerCase() && u.active !== false);
       if(found && (found.sessionVersion || 0) === sessionData.v){
-        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport };
+        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused };
         revealApp();
         return;
       } else if(found){
@@ -4379,7 +4436,7 @@
         if(storageAvailable) await logAccess(found.username, "login_failed");
         return false;
       }
-      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport };
+      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused };
       if(storageAvailable){
         await setSessionUsername(found.username, found.sessionVersion || 0);
         await logAccess(found.username, "login");
@@ -4438,13 +4495,14 @@
         <div class="userRow ${u.active===false ? 'inactive' : ''}">
           <div class="userRowInfo">
             <span class="userRowName">${escapeHtml(u.username)} ${currentUser.username.toLowerCase()===u.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
-            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}${u.featured ? ' · logo propio' : ''}${(u.role!=="admin" && u.canExport) ? ' · puede exportar' : ''}</span>
+            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}${u.featured ? ' · logo propio' : ''}${(u.role!=="admin" && u.canExport) ? ' · puede exportar' : ''}${u.searchFocused ? ' · enfocado en buscar' : ''}</span>
           </div>
           <div class="userRowBtns">
             <button class="renameUserBtn" data-i="${i}">Renombrar</button>
             <button class="resetPassBtn" data-i="${i}">Restablecer clave</button>
             <button class="featureUserBtn" data-i="${i}">${u.featured ? "Quitar logo" : "Dar logo propio"}</button>
             ${u.role!=="admin" ? `<button class="exportPermBtn" data-i="${i}">${u.canExport ? "Quitar Excel" : "Dar acceso a Excel"}</button>` : ``}
+            ${u.role==="actualizacion" ? `<button class="searchFocusBtn" data-i="${i}" title="Al entrar, prioriza el buscador de placas y deja la edición en segundo plano (colapsada, pero disponible)">${u.searchFocused ? "Quitar enfoque en buscar" : "Enfocar en buscar ubicación"}</button>` : ``}
             <button class="revokeSessionBtn" data-i="${i}" title="Fuerza a que esta cuenta tenga que volver a iniciar sesión en cualquier dispositivo donde haya quedado recordada">Cerrar sesión en otros dispositivos</button>
             <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "Activar" : "Desactivar"}</button>
             <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
@@ -4505,6 +4563,17 @@
           users[i].canExport = !users[i].canExport;
           await saveUsers(users);
           showToast(users[i].canExport ? `"${users[i].username}" ya puede exportar a Excel` : `Se le quitó el acceso a Excel a "${users[i].username}"`);
+          draw();
+        });
+      });
+      listEl.querySelectorAll(".searchFocusBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          users[i].searchFocused = !users[i].searchFocused;
+          await saveUsers(users);
+          showToast(users[i].searchFocused
+            ? `"${users[i].username}" ahora entra directo al buscador (edición queda colapsada, pero disponible)`
+            : `"${users[i].username}" vuelve a ver la pantalla completa de Actualización`);
           draw();
         });
       });
@@ -4827,10 +4896,13 @@
         <div id="updBrowseSection">
           <input type="text" id="updSearchInput" class="plate" placeholder="Buscar placa (te lleva a su espacio actual)…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
           <div id="updSearchResults"></div>
-          <label style="margin-top:14px;">Zona <span class="zoneConfirmHint" id="zoneConfirmHint" style="display:none;"></span></label>
-          <div class="zoneChipsRow" id="updSpaceZoneChips"></div>
-          <label id="updSpaceCampoLabel">Campos</label>
-          <div class="spaceGrid" id="updSpaceGrid"></div>
+          <details class="bulk" id="updGridDetails" ${currentUser.searchFocused ? "" : "open"} style="margin-top:14px;">
+            <summary>${currentUser.searchFocused ? "Ver espacios y actualizar (opcional)" : "Zona y espacios"}</summary>
+            <label style="margin-top:10px;">Zona <span class="zoneConfirmHint" id="zoneConfirmHint" style="display:none;"></span></label>
+            <div class="zoneChipsRow" id="updSpaceZoneChips"></div>
+            <label id="updSpaceCampoLabel">Campos</label>
+            <div class="spaceGrid" id="updSpaceGrid"></div>
+          </details>
           <input type="text" id="updListFilter" placeholder="Filtrar el listado de abajo…" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #e2e3de; background:#fbfbfa; font-size:0.85rem; margin-top:18px;">
           <div class="updaterZoneFilterRow" id="updZoneFilterRow"></div>
           <div id="updAllList"></div>
