@@ -973,7 +973,7 @@
     cursor:pointer;
     white-space:nowrap;
   }
-  #usersBtn, #historyBtn, #backupBtn, #restoreBtn, #refreshBtn, #themeToggleBtn, #guestLinksBtn{
+  #usersBtn, #historyBtn, #backupBtn, #restoreBtn, #refreshBtn, #themeToggleBtn, #guestLinksBtn, #adminMenuBtn{
     background: transparent;
     color: var(--paper);
     border:1px solid var(--asphalt-3);
@@ -984,6 +984,36 @@
     cursor:pointer;
     white-space:nowrap;
   }
+  .adminMenuWrap{ position:relative; display:inline-block; }
+  .adminMenuDropdown{
+    display:none;
+    position:absolute;
+    top:calc(100% + 4px);
+    left:0;
+    z-index:80;
+    background: var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.2);
+    padding:6px;
+    min-width:160px;
+    flex-direction:column;
+    gap:2px;
+  }
+  .adminMenuDropdown.show{ display:flex; }
+  .adminMenuDropdown button{
+    background:none;
+    border:none;
+    text-align:left;
+    padding:8px 10px;
+    border-radius:8px;
+    font-size:0.82rem;
+    font-weight:600;
+    color: var(--ink);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .adminMenuDropdown button:active{ background: var(--surface-2); }
   .identityRow{
     display:flex; align-items:center; gap:8px;
     margin-top:8px;
@@ -1225,6 +1255,39 @@
   .spaceGridBtn.partial .spaceGridCount{ color:#8a6a1c; }
   .spaceGridBtn.full{ background:#fbdedb; border-color:#e79a92; }
   .spaceGridBtn.full .spaceGridCount{ color:#a13d33; }
+  .spaceGridBtn.hechoHoy{
+    border-color: var(--ok);
+    border-width:2px;
+    position:relative;
+  }
+  .spaceGridDoneTag{
+    position:absolute;
+    top:2px; right:4px;
+    font-size:0.6rem;
+    font-weight:900;
+    color: var(--ok);
+  }
+  .spaceNavRow{
+    display:flex; gap:8px; margin-bottom:10px;
+  }
+  .spaceNavRow button{
+    flex:1;
+    background: var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 6px;
+    font-size:0.76rem;
+    font-weight:700;
+    color: var(--ink);
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .spaceNavRow button:disabled{
+    opacity:0.4;
+    cursor:default;
+  }
   .spaceGridBtn.active{
     border-width:2.5px;
     border-color: var(--ink);
@@ -1319,6 +1382,24 @@
     border:none; font-size:0.72rem; cursor:pointer;
   }
   body.kiosk-mode .kioskFloatingExit:active{ background: rgba(27,30,33,0.45); color:white; }
+  .searchHighlight{
+    background: var(--line);
+    color: var(--asphalt);
+    border-radius:3px;
+    padding:0 2px;
+    font-weight:800;
+  }
+  .dataHealthItemBtn{
+    background: var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:6px 8px;
+    font-size:0.78rem;
+    font-weight:600;
+    color: var(--ink);
+    text-align:left;
+    cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -1390,11 +1471,17 @@
     <div class="headerBtns">
       <button id="refreshBtn">🔄 Actualizar</button>
       <button id="themeToggleBtn">🌙 Oscuro</button>
-      <button id="usersBtn" style="display:none;">Usuarios</button>
-      <button id="historyBtn" style="display:none;">Historial</button>
-      <button id="guestLinksBtn" style="display:none;">Invitados</button>
-      <button id="backupBtn" style="display:none;">Respaldo</button>
-      <button id="restoreBtn" style="display:none;">Restaurar</button>
+      <div class="adminMenuWrap" id="adminMenuWrap" style="display:none;">
+        <button type="button" id="adminMenuBtn">⚙️ Administrar</button>
+        <div class="adminMenuDropdown" id="adminMenuDropdown">
+          <button id="usersBtn">👤 Usuarios</button>
+          <button id="historyBtn">🕒 Historial</button>
+          <button id="guestLinksBtn">🔗 Invitados</button>
+          <button id="backupBtn">💾 Respaldo</button>
+          <button id="restoreBtn">📂 Restaurar</button>
+          <button id="dataHealthBtn">🩺 Salud de datos</button>
+        </div>
+      </div>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
       <button id="logoutBtn">Cerrar sesión</button>
       <button id="undoBtn" disabled style="display:none;">Deshacer</button>
@@ -1490,6 +1577,7 @@
 <div class="modalOverlay" id="historyModal">
   <div class="modalCard modalCardWide">
     <h3>Historial de actividad</h3>
+    <input type="text" id="historySearchInput" class="plate" placeholder="Buscar por placa, usuario o fecha…" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); font-size:0.85rem; margin-bottom:10px;">
     <div class="historyTabs">
       <button class="historyTabBtn active" id="historyTabUpdates" type="button">Movimientos de placas</button>
       <button class="historyTabBtn" id="historyTabAccess" type="button">Accesos</button>
@@ -1525,6 +1613,18 @@
     </div>
   </div>
 </div>
+
+<div class="modalOverlay" id="dataHealthModal">
+  <div class="modalCard modalCardWide">
+    <h3>Salud de datos</h3>
+    <p>Revisión automática de cosas que suelen convenir corregir. No se toca nada solo — cada hallazgo te lleva a donde está para que lo arregles vos.</p>
+    <div id="dataHealthContent" class="historyList"></div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="secondaryBtn" id="dataHealthCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 (function(){
@@ -1825,6 +1925,7 @@
   const HISTORY_KEY = "inventario_parqueo_history_v1"; // compartido: movimientos de placas
   const ACCESS_LOG_KEY = "inventario_parqueo_access_v1"; // compartido: inicios/cierres de sesión e intentos fallidos
   const GUEST_LINKS_KEY = "inventario_parqueo_guest_links_v1"; // compartido: enlaces de invitado temporales
+  const ZONE_TEMPLATES_KEY = "inventario_parqueo_zone_templates_v1"; // compartido: plantillas de campos/capacidades por zona
   let state = null; // { zones: { zoneKey: [ {campo, plates:[]}, ... ] }, capacities:{zoneKey:number}, updatedAt }
   let activeTab = "__dashboard__";
   let dashboardCharts = []; // instancias Chart.js activas, para destruirlas antes de re-renderizar
@@ -2333,13 +2434,11 @@
     });
   }
 
-  // Quita una placa de donde esté (por índice) y limpia el campo si queda vacío.
+  // Quita una placa de donde esté (por índice). El campo/línea sigue
+  // existiendo aunque quede sin vehículos.
   function removePlateAt(zoneKey, campoIdx, plateIdx){
     const arr = state.zones[zoneKey];
     arr[campoIdx].plates.splice(plateIdx, 1);
-    if(arr[campoIdx].plates.length === 0){
-      arr.splice(campoIdx, 1);
-    }
   }
 
   // Modal para editar la zona y el campo donde está una placa, abierto
@@ -2350,11 +2449,8 @@
     const idx = campoObj.plates.indexOf(entryObj);
     if(idx === -1) return;
     campoObj.plates.splice(idx, 1);
-    if(campoObj.plates.length === 0){
-      const arr = state.zones[zoneKey];
-      const cIdx = arr.indexOf(campoObj);
-      if(cIdx !== -1) arr.splice(cIdx, 1);
-    }
+    // El campo/línea sigue existiendo aunque quede sin vehículos — es un
+    // espacio físico real, no debería desaparecer solo por vaciarse.
   }
 
   // Vista de solo lectura para el rol Búsqueda: muestra el detalle del
@@ -2605,8 +2701,8 @@
   async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position){
     const plate = normalizePlate(plateRaw);
     if(!plate) return false;
-    const aseguradora = (aseguradoraRaw || "").trim();
-    const modelo = (modeloRaw || "").trim();
+    let aseguradora = (aseguradoraRaw || "").trim();
+    let modelo = (modeloRaw || "").trim();
     const info = zoneInfo(zoneKey);
     const campo = campoLabel ? normalizeCampo(campoLabel)
       : (UNNUMBERED_ONLY_ZONES.has(zoneKey) ? nextLineLabel(zoneKey) : nextAutoCampo(zoneKey));
@@ -2621,6 +2717,12 @@
       const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
       const choice = await askMoveOrCancel(plate, dupInfo.label, dupCampo, info.label, campo);
       if(choice !== "move") return false;
+      // Es un MOVER, no un vehículo nuevo: si no se escribió aseguradora/modelo
+      // en este formulario, se conservan los que ya tenía en su ubicación
+      // anterior, en vez de perderlos por dejar esos campos vacíos.
+      const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
+      if(!aseguradora) aseguradora = dupEntry.aseguradora || "";
+      if(!modelo) modelo = dupEntry.modelo || "";
       removePlateAt(dup.zoneKey, dup.campoIdx, dup.plateIdx);
     }
 
@@ -2648,7 +2750,7 @@
     `;
   }
 
-  function renderZonePanel(zone){
+  async function renderZonePanel(zone){
     const info = zoneInfo(zone.key);
     const campos = state.zones[zone.key] || [];
     const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
@@ -2662,35 +2764,36 @@
       return wrap;
     }
 
+    const abbr = info.abbr;
+    const labelLower = UNNUMBERED_ONLY_ZONES.has(zone.key) ? "línea" : "campo";
+
     wrap.innerHTML = `
       <div class="zoneHeadCard">
         <h2>${info.label}</h2>
         <div class="sub">${totalVeh} vehículo(s) en ${campos.length} campo(s)</div>
         ${occupancyHtml(zone.key, occupancyCountForZone(zone.key), info.color)}
       </div>
-      <div class="addRow">
-        <input type="text" id="campoInput_${info.abbr}" class="campoInput" placeholder="${UNNUMBERED_ONLY_ZONES.has(zone.key) ? "Línea" : "Campo"}">
-        <input type="text" id="addInput_${info.abbr}" class="plate plateInputAdd" placeholder="Placa">
-        <button id="addBtn_${info.abbr}">Agregar</button>
+      <div id="zoneBrowse_${abbr}">
+        <div class="spaceGrid" id="zoneGrid_${abbr}"></div>
+        <button type="button" class="linkBackBtn" id="addEmptyCampoBtn_${abbr}" style="text-decoration:none; font-weight:700; margin:10px 0 0;">+ Agregar ${labelLower} vacío (sin vehículo todavía)</button>
+        <details class="bulk">
+          <summary>Pegar varias placas a la vez</summary>
+          <div class="bulkHint">Una por línea, formato "campo placa" (ej: 42 CL338850). Si solo ponés la placa, se le asigna un campo nuevo.</div>
+          <textarea id="bulkArea_${abbr}" placeholder="42 CL338850&#10;42 BQZ203&#10;AAA758"></textarea>
+          <button class="bulkBtn" id="bulkBtn_${abbr}">Agregar todas</button>
+        </details>
+        <details class="bulk">
+          <summary>Plantillas de zona (campos y capacidades)</summary>
+          <div class="bulkHint">Guardá la estructura de campos y sus capacidades de esta zona para reutilizarla en otra parecida. No toca los vehículos, solo campos y límites.</div>
+          <select id="zoneTemplateSelect_${abbr}" style="margin-top:8px;"><option value="">Elegí una plantilla…</option></select>
+          <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
+            <button class="bulkBtn" id="applyTemplateBtn_${abbr}" style="flex:1;">Aplicar a esta zona</button>
+            <button class="bulkBtn" id="deleteTemplateBtn_${abbr}" style="flex:0 0 auto; background:var(--danger); color:white;">Borrar</button>
+          </div>
+          <button class="bulkBtn" id="saveTemplateBtn_${abbr}" style="width:100%; margin-top:8px;">💾 Guardar esta zona como plantilla nueva</button>
+        </details>
       </div>
-      <div class="addRowSecondary">
-        <input type="text" id="aseguradoraInput_${info.abbr}" placeholder="Aseguradora (opcional)">
-        <input type="text" id="modeloInput_${info.abbr}" placeholder="Modelo (opcional)">
-      </div>
-      <div class="dupWarn" id="dupWarn_${info.abbr}" style="display:none;"></div>
-      <div class="similarWarn" id="similarWarn_${info.abbr}" style="display:none;"></div>
-      <div class="addHint">${UNNUMBERED_ONLY_ZONES.has(zone.key)
-        ? `Dejá "Línea" vacío para asignar la siguiente disponible (Línea 1, Línea 2…). Si ya existe, la placa se suma a las que ya tiene esa línea.`
-        : `Dejá "Campo" vacío para asignar el siguiente número disponible, o <button type="button" class="sinAsignarBtn" id="sinAsignarBtn_${info.abbr}">marcá como sin asignar</button>. Si el campo ya existe, la placa se suma a las que ya tiene.`
-      }</div>
-      <details class="bulk">
-        <summary>Pegar varias placas a la vez</summary>
-        <div class="bulkHint">Una por línea, formato "campo placa" (ej: 42 CL338850). Si solo ponés la placa, se le asigna un campo nuevo. La aseguradora se agrega después, editando cada placa.</div>
-        <textarea id="bulkArea_${info.abbr}" placeholder="42 CL338850&#10;42 BQZ203&#10;AAA758"></textarea>
-        <button class="bulkBtn" id="bulkBtn_${info.abbr}">Agregar todas</button>
-      </details>
-      <div class="campoList" id="campoList_${info.abbr}"></div>
-      <div id="empty_${info.abbr}"></div>
+      <div id="zoneDetail_${abbr}"></div>
     `;
 
     document.getElementById("mainArea").appendChild(wrap);
@@ -2711,235 +2814,385 @@
       renderAll();
     });
 
+    const browseBox = wrap.querySelector(`#zoneBrowse_${abbr}`);
+    const gridBox = wrap.querySelector(`#zoneGrid_${abbr}`);
+    const detailBox = wrap.querySelector(`#zoneDetail_${abbr}`);
+    let selectedCi = null;
+    let editingPlateIdx = null;
 
-    const list = wrap.querySelector(`#campoList_${info.abbr}`);
-    if(campos.length === 0){
-      wrap.querySelector(`#empty_${info.abbr}`).innerHTML = `<div class="emptyState">Sin vehículos registrados en esta zona todavía.</div>`;
-    } else {
-      campos.forEach((c, ci)=>{
-        const card = document.createElement("div");
-        card.className = "campoCard";
-        const isSinAsignar = c.campo === SIN_ASIGNAR;
-        const hasCap = typeof c.capacidad === "number" && c.capacidad > 0;
-        const overCap = hasCap && c.plates.length > c.capacidad;
-        card.innerHTML = `
-          <span class="campoNum${isSinAsignar ? " sinAsignar" : ""}" ${isSinAsignar ? "" : `style="background:${info.color}"`} data-ci="${ci}" title="Tocá para renombrar el campo">${escapeHtml(c.campo)}</span>
-          <div class="campoBody">
-            ${hasCap ? `<div class="campoCapBadge${overCap ? " overCap" : ""}" title="Capacidad de este espacio">${c.plates.length}/${c.capacidad} vehíc.</div>` : ``}
-            <div class="plateChips" data-ci="${ci}"></div>
-          </div>
-          <button class="campoDeleteBtn" data-ci="${ci}" title="Eliminar campo completo">✕</button>
+    function drawZoneGrid(){
+      const arr = state.zones[zone.key] || [];
+      if(arr.length === 0){
+        gridBox.innerHTML = `<div class="dashEmptyNote">Sin campos registrados en esta zona todavía.</div>`;
+        return;
+      }
+      gridBox.innerHTML = arr.map((c, ci)=>{
+        const cap = c.capacidad;
+        const occ = c.plates.length;
+        let fillClass = "empty";
+        if(occ > 0) fillClass = (cap && occ >= cap) ? "full" : "partial";
+        const hechoHoy = c.plates.some(p => wasUpdatedToday(p));
+        return `
+          <button type="button" class="spaceGridBtn ${fillClass}${hechoHoy ? ' hechoHoy' : ''}${selectedCi===ci ? ' active' : ''}" data-ci="${ci}">
+            ${hechoHoy ? `<span class="spaceGridDoneTag" title="Actualizado hoy">✓</span>` : ``}
+            <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
+            <span class="spaceGridCount">${occ}${cap ? "/"+cap : ""}</span>
+          </button>
         `;
-        const chipsWrap = card.querySelector(".plateChips");
-        c.plates.forEach((entry, pi)=>{
-          const chip = document.createElement("span");
-          chip.className = "plateChip" + (wasUpdatedToday(entry) ? " updatedToday" : "");
-          chip.dataset.ci = ci;
-          chip.dataset.pi = pi;
-          chip.title = "Tocá para editar placa, campo, zona o aseguradora";
-          const isFirst = pi === 0;
-          const isLast = pi === c.plates.length - 1 && c.plates.length > 1;
-          const multi = c.plates.length > 1;
-          chip.innerHTML = `
-            <div class="plateChipMain">
-              ${multi ? `<span class="orderMoveBtns">
-                <button class="orderUp" data-ci="${ci}" data-pi="${pi}" title="Mover antes" ${isFirst ? "disabled" : ""}>▲</button>
-                <button class="orderDown" data-ci="${ci}" data-pi="${pi}" title="Mover después" ${isLast ? "disabled" : ""}>▼</button>
-              </span>` : ``}
-              <span class="orderBadge" title="Orden de llegada">${pi+1}</span>
-              <span class="plateText plate">${escapeHtml(entry.plate)}</span>
-              ${isFirst ? '<span class="orderTag">primero</span>' : ''}
-              ${isLast ? '<span class="orderTag last">último</span>' : ''}
-              ${wasUpdatedToday(entry) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}
-              <button class="chipRm" data-ci="${ci}" data-pi="${pi}" title="Eliminar rápido">✕</button>
-            </div>
-            <div class="aseguradoraText" data-placeholder="sin aseguradora">${entry.aseguradora ? escapeHtml(entry.aseguradora) : ""}</div>
-            <div class="aseguradoraText" data-placeholder="sin modelo">${entry.modelo ? escapeHtml(entry.modelo) : ""}</div>
-          `;
-          chip.addEventListener("click", (e)=>{
-            if(e.target.closest("button")) return;
-            openEditLocModal(zone.key, ci, pi);
-          });
-          chipsWrap.appendChild(chip);
+      }).join("");
+      gridBox.querySelectorAll(".spaceGridBtn").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          selectedCi = parseInt(btn.getAttribute("data-ci"),10);
+          editingPlateIdx = null;
+          drawZoneDetail();
         });
-        const addBtn = document.createElement("button");
-        addBtn.className = "addPlateToCampoBtn";
-        addBtn.dataset.ci = ci;
-        addBtn.textContent = "+ vehículo";
-        chipsWrap.appendChild(addBtn);
-        list.appendChild(card);
       });
     }
 
-    // --- eventos: renombrar el número de campo ---
-    list.querySelectorAll(".campoNum").forEach(span=>{
-      span.addEventListener("click", ()=>{
-        const ci = parseInt(span.getAttribute("data-ci"),10);
-        const current = state.zones[zone.key][ci].campo;
-        const input = prompt("Nuevo número/nombre de campo:", current);
+    function drawZoneDetail(){
+      const arr = state.zones[zone.key] || [];
+      if(selectedCi === null || !arr[selectedCi]){
+        selectedCi = null;
+        browseBox.style.display = "block";
+        detailBox.innerHTML = "";
+        drawZoneGrid();
+        return;
+      }
+      browseBox.style.display = "none";
+      const c = arr[selectedCi];
+      const cap = c.capacidad;
+      const occ = c.plates.length;
+      const full = cap && occ >= cap;
+      const anterior = selectedCi > 0 ? arr[selectedCi-1] : null;
+      const siguiente = selectedCi < arr.length-1 ? arr[selectedCi+1] : null;
+
+      const plateRowsHtml = c.plates.length ? c.plates.map((p, idx)=>{
+        if(idx === editingPlateIdx){
+          return `
+            <div class="spaceEditForm" data-idx="${idx}">
+              <div class="spaceEditQuickRow">
+                <input type="text" id="zoneEditPlaca_${abbr}" class="plate" value="${escapeHtml(p.plate)}" placeholder="Placa">
+                <input type="text" id="zoneEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" placeholder="Aseguradora">
+                <input type="text" id="zoneEditModelo_${abbr}" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo">
+              </div>
+              <div class="dupWarn" id="zoneEditDupWarn_${abbr}" style="display:none;"></div>
+              <button type="button" class="linkBackBtn" id="zoneEditMoveToggle_${abbr}" style="text-decoration:none; font-weight:700; margin-top:6px;">📍 Cambiar de zona/campo</button>
+              <div id="zoneEditMoveBox_${abbr}" style="display:none;">
+                <label style="margin-top:8px;">Nueva zona</label>
+                <div class="zoneChipsRow" id="zoneEditZoneChips_${abbr}"></div>
+                <label id="zoneEditCampoLabel_${abbr}">Nuevo ${labelLower}</label>
+                <input type="text" id="zoneEditCampo_${abbr}" class="plate" value="${escapeHtml(c.campo)}">
+              </div>
+              <div class="modalActions" style="margin-top:10px; flex-direction:row; gap:8px;">
+                <button type="button" class="primaryBtn" id="zoneEditSaveBtn_${abbr}" style="flex:1;">Guardar</button>
+                <button type="button" class="secondaryBtn" id="zoneEditCancelBtn_${abbr}" style="flex:1;">Cancelar</button>
+                <button type="button" class="dangerBtn" id="zoneEditRemoveBtn_${abbr}" style="flex:0 0 auto;" title="Quitar">✕</button>
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="spacePlateRow" data-idx="${idx}">
+            <span class="orderBadge">${idx+1}</span>
+            <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+            <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
+            <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
+          </div>
+        `;
+      }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
+
+      detailBox.classList.remove("viewFadeIn");
+      void detailBox.offsetWidth;
+      detailBox.classList.add("viewFadeIn");
+      detailBox.innerHTML = `
+        <button type="button" class="linkBackBtn" id="zoneBackBtn_${abbr}" style="margin-bottom:8px; text-decoration:none; font-weight:700;">← Volver a la lista de espacios</button>
+        <div class="spaceNavRow">
+          <button type="button" id="zonePrevBtn_${abbr}" ${anterior ? "" : "disabled"}>← ${anterior ? escapeHtml(anterior.campo) : "—"}</button>
+          <button type="button" id="zoneNextBtn_${abbr}" ${siguiente ? "" : "disabled"}>${siguiente ? escapeHtml(siguiente.campo) : "—"} →</button>
+        </div>
+        <div class="spaceInfoHeader">
+          <strong id="zoneCampoRenameLabel_${abbr}" title="Tocá para renombrar" style="cursor:pointer; text-decoration:underline dotted;">${info.label} · ${escapeHtml(c.campo)}</strong>
+          ${cap
+            ? `<span class="spaceCapBadge${full ? " full" : ""}" id="zoneCapEditBtn_${abbr}" title="Tocá para cambiar la capacidad" style="cursor:pointer;">${occ}/${cap} ✏️</span>`
+            : `<button type="button" class="linkBackBtn" id="zoneCapEditBtn_${abbr}" style="text-decoration:none; font-weight:700; font-size:0.7rem;">+ Definir capacidad</button>`
+          }
+        </div>
+        ${plateRowsHtml}
+        ${full ? `<div class="similarWarn" style="margin-top:8px;"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
+        <button type="button" class="linkBackBtn" id="zoneAddToggle_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
+        <div id="zoneAddBox_${abbr}" style="display:none;">
+          <input type="text" id="zoneNewPlaca_${abbr}" class="plate" placeholder="Placa">
+          <input type="text" id="zoneNewAseguradora_${abbr}" placeholder="Aseguradora (opcional)" style="margin-top:6px;">
+          <input type="text" id="zoneNewModelo_${abbr}" placeholder="Modelo" style="margin-top:6px;">
+          <div class="dupWarn" id="zoneNewDupWarn_${abbr}" style="display:none;"></div>
+          <div class="similarWarn" id="zoneNewSimilarWarn_${abbr}" style="display:none;"></div>
+          <button type="button" class="primaryBtn authBtn" id="zoneNewAddBtn_${abbr}">Agregar en este espacio</button>
+        </div>
+        <button type="button" class="dangerBtn" id="zoneDeleteCampoBtn_${abbr}" style="width:100%; margin-top:16px;">Eliminar este ${labelLower} por completo</button>
+      `;
+
+      // --- navegación anterior/siguiente ---
+      const prevBtn = detailBox.querySelector(`#zonePrevBtn_${abbr}`);
+      const nextBtn = detailBox.querySelector(`#zoneNextBtn_${abbr}`);
+      if(prevBtn && anterior) prevBtn.addEventListener("click", ()=>{ selectedCi--; editingPlateIdx=null; drawZoneDetail(); });
+      if(nextBtn && siguiente) nextBtn.addEventListener("click", ()=>{ selectedCi++; editingPlateIdx=null; drawZoneDetail(); });
+
+      detailBox.querySelector(`#zoneBackBtn_${abbr}`).addEventListener("click", ()=>{
+        selectedCi = null;
+        editingPlateIdx = null;
+        drawZoneGrid();
+        drawZoneDetail();
+      });
+
+      // --- renombrar el campo ---
+      detailBox.querySelector(`#zoneCampoRenameLabel_${abbr}`).addEventListener("click", ()=>{
+        const current = c.campo;
+        const input = prompt(`Nuevo número/nombre de ${labelLower}:`, current);
         if(input === null) return;
         const newCampo = normalizeCampo(input);
         if(!newCampo || newCampo === current) return;
-
-        const existing = state.zones[zone.key].find(c => c.campo === newCampo);
+        const existing = state.zones[zone.key].find(x => x.campo === newCampo);
         const snap = snapshotZones();
         if(existing){
-          if(!confirm(`Ya existe el campo ${newCampo} en esta zona con ${existing.plates.length} vehículo(s). ¿Fusionar los vehículos de ${current} ahí?`)) return;
-          existing.plates.push(...state.zones[zone.key][ci].plates);
-          state.zones[zone.key].splice(ci,1);
+          if(!confirm(`Ya existe "${newCampo}" con ${existing.plates.length} vehículo(s). ¿Fusionar los vehículos de "${current}" ahí?`)) return;
+          existing.plates.push(...c.plates);
+          state.zones[zone.key].splice(selectedCi,1);
+          selectedCi = state.zones[zone.key].indexOf(existing);
         } else {
-          state.zones[zone.key][ci].campo = newCampo;
+          c.campo = newCampo;
         }
         sortCampos(state.zones[zone.key]);
+        selectedCi = state.zones[zone.key].indexOf(existing || c);
         pushUndo(snap);
         saveState();
-        renderAll();
+        drawZoneGrid();
+        drawZoneDetail();
       });
-    });
 
-    // --- eventos: reordenar manualmente el orden de llegada ---
-    function movePlate(zoneKey, ci, pi, dir){
-      const plates = state.zones[zoneKey][ci].plates;
-      const target = pi + dir;
-      if(target < 0 || target >= plates.length) return;
-      const snap = snapshotZones();
-      [plates[pi], plates[target]] = [plates[target], plates[pi]];
-      pushUndo(snap);
-      saveState();
-      renderAll();
-    }
-    list.querySelectorAll(".orderUp").forEach(b=>{
-      b.addEventListener("click", (e)=>{
-        const ci = parseInt(e.target.getAttribute("data-ci"),10);
-        const pi = parseInt(e.target.getAttribute("data-pi"),10);
-        movePlate(zone.key, ci, pi, -1);
-      });
-    });
-    list.querySelectorAll(".orderDown").forEach(b=>{
-      b.addEventListener("click", (e)=>{
-        const ci = parseInt(e.target.getAttribute("data-ci"),10);
-        const pi = parseInt(e.target.getAttribute("data-pi"),10);
-        movePlate(zone.key, ci, pi, 1);
-      });
-    });
-
-    // --- eventos: eliminar placa individual ---
-    list.querySelectorAll(".chipRm").forEach(b=>{
-      b.addEventListener("click", (e)=>{
-        const ci = parseInt(e.target.getAttribute("data-ci"),10);
-        const pi = parseInt(e.target.getAttribute("data-pi"),10);
+      // --- editar cuántos vehículos caben en este espacio puntual ---
+      detailBox.querySelector(`#zoneCapEditBtn_${abbr}`).addEventListener("click", ()=>{
+        const current = c.capacidad || "";
+        const input = prompt(`¿Cuántos vehículos caben en el ${labelLower} ${c.campo}? (dejá vacío para quitar el límite)`, current);
+        if(input === null) return;
+        const trimmed = input.trim();
         const snap = snapshotZones();
-        removePlateAt(zone.key, ci, pi);
-        pushUndo(snap);
-        saveState();
-        renderAll();
-      });
-    });
-
-    // --- eventos: agregar vehículo a un campo existente ---
-    list.querySelectorAll(".addPlateToCampoBtn").forEach(b=>{
-      b.addEventListener("click", async ()=>{
-        const ci = parseInt(b.getAttribute("data-ci"),10);
-        const campoLabel = state.zones[zone.key][ci].campo;
-        const plate = prompt(`Nueva placa para el campo ${campoLabel}:`);
-        if(plate === null) return;
-        const snap = snapshotZones();
-        const ok = await addPlateToZone(zone.key, campoLabel, plate);
-        if(ok){ pushUndo(snap); saveState(); renderAll(); }
-      });
-    });
-
-    // --- eventos: eliminar campo completo ---
-    list.querySelectorAll(".campoDeleteBtn").forEach(b=>{
-      b.addEventListener("click", ()=>{
-        const ci = parseInt(b.getAttribute("data-ci"),10);
-        const c = state.zones[zone.key][ci];
-        if(c.plates.length > 1 && !confirm(`El campo ${c.campo} tiene ${c.plates.length} vehículos. ¿Eliminar todo el campo?`)) return;
-        const snap = snapshotZones();
-        state.zones[zone.key].splice(ci,1);
-        pushUndo(snap);
-        saveState();
-        renderAll();
-      });
-    });
-
-    // --- agregar (fila superior) ---
-    const campoInput = wrap.querySelector(`#campoInput_${info.abbr}`);
-    const addInput = wrap.querySelector(`#addInput_${info.abbr}`);
-    const aseguradoraInput = wrap.querySelector(`#aseguradoraInput_${info.abbr}`);
-    const modeloInput = wrap.querySelector(`#modeloInput_${info.abbr}`);
-    const addBtn = wrap.querySelector(`#addBtn_${info.abbr}`);
-    const dupWarn = wrap.querySelector(`#dupWarn_${info.abbr}`);
-    const similarWarn = wrap.querySelector(`#similarWarn_${info.abbr}`);
-    const sinAsignarBtn = wrap.querySelector(`#sinAsignarBtn_${info.abbr}`);
-    if(sinAsignarBtn){
-      sinAsignarBtn.addEventListener("click", ()=>{
-        campoInput.value = SIN_ASIGNAR;
-        addInput.focus();
-      });
-    }
-
-    function checkLiveDup(){
-      const v = normalizePlate(addInput.value);
-      if(!v){ dupWarn.style.display = "none"; similarWarn.style.display = "none"; return; }
-      const dup = findPlate(v);
-      if(dup){
-        const dupInfo = zoneInfo(dup.zoneKey);
-        const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
-        const mismaZona = dup.zoneKey === zone.key;
-        dupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya está registrada en ${mismaZona ? "esta zona" : dupInfo.label}, campo ${dupCampo}`;
-        dupWarn.style.display = "flex";
-        similarWarn.style.display = "none";
-      } else {
-        dupWarn.style.display = "none";
-        const similares = findSimilarPlates(v);
-        if(similares.length > 0){
-          const items = similares.map(s=>{
-            const zi = zoneInfo(s.zoneKey);
-            const campo = state.zones[s.zoneKey][s.campoIdx].campo;
-            return `<button type="button" class="useSimilarBtn" data-plate="${escapeAttrLike(s.plate)}">${s.plate}</button> (${zi.label}, campo ${campo})`;
-          }).join(", ");
-          similarWarn.innerHTML = `<span class="dupWarnIcon">🔍</span><span class="similarList">¿Es alguna de estas? ${items}</span>`;
-          similarWarn.style.display = "flex";
-          similarWarn.querySelectorAll(".useSimilarBtn").forEach(b=>{
-            b.addEventListener("click", ()=>{
-              addInput.value = b.getAttribute("data-plate");
-              checkLiveDup();
-              addInput.focus();
-            });
-          });
+        if(trimmed === ""){
+          delete c.capacidad;
         } else {
-          similarWarn.style.display = "none";
+          const n = parseInt(trimmed, 10);
+          if(isNaN(n) || n <= 0){ showToast("Ingresá un número válido"); return; }
+          c.capacidad = n;
+        }
+        pushUndo(snap);
+        saveState();
+        drawZoneGrid();
+        drawZoneDetail();
+      });
+
+      // --- eliminar el campo completo ---
+      detailBox.querySelector(`#zoneDeleteCampoBtn_${abbr}`).addEventListener("click", ()=>{
+        if(c.plates.length > 0 && !confirm(`Este ${labelLower} tiene ${c.plates.length} vehículo(s). ¿Eliminar todo el ${labelLower}?`)) return;
+        const snap = snapshotZones();
+        const idx = state.zones[zone.key].indexOf(c);
+        if(idx !== -1) state.zones[zone.key].splice(idx,1);
+        pushUndo(snap);
+        saveState();
+        selectedCi = null;
+        editingPlateIdx = null;
+        showToast(`${labelLower[0].toUpperCase()+labelLower.slice(1)} eliminado`);
+        drawZoneGrid();
+        drawZoneDetail();
+      });
+
+      // --- edición inline de una placa ya existente ---
+      if(editingPlateIdx !== null){
+        let editTargetZone = zone.key;
+        const editZoneChipsBox = detailBox.querySelector(`#zoneEditZoneChips_${abbr}`);
+        editZoneChipsBox.innerHTML = ZONES.map(z=>`
+          <button type="button" class="zoneChipBtn${zone.key===z.key?' active':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
+        `).join("");
+        editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(btn=>{
+          btn.addEventListener("click", ()=>{
+            editTargetZone = btn.getAttribute("data-zone");
+            editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(b=>b.classList.remove("active"));
+            btn.classList.add("active");
+            detailBox.querySelector(`#zoneEditCampoLabel_${abbr}`).textContent = `Nuevo ${UNNUMBERED_ONLY_ZONES.has(editTargetZone) ? "línea" : "campo"}`;
+            detailBox.querySelector(`#zoneEditCampo_${abbr}`).value = (editTargetZone === zone.key) ? c.campo : "";
+          });
+        });
+        detailBox.querySelector(`#zoneEditMoveToggle_${abbr}`).addEventListener("click", ()=>{
+          const moveBox = detailBox.querySelector(`#zoneEditMoveBox_${abbr}`);
+          const toggle = detailBox.querySelector(`#zoneEditMoveToggle_${abbr}`);
+          const show = moveBox.style.display === "none";
+          moveBox.style.display = show ? "block" : "none";
+          toggle.style.display = show ? "none" : "block";
+        });
+
+        const editPlacaInput = detailBox.querySelector(`#zoneEditPlaca_${abbr}`);
+        const editDupWarn = detailBox.querySelector(`#zoneEditDupWarn_${abbr}`);
+        const originalPlate = c.plates[editingPlateIdx].plate;
+        function checkEditDup(){
+          const v = normalizePlate(editPlacaInput.value);
+          if(!v || v === originalPlate){ editDupWarn.style.display = "none"; return; }
+          const dup = findPlate(v, zone.key, selectedCi, editingPlateIdx);
+          if(dup){
+            const dupInfo = zoneInfo(dup.zoneKey);
+            const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
+            editDupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya existe en ${dupInfo.label}, campo ${dupCampo}. Al guardar, se preguntará si se mueve.`;
+            editDupWarn.style.display = "flex";
+          } else {
+            editDupWarn.style.display = "none";
+          }
+        }
+        editPlacaInput.addEventListener("input", checkEditDup);
+        editPlacaInput.addEventListener("keyup", checkEditDup);
+
+        async function saveZoneEdit(){
+          const newPlate = editPlacaInput.value;
+          const newAseguradora = detailBox.querySelector(`#zoneEditAseg_${abbr}`).value.trim();
+          const newModelo = detailBox.querySelector(`#zoneEditModelo_${abbr}`).value.trim();
+          const newCampo = normalizeCampo(detailBox.querySelector(`#zoneEditCampo_${abbr}`).value);
+          if(!newCampo){ showToast("Ingresá un campo válido"); return; }
+          if(!normalizePlate(newPlate)){ showToast("Ingresá una placa válida"); return; }
+          const idxToEdit = editingPlateIdx;
+          const ci = state.zones[zone.key].indexOf(c);
+          const ok = await updaterConfirmMove(zone.key, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "last", newPlate);
+          if(!ok) return;
+          showToast("Vehículo actualizado");
+          editingPlateIdx = null;
+          if(editTargetZone !== zone.key){
+            renderAll();
+            return;
+          }
+          selectedCi = state.zones[zone.key].findIndex(x => x.campo === newCampo);
+          drawZoneGrid();
+          drawZoneDetail();
+        }
+        detailBox.querySelector(`#zoneEditSaveBtn_${abbr}`).addEventListener("click", saveZoneEdit);
+        detailBox.querySelector(`#zoneEditCancelBtn_${abbr}`).addEventListener("click", ()=>{
+          editingPlateIdx = null;
+          drawZoneDetail();
+        });
+        detailBox.querySelector(`#zoneEditRemoveBtn_${abbr}`).addEventListener("click", ()=> removeZonePlate(editingPlateIdx));
+        [editPlacaInput, detailBox.querySelector(`#zoneEditAseg_${abbr}`), detailBox.querySelector(`#zoneEditModelo_${abbr}`), detailBox.querySelector(`#zoneEditCampo_${abbr}`)].forEach(inp=>{
+          inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") saveZoneEdit(); });
+        });
+        editPlacaInput.focus();
+        editPlacaInput.select();
+      }
+
+      async function removeZonePlate(idx){
+        const plateToRemove = c.plates[idx];
+        if(!confirm(`¿Quitar ${plateToRemove.plate} de este ${labelLower}?`)) return;
+        const snap = snapshotZones();
+        removePlateEntryByRef(zone.key, c, plateToRemove);
+        pushUndo(snap);
+        await saveState();
+        showToast("Vehículo eliminado");
+        editingPlateIdx = null;
+        drawZoneGrid();
+        drawZoneDetail();
+      }
+
+      detailBox.querySelectorAll(".spaceEditBtn").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          editingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
+          drawZoneDetail();
+        });
+      });
+      detailBox.querySelectorAll(".spaceRemoveBtn").forEach(b=>{
+        b.addEventListener("click", ()=> removeZonePlate(parseInt(b.getAttribute("data-idx"),10)));
+      });
+
+      // --- agregar o mover una placa a este espacio ---
+      const addToggleBtn = detailBox.querySelector(`#zoneAddToggle_${abbr}`);
+      const addBox = detailBox.querySelector(`#zoneAddBox_${abbr}`);
+      addToggleBtn.addEventListener("click", ()=>{
+        addBox.style.display = "block";
+        addToggleBtn.style.display = "none";
+        detailBox.querySelector(`#zoneNewPlaca_${abbr}`).focus();
+      });
+
+      const newPlacaInput = detailBox.querySelector(`#zoneNewPlaca_${abbr}`);
+      const newDupWarn = detailBox.querySelector(`#zoneNewDupWarn_${abbr}`);
+      const newSimilarWarn = detailBox.querySelector(`#zoneNewSimilarWarn_${abbr}`);
+      const newAddBtn = detailBox.querySelector(`#zoneNewAddBtn_${abbr}`);
+
+      function checkNewDup(){
+        const v = normalizePlate(newPlacaInput.value);
+        if(!v){ newDupWarn.style.display = "none"; newSimilarWarn.style.display = "none"; return; }
+        const dup = findPlate(v);
+        if(dup){
+          const dupInfo = zoneInfo(dup.zoneKey);
+          const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
+          const yaAca = dup.zoneKey === zone.key && dupCampo === c.campo;
+          newDupWarn.innerHTML = yaAca
+            ? `<span class="dupWarnIcon">⚠️</span> ${v} ya está en este mismo ${labelLower}.`
+            : `<span class="dupWarnIcon">🔁</span> ${v} está en ${dupInfo.label}, campo ${dupCampo}. Al confirmar, se moverá acá.`;
+          newDupWarn.style.display = "flex";
+          newSimilarWarn.style.display = "none";
+        } else {
+          newDupWarn.style.display = "none";
+          const similares = findSimilarPlates(v);
+          if(similares.length > 0){
+            const items = similares.map(s=>{
+              const zi = zoneInfo(s.zoneKey);
+              const campo = state.zones[s.zoneKey][s.campoIdx].campo;
+              return `<button type="button" class="useSimilarBtn" data-plate="${escapeAttrLike(s.plate)}">${s.plate}</button> (${zi.label}, campo ${campo})`;
+            }).join(", ");
+            newSimilarWarn.innerHTML = `<span class="dupWarnIcon">🔍</span><span class="similarList">¿Es alguna de estas? ${items}</span>`;
+            newSimilarWarn.style.display = "flex";
+            newSimilarWarn.querySelectorAll(".useSimilarBtn").forEach(b=>{
+              b.addEventListener("click", ()=>{ newPlacaInput.value = b.getAttribute("data-plate"); checkNewDup(); });
+            });
+          } else {
+            newSimilarWarn.style.display = "none";
+          }
         }
       }
-    }
-    addInput.addEventListener("input", checkLiveDup);
-    addInput.addEventListener("keyup", checkLiveDup);
+      newPlacaInput.addEventListener("input", checkNewDup);
+      newPlacaInput.addEventListener("keyup", checkNewDup);
 
-    async function doAdd(){
-      const plate = addInput.value;
-      if(!normalizePlate(plate)) return;
-      const snap = snapshotZones();
-      const ok = await addPlateToZone(zone.key, campoInput.value, plate, aseguradoraInput.value, modeloInput.value);
-      if(ok){
-        pushUndo(snap);
-        campoInput.value = "";
-        addInput.value = "";
-        aseguradoraInput.value = "";
-        modeloInput.value = "";
-        dupWarn.style.display = "none";
-        saveState();
-        renderAll();
+      async function confirmZoneAdd(){
+        const plateRaw = newPlacaInput.value;
+        if(!normalizePlate(plateRaw)){ showToast("Ingresá una placa válida"); return; }
+        const aseguradora = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`).value;
+        const modeloInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
+        if(!modeloInput.value.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
+        const snap = snapshotZones();
+        const ok = await updaterAddNew(zone.key, c.campo, plateRaw, aseguradora, modeloInput.value, "last");
+        if(ok){
+          pushUndo(snap);
+          showToast("Listo — vehículo en este espacio");
+          drawZoneGrid();
+          drawZoneDetail();
+        }
       }
+      newAddBtn.addEventListener("click", confirmZoneAdd);
+      [newPlacaInput, detailBox.querySelector(`#zoneNewAseguradora_${abbr}`), detailBox.querySelector(`#zoneNewModelo_${abbr}`)].forEach(inp=>{
+        inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmZoneAdd(); });
+      });
     }
-    addBtn.addEventListener("click", doAdd);
-    addInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") doAdd(); });
-    campoInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") addInput.focus(); });
-    aseguradoraInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") doAdd(); });
 
-    // --- pegado masivo ---
-    const bulkBtn = wrap.querySelector(`#bulkBtn_${info.abbr}`);
-    const bulkArea = wrap.querySelector(`#bulkArea_${info.abbr}`);
+    const addEmptyCampoBtn = wrap.querySelector(`#addEmptyCampoBtn_${abbr}`);
+    addEmptyCampoBtn.addEventListener("click", ()=>{
+      const sugerido = UNNUMBERED_ONLY_ZONES.has(zone.key) ? nextLineLabel(zone.key) : nextAutoCampo(zone.key);
+      const input = prompt(`Número/nombre del nuevo ${labelLower} (en blanco = siguiente disponible, "${sugerido}"):`, "");
+      if(input === null) return;
+      const campoLabel = normalizeCampo(input) || sugerido;
+      const yaExiste = (state.zones[zone.key] || []).some(x => x.campo === campoLabel);
+      if(yaExiste){ showToast(`El ${labelLower} "${campoLabel}" ya existe.`); return; }
+      const snap = snapshotZones();
+      getOrCreateCampo(zone.key, campoLabel); // ya inserta ordenado, sin importar si va en medio de la secuencia
+      pushUndo(snap);
+      saveState();
+      showToast(`${labelLower[0].toUpperCase()+labelLower.slice(1)} "${campoLabel}" agregado, vacío.`);
+      drawZoneGrid();
+    });
+
+    // --- pegado masivo (nivel de zona) ---
+    const bulkBtn = wrap.querySelector(`#bulkBtn_${abbr}`);
+    const bulkArea = wrap.querySelector(`#bulkArea_${abbr}`);
     bulkBtn.addEventListener("click", async ()=>{
       const lines = bulkArea.value.split("\n").map(l=>l.trim()).filter(Boolean);
       if(lines.length===0) return;
@@ -2964,6 +3217,61 @@
       showToast(skipped===0 ? `${added} placa(s) agregada(s)` : `${added} agregada(s), ${skipped} omitida(s) (duplicadas o canceladas)`, 3200);
     });
 
+    // --- plantillas de zona (campos + capacidades, sin tocar vehículos) ---
+    const templateSelect = wrap.querySelector(`#zoneTemplateSelect_${abbr}`);
+    const saveTemplateBtn = wrap.querySelector(`#saveTemplateBtn_${abbr}`);
+    const applyTemplateBtn = wrap.querySelector(`#applyTemplateBtn_${abbr}`);
+    const deleteTemplateBtn = wrap.querySelector(`#deleteTemplateBtn_${abbr}`);
+    let templates = await loadZoneTemplates();
+
+    function refreshTemplateSelect(){
+      templateSelect.innerHTML = `<option value="">Elegí una plantilla…</option>` +
+        templates.map((t,ti)=>`<option value="${ti}">${escapeAttrLike(t.name)} (${t.entries.length} ${labelLower}s)</option>`).join("");
+    }
+    refreshTemplateSelect();
+
+    saveTemplateBtn.addEventListener("click", async ()=>{
+      const arr = state.zones[zone.key] || [];
+      if(arr.length === 0){ showToast(`Esta zona todavía no tiene ${labelLower}s para guardar como plantilla.`); return; }
+      const name = prompt("Nombre para esta plantilla:", `${info.label} (${arr.length} ${labelLower}s)`);
+      if(!name || !name.trim()) return;
+      const entries = arr.map(c => ({ campo: c.campo, capacidad: c.capacidad }));
+      templates.push({ name: name.trim(), entries, createdAt: nowStamp() });
+      const ok = await saveZoneTemplates(templates);
+      if(!ok){ showToast("No se pudo guardar la plantilla, intentá de nuevo."); return; }
+      showToast(`Plantilla "${name.trim()}" guardada`);
+      refreshTemplateSelect();
+    });
+
+    applyTemplateBtn.addEventListener("click", async ()=>{
+      const ti = parseInt(templateSelect.value, 10);
+      if(isNaN(ti) || !templates[ti]){ showToast("Elegí una plantilla primero"); return; }
+      const t = templates[ti];
+      if(!confirm(`¿Aplicar la plantilla "${t.name}" a ${info.label}? Se crean/actualizan ${t.entries.length} ${labelLower}(s) con sus capacidades. Los vehículos que ya haya no se tocan.`)) return;
+      const snap = snapshotZones();
+      t.entries.forEach(entry=>{
+        const campoObj = getOrCreateCampo(zone.key, entry.campo);
+        if(entry.capacidad){ campoObj.capacidad = entry.capacidad; }
+        else { delete campoObj.capacidad; }
+      });
+      pushUndo(snap);
+      saveState();
+      showToast(`Plantilla "${t.name}" aplicada`);
+      drawZoneGrid();
+    });
+
+    deleteTemplateBtn.addEventListener("click", async ()=>{
+      const ti = parseInt(templateSelect.value, 10);
+      if(isNaN(ti) || !templates[ti]){ showToast("Elegí una plantilla primero"); return; }
+      if(!confirm(`¿Borrar la plantilla "${templates[ti].name}"?`)) return;
+      templates.splice(ti,1);
+      await saveZoneTemplates(templates);
+      showToast("Plantilla borrada");
+      refreshTemplateSelect();
+    });
+
+    drawZoneGrid();
+    drawZoneDetail();
     return wrap;
   }
 
@@ -3024,6 +3332,16 @@
     const zoneSelect = wrap.querySelector("#resumenZoneFilter");
     const clearBtn = wrap.querySelector("#resumenClear");
 
+    // Envuelve en <mark> la parte del texto que coincide con la búsqueda,
+    // para que se vea de un vistazo por qué apareció esa fila.
+    function highlightMatch(text, filterText){
+      const escaped = escapeHtml(String(text == null ? "" : text));
+      if(!filterText) return escaped;
+      const idx = escaped.toUpperCase().indexOf(filterText);
+      if(idx === -1) return escaped;
+      return escaped.slice(0, idx) + '<mark class="searchHighlight">' + escaped.slice(idx, idx+filterText.length) + '</mark>' + escaped.slice(idx+filterText.length);
+    }
+
     function draw(){
       const filterText = filterInput.value.trim().toUpperCase();
       const filterZone = zoneSelect.value;
@@ -3052,11 +3370,11 @@
           tr.dataset.ci = r.ci;
           tr.dataset.pi = r.pi;
           tr.innerHTML = `
-            <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${escapeHtml(r.campo)}</span></td>
-            <td>${r.modelo ? escapeHtml(r.modelo) : '<span style="color:var(--muted);">—</span>'}</td>
-            <td class="plate">${escapeHtml(r.placa)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</td>
+            <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${highlightMatch(r.campo, filterText)}</span></td>
+            <td>${r.modelo ? highlightMatch(r.modelo, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
+            <td class="plate">${highlightMatch(r.placa, filterText)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</td>
             <td>${r.zoneLabel}</td>
-            <td>${r.aseguradora ? escapeHtml(r.aseguradora) : '<span style="color:var(--muted);">—</span>'}</td>
+            <td>${r.aseguradora ? highlightMatch(r.aseguradora, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
           `;
           tr.addEventListener("click", ()=>{
             if(currentUser && currentUser.role === "consulta"){
@@ -3131,7 +3449,7 @@
             return zonasConDatos.map(({z, ocupados, cap, hasCap, pct})=>{
               const barClass = pct >= 100 ? "full" : (pct >= 70 ? "high" : "ok");
               return `
-                <div class="capacityByZoneRow">
+                <div class="capacityByZoneRow" data-zone="${z.key}" style="cursor:pointer;" title="Tocá para ir a esta zona">
                   <span class="dot" style="background:${z.color}"></span>
                   <span class="capacityByZoneName">${z.label}</span>
                   <span class="capacityByZoneValue">${hasCap ? `${ocupados}/${cap} campos` : `${ocupados} campos · sin capacidad`}</span>
@@ -3158,7 +3476,8 @@
     if(canEdit()){
       loadRecentActivity();
       wrap.querySelectorAll(".capacityByZoneList .capacityEditBtn").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
+        btn.addEventListener("click", (e)=>{
+          e.stopPropagation();
           const zoneKey = btn.getAttribute("data-zone");
           const info = zoneInfo(zoneKey);
           const current = state.capacities[zoneKey] || "";
@@ -3173,6 +3492,12 @@
             state.capacities[zoneKey] = n;
           }
           saveState();
+          renderAll();
+        });
+      });
+      wrap.querySelectorAll(".capacityByZoneList .capacityByZoneRow").forEach(row=>{
+        row.addEventListener("click", ()=>{
+          activeTab = row.getAttribute("data-zone");
           renderAll();
         });
       });
@@ -3594,6 +3919,20 @@
     return Array.from(arr).map(b=>b.toString(16).padStart(2,"0")).join("");
   }
 
+  async function loadZoneTemplates(){
+    try{
+      const res = await window.storage.get(ZONE_TEMPLATES_KEY, true);
+      if(res && res.value) return JSON.parse(res.value);
+    }catch(e){ /* no existen todavía */ }
+    return [];
+  }
+  async function saveZoneTemplates(list){
+    try{
+      const result = await window.storage.set(ZONE_TEMPLATES_KEY, JSON.stringify(list), true);
+      return !!(result && typeof result === "object");
+    }catch(e){ console.error("Error guardando plantillas de zona", e); return false; }
+  }
+
   async function appendLog(key, entry, limit){
     let list = [];
     try{
@@ -3820,15 +4159,27 @@
     showLogos();
   }
 
-  async function getSessionUsername(){
+  // La sesión "recordada" guarda el usuario Y una versión de sesión — si el
+  // Admin la incrementa (botón "Cerrar sesión en todos los dispositivos"),
+  // cualquier dispositivo con la versión vieja deja de auto-entrar solo, sin
+  // tener que esperar a que esa persona cierre sesión ella misma.
+  async function getSessionData(){
     try{
       const res = await window.storage.get(SESSION_KEY, false);
-      if(res && res.value) return res.value;
+      if(res && res.value){
+        try{
+          const parsed = JSON.parse(res.value);
+          if(parsed && parsed.u) return { username: parsed.u, v: parsed.v || 0 };
+        }catch(e){
+          // formato viejo (username plano, sin versión): se trata como v=0
+          return { username: res.value, v: 0 };
+        }
+      }
     }catch(e){ /* no hay sesión guardada */ }
     return null;
   }
-  async function setSessionUsername(username){
-    try{ await window.storage.set(SESSION_KEY, username, false); }catch(e){ /* no crítico */ }
+  async function setSessionUsername(username, sessionVersion){
+    try{ await window.storage.set(SESSION_KEY, JSON.stringify({ u: username, v: sessionVersion || 0 }), false); }catch(e){ /* no crítico */ }
   }
   async function clearSession(){
     try{ await window.storage.delete(SESSION_KEY, false); }catch(e){ /* no crítico */ }
@@ -3872,11 +4223,7 @@
       guestBanner.style.display = "none";
     }
 
-    document.getElementById("usersBtn").style.display = role === "admin" ? "inline-block" : "none";
-    document.getElementById("historyBtn").style.display = role === "admin" ? "inline-block" : "none";
-    document.getElementById("guestLinksBtn").style.display = role === "admin" ? "inline-block" : "none";
-    document.getElementById("backupBtn").style.display = role === "admin" ? "inline-block" : "none";
-    document.getElementById("restoreBtn").style.display = role === "admin" ? "inline-block" : "none";
+    document.getElementById("adminMenuWrap").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("undoBtn").style.display = role === "admin" ? "inline-block" : "none";
     document.getElementById("exportBtn").style.display = canExport() ? "inline-block" : "none";
     document.getElementById("shareExportBtn").style.display = (canExport() && supportsFileShare()) ? "inline-block" : "none";
@@ -3969,12 +4316,12 @@
 
   async function runAuthGate(){
     storageAvailable = false;
-    let sessionUsername = null;
+    let sessionData = null;
     try{
       await withTimeout(ensureFirebaseAuth(), 6000, "Firebase tardó demasiado en responder.").catch(()=>{ fbReady = !!fbDb; });
       storageAvailable = await checkStorageAvailable();
       if(storageAvailable){
-        sessionUsername = await getSessionUsername();
+        sessionData = await getSessionData();
       }
     }catch(e){
       console.error("Firebase no disponible, la app sigue funcionando sin guardado permanente", e);
@@ -4009,12 +4356,16 @@
       }
     }
 
-    if(sessionUsername){
-      const found = users.find(u => u.username.toLowerCase() === sessionUsername.toLowerCase() && u.active !== false);
-      if(found){
+    if(sessionData){
+      const found = users.find(u => u.username.toLowerCase() === sessionData.username.toLowerCase() && u.active !== false);
+      if(found && (found.sessionVersion || 0) === sessionData.v){
         currentUser = { username: found.username, role: found.role, canExport: !!found.canExport };
         revealApp();
         return;
+      } else if(found){
+        // La sesión de este dispositivo quedó vieja (el Admin la cerró de
+        // forma remota): se limpia y se muestra el login normal.
+        await clearSession();
       }
     }
 
@@ -4030,7 +4381,7 @@
       }
       currentUser = { username: found.username, role: found.role, canExport: !!found.canExport };
       if(storageAvailable){
-        await setSessionUsername(found.username);
+        await setSessionUsername(found.username, found.sessionVersion || 0);
         await logAccess(found.username, "login");
       }
       revealApp();
@@ -4094,6 +4445,7 @@
             <button class="resetPassBtn" data-i="${i}">Restablecer clave</button>
             <button class="featureUserBtn" data-i="${i}">${u.featured ? "Quitar logo" : "Dar logo propio"}</button>
             ${u.role!=="admin" ? `<button class="exportPermBtn" data-i="${i}">${u.canExport ? "Quitar Excel" : "Dar acceso a Excel"}</button>` : ``}
+            <button class="revokeSessionBtn" data-i="${i}" title="Fuerza a que esta cuenta tenga que volver a iniciar sesión en cualquier dispositivo donde haya quedado recordada">Cerrar sesión en otros dispositivos</button>
             <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "Activar" : "Desactivar"}</button>
             <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
           </div>
@@ -4156,6 +4508,15 @@
           draw();
         });
       });
+      listEl.querySelectorAll(".revokeSessionBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          if(!confirm(`¿Cerrar la sesión de "${users[i].username}" en cualquier otro dispositivo? La próxima vez que abran la app ahí, van a tener que volver a escribir la contraseña.`)) return;
+          users[i].sessionVersion = (users[i].sessionVersion || 0) + 1;
+          await saveUsers(users);
+          showToast(`Listo — la sesión de "${users[i].username}" quedó cerrada en otros dispositivos.`);
+        });
+      });
       listEl.querySelectorAll(".toggleActiveBtn").forEach(b=>{
         b.addEventListener("click", async ()=>{
           const i = parseInt(b.getAttribute("data-i"),10);
@@ -4212,25 +4573,45 @@
     const listAccess = document.getElementById("historyListAccess");
     const tabUpdates = document.getElementById("historyTabUpdates");
     const tabAccess = document.getElementById("historyTabAccess");
+    const searchInput = document.getElementById("historySearchInput");
 
     const updates = (await readLog(HISTORY_KEY)).slice().reverse();
     const access = (await readLog(ACCESS_LOG_KEY)).slice().reverse();
-
-    listUpdates.innerHTML = updates.length ? updates.map(h=>`
-      <div class="historyItem">
-        <strong>${escapeHtml(h.placa)}</strong> movida por ${escapeHtml(h.username)}<br>
-        de ${escapeHtml(h.desde)} a ${escapeHtml(h.hasta)}
-        <div class="historyMeta">${escapeHtml(h.ts)}</div>
-      </div>
-    `).join("") : `<div class="dashEmptyNote">Todavía no hay movimientos registrados.</div>`;
-
     const typeLabel = { login: "Inicio de sesión", logout: "Cierre de sesión", login_failed: "Intento fallido" };
-    listAccess.innerHTML = access.length ? access.map(a=>`
-      <div class="historyItem">
-        ${typeLabel[a.type] || a.type} — <strong>${escapeHtml(a.username)}</strong>
-        <div class="historyMeta">${escapeHtml(a.ts)}</div>
-      </div>
-    `).join("") : `<div class="dashEmptyNote">Todavía no hay accesos registrados.</div>`;
+
+    function drawLists(){
+      const q = searchInput.value.trim().toUpperCase();
+      const filteredUpdates = q ? updates.filter(h =>
+        (h.placa||"").toUpperCase().includes(q) ||
+        (h.username||"").toUpperCase().includes(q) ||
+        (h.ts||"").toUpperCase().includes(q) ||
+        (h.desde||"").toUpperCase().includes(q) ||
+        (h.hasta||"").toUpperCase().includes(q)
+      ) : updates;
+      const filteredAccess = q ? access.filter(a =>
+        (a.username||"").toUpperCase().includes(q) ||
+        (a.ts||"").toUpperCase().includes(q) ||
+        (typeLabel[a.type] || a.type || "").toUpperCase().includes(q)
+      ) : access;
+
+      listUpdates.innerHTML = filteredUpdates.length ? filteredUpdates.map(h=>`
+        <div class="historyItem">
+          <strong>${escapeHtml(h.placa)}</strong> movida por ${escapeHtml(h.username)}<br>
+          de ${escapeHtml(h.desde)} a ${escapeHtml(h.hasta)}
+          <div class="historyMeta">${escapeHtml(h.ts)}</div>
+        </div>
+      `).join("") : `<div class="dashEmptyNote">${q ? "Sin resultados para esa búsqueda." : "Todavía no hay movimientos registrados."}</div>`;
+
+      listAccess.innerHTML = filteredAccess.length ? filteredAccess.map(a=>`
+        <div class="historyItem">
+          ${typeLabel[a.type] || a.type} — <strong>${escapeHtml(a.username)}</strong>
+          <div class="historyMeta">${escapeHtml(a.ts)}</div>
+        </div>
+      `).join("") : `<div class="dashEmptyNote">${q ? "Sin resultados para esa búsqueda." : "Todavía no hay accesos registrados."}</div>`;
+    }
+    searchInput.value = "";
+    drawLists();
+    searchInput.oninput = drawLists;
 
     function showTab(which){
       listUpdates.style.display = which==="updates" ? "flex" : "none";
@@ -4331,6 +4712,90 @@
     };
   }
   document.getElementById("guestLinksBtn").addEventListener("click", openGuestLinksModal);
+
+  // ---- Salud de datos (solo Admin) ----
+  function goToZoneAndClose(zoneKey, overlay){
+    activeTab = zoneKey;
+    renderAll();
+    overlay.classList.remove("show");
+  }
+
+  function openDataHealthModal(){
+    if(!guardEdit()) return;
+    const overlay = document.getElementById("dataHealthModal");
+    const content = document.getElementById("dataHealthContent");
+
+    // 1) Placas duplicadas
+    const rows = buildResumenRows();
+    const porPlaca = {};
+    rows.forEach(r=>{ const k = r.placa.toUpperCase(); (porPlaca[k] = porPlaca[k]||[]).push(r); });
+    const duplicadas = Object.values(porPlaca).filter(list => list.length > 1);
+
+    // 2) Campos sin capacidad definida
+    const camposSinCap = [];
+    ZONES.forEach(z=>{
+      (state.zones[z.key]||[]).forEach(c=>{
+        if(!c.capacidad) camposSinCap.push({ zoneKey: z.key, zoneLabel: z.label, campo: c.campo });
+      });
+    });
+
+    // 3) Vehículos sin modelo cargado
+    const sinModelo = rows.filter(r => !r.modelo);
+
+    // 4) Vehículos sin actualizarse hace 30+ días (o sin fecha registrada)
+    const treintaDias = 30*24*60*60*1000;
+    const estancados = [];
+    ZONES.forEach(z=>{
+      (state.zones[z.key]||[]).forEach(c=>{
+        c.plates.forEach(p=>{
+          const t = p.lastUpdated ? new Date(p.lastUpdated).getTime() : NaN;
+          if(isNaN(t) || (Date.now() - t) > treintaDias){
+            estancados.push({ zoneKey: z.key, zoneLabel: z.label, campo: c.campo, placa: p.plate, lastUpdated: p.lastUpdated });
+          }
+        });
+      });
+    });
+
+    function section(title, count, items, renderItem){
+      if(count === 0){
+        return `<div class="historyItem"><strong>✅ ${title}</strong><div class="historyMeta">Sin hallazgos.</div></div>`;
+      }
+      const shown = items.slice(0, 10);
+      const resto = count - shown.length;
+      return `
+        <div class="historyItem">
+          <strong>⚠️ ${title} (${count})</strong>
+          <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
+            ${shown.map(renderItem).join("")}
+          </div>
+          ${resto > 0 ? `<div class="historyMeta" style="margin-top:4px;">y ${resto} más…</div>` : ``}
+        </div>
+      `;
+    }
+
+    content.innerHTML =
+      section("Placas duplicadas (registradas en más de un lugar)", duplicadas.length, duplicadas, list => {
+        const primero = list[0];
+        return `<button type="button" class="dataHealthItemBtn" data-zone="${primero.zoneKey}">${escapeHtml(primero.placa)} — en ${list.map(r=>`${r.zoneLabel} campo ${r.campo}`).join(" y ")}</button>`;
+      }) +
+      section("Campos/líneas sin capacidad definida", camposSinCap.length, camposSinCap, c =>
+        `<button type="button" class="dataHealthItemBtn" data-zone="${c.zoneKey}">${escapeHtml(c.zoneLabel)} · campo ${escapeHtml(c.campo)}</button>`
+      ) +
+      section("Vehículos sin modelo cargado", sinModelo.length, sinModelo, r =>
+        `<button type="button" class="dataHealthItemBtn" data-zone="${r.zoneKey}">${escapeHtml(r.placa)} — ${escapeHtml(r.zoneLabel)} campo ${escapeHtml(r.campo)}</button>`
+      ) +
+      section("Vehículos sin actualizarse hace 30 días o más", estancados.length, estancados, r =>
+        `<button type="button" class="dataHealthItemBtn" data-zone="${r.zoneKey}">${escapeHtml(r.placa)} — ${escapeHtml(r.zoneLabel)} campo ${escapeHtml(r.campo)}</button>`
+      );
+
+    content.querySelectorAll(".dataHealthItemBtn").forEach(b=>{
+      b.addEventListener("click", ()=> goToZoneAndClose(b.getAttribute("data-zone"), overlay));
+    });
+
+    overlay.classList.add("show");
+    document.getElementById("dataHealthCloseBtn").onclick = ()=> overlay.classList.remove("show");
+  }
+  document.getElementById("dataHealthBtn").addEventListener("click", openDataHealthModal);
 
   // ---- Helpers de chips de zona tocables (reemplazan el <select> en el panel de Actualización) ----
   function zoneChipsHtml(containerId, selectedKey){
@@ -4519,8 +4984,10 @@
         if(occ > 0){
           fillClass = (cap && occ >= cap) ? "full" : "partial";
         }
+        const hechoHoy = c.plates.some(p => wasUpdatedToday(p));
         return `
-          <button type="button" class="spaceGridBtn ${fillClass}${selectedCampo===c.campo ? ' active' : ''}" data-campo="${escapeAttrLike(c.campo)}">
+          <button type="button" class="spaceGridBtn ${fillClass}${hechoHoy ? ' hechoHoy' : ''}${selectedCampo===c.campo ? ' active' : ''}" data-campo="${escapeAttrLike(c.campo)}">
+            ${hechoHoy ? `<span class="spaceGridDoneTag" title="Ya trabajado hoy">✓</span>` : ``}
             <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
             <span class="spaceGridCount">${occ}${cap ? "/"+cap : ""}</span>
           </button>
@@ -4648,11 +5115,20 @@
         `;
       }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
 
+      const camposArr = state.zones[spaceZone] || [];
+      const idxActual = camposArr.indexOf(entry);
+      const anterior = idxActual > 0 ? camposArr[idxActual-1] : null;
+      const siguiente = idxActual < camposArr.length-1 ? camposArr[idxActual+1] : null;
+
       spaceInfoBox.classList.remove("viewFadeIn");
       void spaceInfoBox.offsetWidth; // fuerza el reflujo para poder repetir la animación
       spaceInfoBox.classList.add("viewFadeIn");
       spaceInfoBox.innerHTML = `
         <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">← Volver a la lista de espacios</button>
+        <div class="spaceNavRow">
+          <button type="button" id="spacePrevBtn" ${anterior ? "" : "disabled"}>← ${anterior ? escapeHtml(anterior.campo) : "—"}</button>
+          <button type="button" id="spaceNextBtn" ${siguiente ? "" : "disabled"}>${siguiente ? escapeHtml(siguiente.campo) : "—"} →</button>
+        </div>
         <div class="spaceInfoHeader">
           <strong>${zoneInfo(spaceZone).label} · ${escapeHtml(campoLabel)}</strong>
           ${cap ? `<span class="spaceCapBadge${full ? " full" : ""}">${occ}/${cap}</span>` : ``}
@@ -4663,7 +5139,7 @@
         <div id="updSpaceAddBox" style="display:none;">
           <input type="text" id="updSpaceNewPlaca" class="plate" placeholder="Placa">
           <input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">
-          <input type="text" id="updSpaceNewModelo" placeholder="Modelo (opcional)" style="margin-top:6px;">
+          <input type="text" id="updSpaceNewModelo" placeholder="Modelo" style="margin-top:6px;">
           <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
           <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
           <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn">Agregar en este espacio</button>
@@ -4845,7 +5321,9 @@
         const plateRaw = spacePlacaInput.value;
         if(!normalizePlate(plateRaw)){ showToast("Ingresá una placa válida"); return; }
         const aseguradora = spaceInfoBox.querySelector("#updSpaceNewAseguradora").value;
-        const modelo = spaceInfoBox.querySelector("#updSpaceNewModelo").value;
+        const modeloInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
+        const modelo = modeloInput.value;
+        if(!modelo.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
         const ok = await updaterAddNew(spaceZone, campoLabel, plateRaw, aseguradora, modelo, "last");
         if(ok){
           lastAddZoneKey = spaceZone;
@@ -4858,7 +5336,9 @@
         }
       }
       spaceAddBtn.addEventListener("click", confirmSpaceAdd);
-      spacePlacaInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmSpaceAdd(); });
+      [spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewAseguradora"), spaceInfoBox.querySelector("#updSpaceNewModelo")].forEach(inp=>{
+        inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmSpaceAdd(); });
+      });
 
       spaceInfoBox.querySelector("#spaceBackBtn").addEventListener("click", ()=>{
         selectedCampo = "";
@@ -4866,6 +5346,10 @@
         spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
         drawSpaceInfo();
       });
+      const prevBtn = spaceInfoBox.querySelector("#spacePrevBtn");
+      const nextBtn = spaceInfoBox.querySelector("#spaceNextBtn");
+      if(prevBtn && anterior) prevBtn.addEventListener("click", ()=> refreshSpaceGrid(anterior.campo));
+      if(nextBtn && siguiente) nextBtn.addEventListener("click", ()=> refreshSpaceGrid(siguiente.campo));
     }
 
     drawSpaceZoneChips();
@@ -4889,7 +5373,7 @@
   }
 
   async function updaterConfirmMove(zoneKey, ci, pi, newZone, newCampo, newAseguradora, newModelo, position, newPlateRaw){
-    if(!(currentUser && currentUser.role === "actualizacion")){
+    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
     }
@@ -4934,7 +5418,7 @@
   }
 
   async function updaterAddNew(zoneKey, campoRaw, plateRaw, aseguradoraRaw, modeloRaw, position){
-    if(!(currentUser && currentUser.role === "actualizacion")){
+    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
     }
@@ -5009,6 +5493,26 @@
   });
   window.addEventListener("online", updateOfflineBanner);
   window.addEventListener("offline", updateOfflineBanner);
+
+  // Menú "⚙️ Administrar": agrupa Usuarios/Historial/Invitados/Respaldo/
+  // Restaurar en un solo desplegable, en vez de 5 botones sueltos.
+  (function setupAdminMenu(){
+    const menuBtn = document.getElementById("adminMenuBtn");
+    const dropdown = document.getElementById("adminMenuDropdown");
+    if(!menuBtn || !dropdown) return;
+    menuBtn.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      dropdown.classList.toggle("show");
+    });
+    dropdown.querySelectorAll("button").forEach(b=>{
+      b.addEventListener("click", ()=> dropdown.classList.remove("show"));
+    });
+    document.addEventListener("click", (e)=>{
+      if(!dropdown.contains(e.target) && e.target !== menuBtn){
+        dropdown.classList.remove("show");
+      }
+    });
+  })();
 
   runAuthGate();
 
