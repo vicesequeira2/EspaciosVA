@@ -537,116 +537,145 @@
   }
   /* Resumen tab */
   .resumenToolbar{
-    display:flex; gap:10px; margin-bottom:8px; flex-wrap:wrap;
+    display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;
     align-items:center;
-    background:var(--surface);
-    border-radius: var(--radius);
-    padding:12px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    border:1px solid var(--surface-3);
   }
   .filterField{
     position:relative;
     flex:1;
-    min-width:170px;
+    min-width:200px;
   }
   .filterField .filterIcon{
     position:absolute;
-    left:11px; top:50%; transform:translateY(-50%);
-    width:15px; height:15px;
+    left:13px; top:50%; transform:translateY(-50%);
+    width:16px; height:16px;
     color:var(--muted);
     pointer-events:none;
   }
   .resumenToolbar input{
     width:100%;
-    padding:9px 12px 9px 34px;
-    border-radius:8px;
+    padding:11px 14px 11px 38px;
+    border-radius:10px;
     border:1px solid var(--border);
-    background:var(--input-bg);
-    font-size:0.9rem;
-    transition: border-color 0.15s, background 0.15s;
+    background:var(--surface);
+    font-size:0.92rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
   .resumenToolbar input:focus{
     outline:none;
     border-color: var(--line-dim);
-    background:var(--surface);
+    box-shadow: 0 0 0 3px rgba(242,194,48,0.18);
   }
-  .selectField{ flex: 0 1 190px; min-width:150px; }
+  .selectField{ flex: 0 0 auto; min-width:0; }
   .resumenToolbar select{
-    width:100%;
-    padding:9px 30px 9px 12px;
-    border-radius:8px;
+    padding:10px 32px 10px 14px;
+    border-radius:999px;
     border:1px solid var(--border);
-    background:var(--input-bg);
-    font-size:0.9rem;
+    background:var(--surface-2);
+    color: var(--ink);
+    font-size:0.8rem;
+    font-weight:700;
     appearance:none;
     -webkit-appearance:none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238b9198'><path d='M5.5 7.5l4.5 5 4.5-5z'/></svg>");
     background-repeat:no-repeat;
-    background-position: right 8px center;
-    background-size:16px;
+    background-position: right 10px center;
+    background-size:14px;
     cursor:pointer;
   }
   .resumenToolbar select:focus{
     outline:none;
     border-color: var(--line-dim);
-    background-color:white;
   }
   .clearFilterBtn{
-    background:none;
-    border:none;
-    color:var(--muted);
-    font-size:0.78rem;
-    font-weight:600;
-    text-decoration:underline;
+    display:flex; align-items:center; gap:4px;
+    background: var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--ink);
+    font-size:0.76rem;
+    font-weight:700;
     cursor:pointer;
-    padding:6px 2px;
+    padding:9px 12px;
+    border-radius:999px;
     white-space:nowrap;
   }
+  .clearFilterBtn:active{ background: var(--surface-3); }
   .resultsCount{
     font-size:0.74rem;
     color:var(--muted);
+    font-weight:600;
     margin: 0 2px 12px;
   }
   .zoneChips{
     display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;
   }
+  .dashboardHeader{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .dashboardHeader h2{
+    margin:0;
+    font-size:1.05rem;
+    font-weight:800;
+    color:var(--ink);
+    letter-spacing:-0.01em;
+  }
+  .dashboardHeaderDate{
+    font-size:0.74rem;
+    color:var(--muted);
+    font-weight:600;
+    text-transform:capitalize;
+  }
   .dashboardGrid{
     display:grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap:10px;
-    margin-bottom:18px;
+    margin-bottom:20px;
   }
   .dashCard{
     background:var(--surface);
+    border:1px solid var(--border);
     border-radius: var(--radius);
-    padding:14px 12px;
-    text-align:center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    padding:14px 14px 12px;
+    text-align:left;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border-top:3px solid var(--line-dim);
+    position:relative;
   }
   .dashCard .dashCardValue{
-    font-size:1.5rem;
+    font-size:1.65rem;
     font-weight:800;
     color:var(--ink);
     line-height:1.1;
+    letter-spacing:-0.02em;
+    font-variant-numeric: tabular-nums;
   }
   .dashCard .dashCardLabel{
-    font-size:0.7rem;
+    font-size:0.66rem;
     color:var(--muted);
-    margin-top:4px;
-    font-weight:600;
+    margin-top:5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
   }
   .chartCard{
     background:var(--surface);
+    border:1px solid var(--border);
     border-radius: var(--radius);
-    padding:14px;
+    padding:16px;
     margin-bottom:16px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   .chartCard h3{
-    margin:0 0 12px;
-    font-size:0.85rem;
-    color:var(--ink);
+    margin:0 0 14px;
+    font-size:0.7rem;
+    font-weight:800;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
   }
   .chartCanvasWrap{
     position:relative;
@@ -658,6 +687,20 @@
     text-align:center;
     padding:10px;
   }
+  .occupancyDetailBox{
+    margin-top:12px;
+    padding:10px 12px;
+    background: var(--surface-2);
+    border-radius:8px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .occupancyDetailZone{ font-size:0.76rem; font-weight:800; color:var(--ink); }
+  .occupancyDetailStats{ font-size:0.82rem; color:var(--ink); }
+  .occupancyDetailStats strong{ font-size:0.95rem; }
+  .occupancyDetailPct{ color:var(--muted); font-weight:700; font-size:0.74rem; margin-left:4px; }
+  .occupancyDetailFree{ font-size:0.7rem; color:var(--muted); font-weight:600; }
   .capacityByZoneList{
     display:flex; flex-direction:column; gap:2px;
   }
@@ -734,15 +777,19 @@
     background:var(--surface);
     border-radius: var(--radius);
     overflow:hidden;
+    border:1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   thead th{
     text-align:left;
-    font-size:0.72rem;
+    font-size:0.68rem;
+    font-weight:800;
     text-transform:uppercase;
-    letter-spacing:0.04em;
+    letter-spacing:0.05em;
     color: var(--muted);
-    padding:8px 10px;
-    border-bottom:2px solid var(--surface-3);
+    padding:10px 10px;
+    background: var(--surface-2);
+    border-bottom:1px solid var(--border);
   }
   tbody td{
     padding:9px 10px;
@@ -751,6 +798,7 @@
     vertical-align:top;
   }
   tbody tr:last-child td{border-bottom:none;}
+  tbody tr:nth-child(even):not(.updatedToday){ background: rgba(0,0,0,0.014); }
   .resumenRow{cursor:pointer;}
   .resumenRow.updatedToday{ background:#e3f3ea; }
   .resumenRow.updatedToday:hover{ background:#d3ebdc; }
@@ -936,6 +984,16 @@
   @keyframes viewFadeIn{
     from{ opacity:0; transform: translateY(6px); }
     to{ opacity:1; transform: translateY(0); }
+  }
+  .slideInRight{ animation: slideInRight 0.2s ease; }
+  @keyframes slideInRight{
+    from{ opacity:0; transform: translateX(18px); }
+    to{ opacity:1; transform: translateX(0); }
+  }
+  .slideInLeft{ animation: slideInLeft 0.2s ease; }
+  @keyframes slideInLeft{
+    from{ opacity:0; transform: translateX(-18px); }
+    to{ opacity:1; transform: translateX(0); }
   }
   .roleLogoBtn:active{ transform: scale(0.97); background:var(--surface-3); }
   .roleLogoIcon{
@@ -1272,6 +1330,12 @@
     padding:8px 4px;
     cursor:pointer;
     min-height:52px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    transition: transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .spaceGridBtn:active{
+    transform: scale(0.95);
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
   }
   .spaceGridLabel{ font-size:0.78rem; font-weight:800; color:var(--ink); }
   .spaceGridCount{ font-size:0.64rem; color:var(--muted); font-weight:600; }
@@ -1280,6 +1344,11 @@
   .spaceGridBtn.partial .spaceGridCount{ color:#8a6a1c; }
   .spaceGridBtn.full{ background:#fbdedb; border-color:#e79a92; }
   .spaceGridBtn.full .spaceGridCount{ color:#a13d33; }
+  .spaceGridBtn.active{
+    border-color: var(--asphalt);
+    border-width:2.5px;
+    box-shadow: 0 0 0 2px rgba(27,30,33,0.15), 0 2px 4px rgba(0,0,0,0.12);
+  }
   .spaceGridBtn.hechoHoy{
     border-color: var(--ok);
     border-width:2px;
@@ -1312,11 +1381,6 @@
   .spaceNavRow button:disabled{
     opacity:0.4;
     cursor:default;
-  }
-  .spaceGridBtn.active{
-    border-width:2.5px;
-    border-color: var(--ink);
-    box-shadow: 0 0 0 2px rgba(27,30,33,0.12);
   }
   .spaceInfoHeader{
     display:flex; align-items:center; justify-content:space-between;
@@ -1352,6 +1416,9 @@
     border-radius:8px;
     border:1px solid var(--border);
     font-size:0.85rem;
+  }
+  .reqField{
+    border-left:3px solid var(--line-dim) !important;
   }
   .spaceEditForm .modalActions button{
     padding:9px 10px;
@@ -1485,6 +1552,7 @@
 </div>
 
 <div id="appRoot" style="display:none;">
+<datalist id="modelSuggestions"></datalist>
 <button type="button" id="kioskFloatingExitBtn" class="kioskFloatingExit" title="Salir del modo kiosco">✕</button>
 
 <header>
@@ -2820,6 +2888,7 @@
       return wrap;
     }
     await loadPlateRegistry();
+    refreshModelSuggestions();
 
     const abbr = info.abbr;
     const labelLower = UNNUMBERED_ONLY_ZONES.has(zone.key) ? "línea" : "campo";
@@ -2910,6 +2979,9 @@
       const arr = state.zones[zone.key] || [];
       if(selectedCi === null || !arr[selectedCi]){
         selectedCi = null;
+        browseBox.classList.remove("slideInLeft");
+        void browseBox.offsetWidth;
+        browseBox.classList.add("slideInLeft");
         browseBox.style.display = "block";
         detailBox.innerHTML = "";
         drawZoneGrid();
@@ -2928,9 +3000,9 @@
           return `
             <div class="spaceEditForm" data-idx="${idx}">
               <div class="spaceEditQuickRow">
-                <input type="text" id="zoneEditPlaca_${abbr}" class="plate" value="${escapeHtml(p.plate)}" placeholder="Placa">
+                <input type="text" id="zoneEditPlaca_${abbr}" class="plate reqField" value="${escapeHtml(p.plate)}" placeholder="Placa *">
                 <input type="text" id="zoneEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" placeholder="Aseguradora">
-                <input type="text" id="zoneEditModelo_${abbr}" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo">
+                <input type="text" id="zoneEditModelo_${abbr}" class="reqField" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo *" list="modelSuggestions">
               </div>
               <div class="dupWarn" id="zoneEditDupWarn_${abbr}" style="display:none;"></div>
               <div class="historyMeta" id="zoneEditMoveCount_${abbr}" style="margin-top:4px;"></div>
@@ -2959,9 +3031,9 @@
         `;
       }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
 
-      detailBox.classList.remove("viewFadeIn");
+      detailBox.classList.remove("slideInRight");
       void detailBox.offsetWidth;
-      detailBox.classList.add("viewFadeIn");
+      detailBox.classList.add("slideInRight");
       detailBox.innerHTML = `
         <button type="button" class="linkBackBtn" id="zoneBackBtn_${abbr}" style="margin-bottom:8px; text-decoration:none; font-weight:700;">← Volver a la lista de espacios</button>
         <div class="spaceNavRow">
@@ -2979,9 +3051,9 @@
         ${full ? `<div class="similarWarn" style="margin-top:8px;"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
         <button type="button" class="linkBackBtn" id="zoneAddToggle_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="zoneAddBox_${abbr}" style="display:none;">
-          <input type="text" id="zoneNewPlaca_${abbr}" class="plate" placeholder="Placa">
+          <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField" placeholder="Placa *">
           <input type="text" id="zoneNewAseguradora_${abbr}" placeholder="Aseguradora (opcional)" style="margin-top:6px;">
-          <input type="text" id="zoneNewModelo_${abbr}" placeholder="Modelo" style="margin-top:6px;">
+          <input type="text" id="zoneNewModelo_${abbr}" class="reqField" placeholder="Modelo *" list="modelSuggestions" style="margin-top:6px;">
           <div class="dupWarn" id="zoneNewDupWarn_${abbr}" style="display:none;"></div>
           <div class="similarWarn" id="zoneNewSimilarWarn_${abbr}" style="display:none;"></div>
           <button type="button" class="primaryBtn authBtn" id="zoneNewAddBtn_${abbr}">Agregar en este espacio</button>
@@ -3398,7 +3470,7 @@
             ${ZONES.map(z=>`<option value="${z.key}">${z.label}</option>`).join("")}
           </select>
         </div>
-        <button class="clearFilterBtn" id="resumenClear" style="display:none;">Limpiar filtros</button>
+        <button class="clearFilterBtn" id="resumenClear" style="display:none;"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg> Limpiar filtros</button>
       </div>
       <div class="resultsCount" id="resultsCount"></div>
       <table>
@@ -3538,7 +3610,13 @@
       return wrap;
     }
 
+    const fechaHoy = new Date().toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
+
     wrap.innerHTML = `
+      <div class="dashboardHeader">
+        <h2>Dashboard</h2>
+        <span class="dashboardHeaderDate">${fechaHoy}</span>
+      </div>
       ${toggleBtnHtml}
       <div class="dashboardGrid">
         <div class="dashCard"><div class="dashCardValue">${totalVeh}</div><div class="dashCardLabel">Vehículos totales</div></div>
@@ -3653,7 +3731,10 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: "rgba(0,0,0,0.05)" } },
+            x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+          }
         }
       });
       dashboardCharts.push(chart1);
@@ -3670,7 +3751,7 @@
     } else {
       try{
         if(typeof Chart === "undefined") throw new Error("Chart.js no está disponible");
-        holder.innerHTML = `<div class="chartCanvasWrap"><canvas id="chartOccupancy"></canvas></div><div id="occupancyBarDetail" class="dashEmptyNote" style="display:none; margin-top:8px;"></div>`;
+        holder.innerHTML = `<div class="chartCanvasWrap"><canvas id="chartOccupancy"></canvas></div><div id="occupancyBarDetail" class="occupancyDetailBox" style="display:none;"></div>`;
         const ctx2 = holder.querySelector("#chartOccupancy").getContext("2d");
         const detailBox = holder.querySelector("#occupancyBarDetail");
         const chart2 = new Chart(ctx2, {
@@ -3679,18 +3760,16 @@
             labels: zonasConCap.map(z=>z.label),
             datasets: [
               {
-                label: "Ocupados",
+                label: "Ocupado",
                 data: zonasConCap.map(z => occupancyCountForZone(z.key)),
-                backgroundColor: zonasConCap.map(z=>"#"+z.hex),
-                borderRadius: 5,
-                maxBarThickness: 36
+                backgroundColor: "#f2c230",
+                maxBarThickness: 22
               },
               {
-                label: "Capacidad",
-                data: zonasConCap.map(z => state.capacities[z.key]),
-                backgroundColor: "#e6e7e2",
-                borderRadius: 5,
-                maxBarThickness: 36
+                label: "Libre",
+                data: zonasConCap.map(z => Math.max(0, state.capacities[z.key] - occupancyCountForZone(z.key))),
+                backgroundColor: "rgba(0,0,0,0.06)",
+                maxBarThickness: 22
               }
             ]
           },
@@ -3698,8 +3777,16 @@
             indexAxis: "y",
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
-            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: "rectRounded", font: { size: 11 }, color: "#8b9198" }
+              }
+            },
+            scales: {
+              x: { stacked: true, beginAtZero: true, ticks: { precision: 0, font: { size: 11 }, color: "#8b9198" }, grid: { color: "rgba(0,0,0,0.05)" } },
+              y: { stacked: true, ticks: { font: { size: 11 }, color: "#1b1e21" }, grid: { display: false } }
+            },
             onClick: (evt, elements) => {
               if(!elements || elements.length === 0) return;
               const idx = elements[0].index;
@@ -3708,8 +3795,12 @@
               const cap = state.capacities[z.key];
               const libres = Math.max(0, cap - ocupados);
               const pct = cap ? Math.round((ocupados/cap)*100) : 0;
-              detailBox.innerHTML = `<strong>${escapeHtml(z.label)}</strong> — ${ocupados} de ${cap} (${pct}%) · ${libres} libre(s)`;
-              detailBox.style.display = "block";
+              detailBox.innerHTML = `
+                <span class="occupancyDetailZone">${escapeHtml(z.label)}</span>
+                <span class="occupancyDetailStats"><strong>${ocupados}</strong> / ${cap} ocupados <span class="occupancyDetailPct">${pct}%</span></span>
+                <span class="occupancyDetailFree">${libres} espacio(s) libre(s)</span>
+              `;
+              detailBox.style.display = "flex";
             }
           }
         });
@@ -4111,7 +4202,29 @@
       const registry = await loadPlateRegistry();
       registry[key] = { aseguradora: aseguradora || "", modelo: modelo || "" };
       await window.storage.set(PLATE_REGISTRY_KEY, JSON.stringify(registry), true);
+      refreshModelSuggestions();
     }catch(e){ console.error("No se pudo actualizar el registro de placas", e); }
+  }
+
+  // Junta todos los modelos ya escritos alguna vez (vehículos activos +
+  // registro de placas quitadas) para sugerirlos como autocompletado al
+  // escribir un modelo nuevo, sin tener que tipearlo entero cada vez.
+  function getKnownModels(){
+    const set = new Set();
+    ZONES.forEach(z=>{
+      (state.zones[z.key] || []).forEach(c=>{
+        c.plates.forEach(p=>{ if(p.modelo && p.modelo.trim()) set.add(p.modelo.trim()); });
+      });
+    });
+    if(plateRegistryCache){
+      Object.values(plateRegistryCache).forEach(r=>{ if(r.modelo && r.modelo.trim()) set.add(r.modelo.trim()); });
+    }
+    return [...set].sort((a,b)=> a.localeCompare(b, "es"));
+  }
+  function refreshModelSuggestions(){
+    const dl = document.getElementById("modelSuggestions");
+    if(!dl) return;
+    dl.innerHTML = getKnownModels().map(m=>`<option value="${escapeAttrLike(m)}">`).join("");
   }
 
   async function appendLog(key, entry, limit){
@@ -5027,6 +5140,7 @@
     if(!(currentUser && currentUser.role === "actualizacion")) return;
     await loadState();
     await loadPlateRegistry();
+    refreshModelSuggestions();
     const holder = document.getElementById("updaterPanel");
     holder.innerHTML = `
       <div class="updaterCard">
@@ -5277,12 +5391,18 @@
     function drawSpaceInfo(){
       const campoLabel = selectedCampo;
       if(!campoLabel){
+        browseSection.classList.remove("slideInLeft");
+        void browseSection.offsetWidth;
+        browseSection.classList.add("slideInLeft");
         browseSection.style.display = "block";
         spaceInfoBox.innerHTML = "";
         return;
       }
       const entry = (state.zones[spaceZone] || []).find(c => c.campo === campoLabel);
       if(!entry){
+        browseSection.classList.remove("slideInLeft");
+        void browseSection.offsetWidth;
+        browseSection.classList.add("slideInLeft");
         browseSection.style.display = "block";
         spaceInfoBox.innerHTML = "";
         return;
@@ -5298,9 +5418,9 @@
           return `
             <div class="spaceEditForm" data-idx="${idx}">
               <div class="spaceEditQuickRow">
-                <input type="text" id="spaceEditPlaca" class="plate" value="${escapeHtml(p.plate)}" placeholder="Placa">
+                <input type="text" id="spaceEditPlaca" class="plate reqField" value="${escapeHtml(p.plate)}" placeholder="Placa *">
                 <input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" placeholder="Aseguradora">
-                <input type="text" id="spaceEditModelo" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo">
+                <input type="text" id="spaceEditModelo" class="reqField" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo *" list="modelSuggestions">
               </div>
               <div class="dupWarn" id="spaceEditDupWarn" style="display:none;"></div>
               <div class="historyMeta" id="spaceEditMoveCount" style="margin-top:4px;"></div>
@@ -5334,9 +5454,9 @@
       const anterior = idxActual > 0 ? camposArr[idxActual-1] : null;
       const siguiente = idxActual < camposArr.length-1 ? camposArr[idxActual+1] : null;
 
-      spaceInfoBox.classList.remove("viewFadeIn");
+      spaceInfoBox.classList.remove("slideInRight");
       void spaceInfoBox.offsetWidth; // fuerza el reflujo para poder repetir la animación
-      spaceInfoBox.classList.add("viewFadeIn");
+      spaceInfoBox.classList.add("slideInRight");
       spaceInfoBox.innerHTML = `
         <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">← Volver a la lista de espacios</button>
         <div class="spaceNavRow">
@@ -5351,9 +5471,9 @@
         ${full ? `<div class="similarWarn" style="margin-top:8px;"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
         <button type="button" class="linkBackBtn" id="updSpaceAddToggle" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="updSpaceAddBox" style="display:none;">
-          <input type="text" id="updSpaceNewPlaca" class="plate" placeholder="Placa">
+          <input type="text" id="updSpaceNewPlaca" class="plate reqField" placeholder="Placa *">
           <input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">
-          <input type="text" id="updSpaceNewModelo" placeholder="Modelo" style="margin-top:6px;">
+          <input type="text" id="updSpaceNewModelo" class="reqField" placeholder="Modelo *" list="modelSuggestions" style="margin-top:6px;">
           <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
           <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
           <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn">Agregar en este espacio</button>
