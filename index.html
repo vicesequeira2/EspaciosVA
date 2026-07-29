@@ -1951,6 +1951,7 @@
   const ACCESS_LOG_KEY = "inventario_parqueo_access_v1"; // compartido: inicios/cierres de sesión e intentos fallidos
   const GUEST_LINKS_KEY = "inventario_parqueo_guest_links_v1"; // compartido: enlaces de invitado temporales
   const ZONE_TEMPLATES_KEY = "inventario_parqueo_zone_templates_v1"; // compartido: plantillas de campos/capacidades por zona
+  const PLATE_REGISTRY_KEY = "inventario_parqueo_plate_registry_v1"; // compartido: {PLACA: {aseguradora, modelo}} — sobrevive aunque la placa se quite del inventario activo
   let state = null; // { zones: { zoneKey: [ {campo, plates:[]}, ... ] }, capacities:{zoneKey:number}, updatedAt }
   let activeTab = "__dashboard__";
   let dashboardCharts = []; // instancias Chart.js activas, para destruirlas antes de re-renderizar
@@ -2019,6 +2020,24 @@
       if(navigator.vibrate) navigator.vibrate(120);
     }catch(e){ /* no crítico */ }
   }
+
+  // Evita el doble toque mientras una acción async está en curso (con señal
+  // débil, el guardado puede tardar y alguien vuelve a tocar el mismo botón
+  // sin saber si ya se envió). Deshabilita el botón, muestra un texto de
+  // "en curso", y lo restaura pase lo que pase al terminar.
+  async function runGuarded(btn, busyText, fn){
+    if(btn.disabled) return; // ya hay una acción de este botón en curso
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    if(busyText) btn.textContent = busyText;
+    try{
+      await fn();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
   let storageAvailable = true;
   let storageWarned = false;
   let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
@@ -2751,7 +2770,19 @@
       removePlateAt(dup.zoneKey, dup.campoIdx, dup.plateIdx);
     }
 
+    if(!dup && (!aseguradora || !modelo)){
+      // No está activa en ningún lado ahora mismo, pero puede que ya la
+      // hayamos visto antes (se quitó del inventario en algún momento):
+      // recuperamos su aseguradora/modelo del registro, si hay.
+      const recordada = lookupPlateInfo(plate);
+      if(recordada){
+        if(!aseguradora) aseguradora = recordada.aseguradora || "";
+        if(!modelo) modelo = recordada.modelo || "";
+      }
+    }
+
     insertPlateAtPosition(getOrCreateCampo(zoneKey, campo), { plate, aseguradora, modelo, lastUpdated: new Date().toISOString() }, position || "last");
+    rememberPlateInfo(plate, aseguradora, modelo).catch(()=>{}); // en segundo plano, no bloquea el guardado principal
     return true;
   }
 
@@ -2788,6 +2819,7 @@
       document.getElementById("mainArea").appendChild(wrap);
       return wrap;
     }
+    await loadPlateRegistry();
 
     const abbr = info.abbr;
     const labelLower = UNNUMBERED_ONLY_ZONES.has(zone.key) ? "línea" : "campo";
@@ -2901,6 +2933,7 @@
                 <input type="text" id="zoneEditModelo_${abbr}" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo">
               </div>
               <div class="dupWarn" id="zoneEditDupWarn_${abbr}" style="display:none;"></div>
+              <div class="historyMeta" id="zoneEditMoveCount_${abbr}" style="margin-top:4px;"></div>
               <button type="button" class="linkBackBtn" id="zoneEditMoveToggle_${abbr}" style="text-decoration:none; font-weight:700; margin-top:6px;">📍 Cambiar de zona/campo</button>
               <div id="zoneEditMoveBox_${abbr}" style="display:none;">
                 <label style="margin-top:8px;">Nueva zona</label>
@@ -3032,6 +3065,15 @@
       // --- edición inline de una placa ya existente ---
       if(editingPlateIdx !== null){
         let editTargetZone = zone.key;
+        const editedPlate = c.plates[editingPlateIdx].plate;
+        countMovementsThisMonth(editedPlate).then(count=>{
+          const noteEl = detailBox.querySelector(`#zoneEditMoveCount_${abbr}`);
+          if(!noteEl) return; // la persona ya cambió de vista antes de que esto terminara
+          if(count > 1){
+            noteEl.textContent = `📊 Se movió ${count} veces este mes.`;
+          }
+        }).catch(()=>{});
+
         const editZoneChipsBox = detailBox.querySelector(`#zoneEditZoneChips_${abbr}`);
         editZoneChipsBox.innerHTML = ZONES.map(z=>`
           <button type="button" class="zoneChipBtn${zone.key===z.key?' active':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
@@ -3109,6 +3151,7 @@
       async function removeZonePlate(idx){
         const plateToRemove = c.plates[idx];
         if(!confirm(`¿Quitar ${plateToRemove.plate} de este ${labelLower}?`)) return;
+        rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
         const snap = snapshotZones();
         removePlateEntryByRef(zone.key, c, plateToRemove);
         pushUndo(snap);
@@ -3158,6 +3201,19 @@
           newSimilarWarn.style.display = "none";
         } else {
           newDupWarn.style.display = "none";
+          const recordada = lookupPlateInfo(v);
+          const asegInput = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`);
+          const modInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
+          let sePreCompleto = false;
+          if(recordada){
+            if(recordada.aseguradora && !asegInput.value.trim()){ asegInput.value = recordada.aseguradora; sePreCompleto = true; }
+            if(recordada.modelo && !modInput.value.trim()){ modInput.value = recordada.modelo; sePreCompleto = true; }
+          }
+          if(sePreCompleto){
+            newSimilarWarn.innerHTML = `<span class="dupWarnIcon">🧠</span><span class="similarList">Datos recordados de un registro anterior de esta placa — podés cambiarlos si hace falta.</span>`;
+            newSimilarWarn.style.display = "flex";
+            return;
+          }
           const similares = findSimilarPlates(v);
           if(similares.length > 0){
             const items = similares.map(s=>{
@@ -3317,23 +3373,14 @@
     wrap.className = "zonePanel active viewFadeIn";
 
     const chips = ZONES.map(z=>{
-      const camposCount = occupancyCountForZone(z.key);
       const vehCount = (state.zones[z.key]||[]).reduce((a,cc)=>a+cc.plates.length,0);
-      const cap = state.capacities[z.key];
-      const hasCap = cap && cap > 0;
-      const pct = hasCap ? Math.min(100, Math.round((camposCount/cap)*100)) : 0;
-      const barClass = pct >= 100 ? "full" : (pct >= 70 ? "high" : "ok");
       return `
         <button type="button" class="resumenZoneCard" data-zone="${z.key}" style="--zone-accent:${z.color};">
           <span class="resumenZoneCardTop">
             <span class="dot" style="background:${z.color}"></span>
             <span class="resumenZoneCardName">${z.label}</span>
           </span>
-          <span class="resumenZoneCardValue">${vehCount}<span class="resumenZoneCardUnit"> veh.</span></span>
-          ${hasCap
-            ? `<span class="resumenZoneCardSub">${camposCount}/${cap} campos</span><div class="capacityProgressBar"><div class="capacityProgressFill ${barClass}" style="width:${pct}%"></div></div>`
-            : `<span class="resumenZoneCardSub">${camposCount} campos · sin capacidad</span>`
-          }
+          <span class="resumenZoneCardValue">${vehCount}</span>
         </button>
       `;
     }).join("");
@@ -4038,6 +4085,35 @@
     }catch(e){ console.error("Error guardando plantillas de zona", e); return false; }
   }
 
+  // Registro de placas: guarda aseguradora/modelo de cada placa que alguna
+  // vez pasó por la app, aunque después se haya quitado del inventario
+  // activo — así, si esa placa vuelve a aparecer (en cualquier espacio), no
+  // hace falta volver a escribir sus datos.
+  let plateRegistryCache = null;
+  async function loadPlateRegistry(){
+    if(plateRegistryCache) return plateRegistryCache;
+    try{
+      const res = await window.storage.get(PLATE_REGISTRY_KEY, true);
+      if(res && res.value){ plateRegistryCache = JSON.parse(res.value); return plateRegistryCache; }
+    }catch(e){ /* no existe todavía */ }
+    plateRegistryCache = {};
+    return plateRegistryCache;
+  }
+  function lookupPlateInfo(plate){
+    const key = normalizePlate(plate);
+    if(!key || !plateRegistryCache) return null;
+    return plateRegistryCache[key] || null;
+  }
+  async function rememberPlateInfo(plate, aseguradora, modelo){
+    const key = normalizePlate(plate);
+    if(!key || (!aseguradora && !modelo)) return;
+    try{
+      const registry = await loadPlateRegistry();
+      registry[key] = { aseguradora: aseguradora || "", modelo: modelo || "" };
+      await window.storage.set(PLATE_REGISTRY_KEY, JSON.stringify(registry), true);
+    }catch(e){ console.error("No se pudo actualizar el registro de placas", e); }
+  }
+
   async function appendLog(key, entry, limit){
     let list = [];
     try{
@@ -4097,11 +4173,27 @@
       : "Vehículo nuevo";
     await appendLog(HISTORY_KEY, {
       ts: nowStamp(),
+      tsMillis: Date.now(),
       username: currentUser ? currentUser.username : "?",
       placa: plate,
       desde,
       hasta: `${zoneInfo(toZoneKey) ? zoneInfo(toZoneKey).label : toZoneKey} · campo ${toCampo}`
     }, 300);
+  }
+
+  // Cuenta cuántas veces se movió una placa puntual durante el mes en
+  // curso (usando el Historial que ya se guarda), para detectar vehículos
+  // que se reubican demasiado seguido.
+  async function countMovementsThisMonth(plate){
+    const key = normalizePlate(plate);
+    const historial = await readLog(HISTORY_KEY);
+    const now = new Date();
+    const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return historial.filter(h =>
+      normalizePlate(h.placa) === key &&
+      typeof h.tsMillis === "number" &&
+      h.tsMillis >= inicioMes
+    ).length;
   }
   async function logAccess(username, type){
     await appendLog(ACCESS_LOG_KEY, { ts: nowStamp(), tsMillis: Date.now(), username, type }, 300);
@@ -4934,6 +5026,7 @@
   async function renderUpdaterPanel(){
     if(!(currentUser && currentUser.role === "actualizacion")) return;
     await loadState();
+    await loadPlateRegistry();
     const holder = document.getElementById("updaterPanel");
     holder.innerHTML = `
       <div class="updaterCard">
@@ -5210,6 +5303,7 @@
                 <input type="text" id="spaceEditModelo" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo">
               </div>
               <div class="dupWarn" id="spaceEditDupWarn" style="display:none;"></div>
+              <div class="historyMeta" id="spaceEditMoveCount" style="margin-top:4px;"></div>
               <button type="button" class="linkBackBtn" id="spaceEditMoveToggle" style="text-decoration:none; font-weight:700; margin-top:6px;">📍 Cambiar de zona/campo</button>
               <div id="spaceEditMoveBox" style="display:none;">
                 <label style="margin-top:8px;">Nueva zona</label>
@@ -5274,25 +5368,30 @@
       });
 
       // Quita una placa de este espacio (compartido entre el botón de la fila y el de edición)
-      async function removePlateFromSpace(idx){
+      async function removePlateFromSpace(idx, btn){
         const plateToRemove = entry.plates[idx];
         if(!confirm(`¿Quitar ${plateToRemove.plate} de este ${labelLower}?`)) return;
-        removePlateEntryByRef(spaceZone, entry, plateToRemove);
-        await saveState(true);
-        await appendLog(HISTORY_KEY, {
-          ts: nowStamp(),
-          username: currentUser.username,
-          placa: plateToRemove.plate,
-          desde: `${zoneInfo(spaceZone).label} · campo ${campoLabel}`,
-          hasta: "Eliminado del inventario"
-        }, 300);
-        vibrateSuccess();
-        showToast("Vehículo eliminado");
-        editingPlateIdx = null;
-        const stillExists = (state.zones[spaceZone] || []).some(c => c.campo === campoLabel);
-        refreshSpaceGrid(stillExists ? campoLabel : "");
-        drawZoneFilterRow();
-        drawAllList();
+        const doRemove = async ()=>{
+          rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
+          removePlateEntryByRef(spaceZone, entry, plateToRemove);
+          await saveState(true);
+          await appendLog(HISTORY_KEY, {
+            ts: nowStamp(),
+            username: currentUser.username,
+            placa: plateToRemove.plate,
+            desde: `${zoneInfo(spaceZone).label} · campo ${campoLabel}`,
+            hasta: "Eliminado del inventario"
+          }, 300);
+          vibrateSuccess();
+          showToast("Vehículo eliminado");
+          editingPlateIdx = null;
+          const stillExists = (state.zones[spaceZone] || []).some(c => c.campo === campoLabel);
+          refreshSpaceGrid(stillExists ? campoLabel : "");
+          drawZoneFilterRow();
+          drawAllList();
+        };
+        if(btn) await runGuarded(btn, "Quitando…", doRemove);
+        else await doRemove();
       }
 
       // --- edición inline de una placa ya existente ---
@@ -5306,6 +5405,14 @@
         const moveToggleBtn = spaceInfoBox.querySelector("#spaceEditMoveToggle");
         const moveBox = spaceInfoBox.querySelector("#spaceEditMoveBox");
         const originalPlate = entry.plates[editingPlateIdx].plate;
+
+        countMovementsThisMonth(originalPlate).then(count=>{
+          const noteEl = spaceInfoBox.querySelector("#spaceEditMoveCount");
+          if(!noteEl) return; // la persona ya cambió de vista antes de que esto terminara
+          if(count > 1){
+            noteEl.textContent = `📊 Se movió ${count} veces este mes.`;
+          }
+        }).catch(()=>{});
 
         const editZoneChipsBox = spaceInfoBox.querySelector("#spaceEditZoneChips");
         editZoneChipsBox.innerHTML = ZONES.map(z=>`
@@ -5350,30 +5457,33 @@
           const newCampo = normalizeCampo(editCampoInput.value);
           if(!newCampo){ showToast("Ingresá un campo válido"); return; }
           if(!normalizePlate(newPlate)){ showToast("Ingresá una placa válida"); return; }
-          const idxToEdit = editingPlateIdx;
-          const currentEntry = (state.zones[spaceZone] || []).find(c => c.campo === campoLabel);
-          const ci = state.zones[spaceZone].indexOf(currentEntry);
-          const ok = await updaterConfirmMove(spaceZone, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "last", newPlate);
-          if(!ok) return; // canceló el diálogo de mover, o no había nada que cambiar: seguimos en edición
-          vibrateSuccess();
-          showToast("Vehículo actualizado");
-          editingPlateIdx = null;
-          if(editTargetZone !== spaceZone){
-            spaceZone = editTargetZone;
-            drawSpaceZoneChips();
-            refreshSpaceGrid(newCampo);
-          } else {
-            refreshSpaceGrid(newCampo);
-          }
-          drawZoneFilterRow();
-          drawAllList();
+          await runGuarded(saveBtn, "Guardando…", async ()=>{
+            const idxToEdit = editingPlateIdx;
+            const currentEntry = (state.zones[spaceZone] || []).find(c => c.campo === campoLabel);
+            const ci = state.zones[spaceZone].indexOf(currentEntry);
+            const ok = await updaterConfirmMove(spaceZone, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "last", newPlate);
+            if(!ok) return; // canceló el diálogo de mover, o no había nada que cambiar: seguimos en edición
+            vibrateSuccess();
+            showToast("Vehículo actualizado");
+            editingPlateIdx = null;
+            if(editTargetZone !== spaceZone){
+              spaceZone = editTargetZone;
+              drawSpaceZoneChips();
+              refreshSpaceGrid(newCampo);
+            } else {
+              refreshSpaceGrid(newCampo);
+            }
+            drawZoneFilterRow();
+            drawAllList();
+          });
         }
-        spaceInfoBox.querySelector("#spaceEditSaveBtn").addEventListener("click", saveEdit);
+        const saveBtn = spaceInfoBox.querySelector("#spaceEditSaveBtn");
+        saveBtn.addEventListener("click", saveEdit);
         spaceInfoBox.querySelector("#spaceEditCancelBtn").addEventListener("click", ()=>{
           editingPlateIdx = null;
           drawSpaceInfo();
         });
-        spaceInfoBox.querySelector("#spaceEditRemoveBtn").addEventListener("click", ()=> removePlateFromSpace(editingPlateIdx));
+        spaceInfoBox.querySelector("#spaceEditRemoveBtn").addEventListener("click", (e)=> removePlateFromSpace(editingPlateIdx, e.currentTarget));
         [editPlacaInput, editAsegInput, editModeloInput, editCampoInput].forEach(inp=>{
           inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") saveEdit(); });
         });
@@ -5388,7 +5498,7 @@
         });
       });
       spaceInfoBox.querySelectorAll(".spaceRemoveBtn").forEach(b=>{
-        b.addEventListener("click", ()=> removePlateFromSpace(parseInt(b.getAttribute("data-idx"),10)));
+        b.addEventListener("click", (e)=> removePlateFromSpace(parseInt(b.getAttribute("data-idx"),10), e.currentTarget));
       });
 
       // --- agregar o mover una placa a este espacio ---
@@ -5414,6 +5524,19 @@
           spaceSimilarWarn.style.display = "none";
         } else {
           spaceDupWarn.style.display = "none";
+          const recordada = lookupPlateInfo(v);
+          const asegInput = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
+          const modInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
+          let sePreCompleto = false;
+          if(recordada){
+            if(recordada.aseguradora && !asegInput.value.trim()){ asegInput.value = recordada.aseguradora; sePreCompleto = true; }
+            if(recordada.modelo && !modInput.value.trim()){ modInput.value = recordada.modelo; sePreCompleto = true; }
+          }
+          if(sePreCompleto){
+            spaceSimilarWarn.innerHTML = `<span class="dupWarnIcon">🧠</span><span class="similarList">Datos recordados de un registro anterior de esta placa — podés cambiarlos si hace falta.</span>`;
+            spaceSimilarWarn.style.display = "flex";
+            return;
+          }
           const similares = findSimilarPlates(v);
           if(similares.length > 0){
             const items = similares.map(s=>{
@@ -5444,16 +5567,18 @@
         const modeloInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
         const modelo = modeloInput.value;
         if(!modelo.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
-        const ok = await updaterAddNew(spaceZone, campoLabel, plateRaw, aseguradora, modelo, "last");
-        if(ok){
-          lastAddZoneKey = spaceZone;
-          lastAddAseguradora = aseguradora.trim();
-          vibrateSuccess();
-          showToast("Listo — vehículo en este espacio");
-          refreshSpaceGrid(campoLabel);
-          drawZoneFilterRow();
-          drawAllList();
-        }
+        await runGuarded(spaceAddBtn, "Guardando…", async ()=>{
+          const ok = await updaterAddNew(spaceZone, campoLabel, plateRaw, aseguradora, modelo, "last");
+          if(ok){
+            lastAddZoneKey = spaceZone;
+            lastAddAseguradora = aseguradora.trim();
+            vibrateSuccess();
+            showToast("Listo — vehículo en este espacio");
+            refreshSpaceGrid(campoLabel);
+            drawZoneFilterRow();
+            drawAllList();
+          }
+        });
       }
       spaceAddBtn.addEventListener("click", confirmSpaceAdd);
       [spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewAseguradora"), spaceInfoBox.querySelector("#updSpaceNewModelo")].forEach(inp=>{
@@ -5534,6 +5659,7 @@
     if(locationChanged){
       await logUpdate(entry.plate, zoneKey, fromCampo, newZone, newCampo);
     }
+    rememberPlateInfo(entry.plate, entry.aseguradora, entry.modelo).catch(()=>{});
     return true;
   }
 
