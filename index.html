@@ -1246,6 +1246,12 @@
     color:#8a5a1c;
     animation: armedPulse 1s ease-in-out infinite;
   }
+  .zoneChipBtn.sinUbicacionChip{
+    border-style:dashed;
+  }
+  .zoneChipBtn.sinUbicacionChip::before{
+    content:"❔ ";
+  }
   @keyframes armedPulse{
     0%,100%{ opacity:1; }
     50%{ opacity:0.6; }
@@ -1954,10 +1960,17 @@
     { key: "AvaluoPuff", label: "Avalúo Puff", abbr: "AVP", color: "var(--z-avaluo-puff)", hex: "8FB9E0" },
     { key: "Atras", label: "Atrás", abbr: "AT", color: "var(--z-atras)", hex: "5FB37A" },
     { key: "Maya", label: "Maya", abbr: "MY", color: "var(--z-malla)", hex: "A175D4" },
-    { key: "MayaSinNumeracion", label: "Maya Sin numeración", abbr: "MSN", color: "var(--z-maya-sn)", hex: "C7A6E8" },
     { key: "Neon Nieto", label: "Neon Nieto", abbr: "NN", color: "var(--z-neon)", hex: "E0529C" },
     { key: "Parqueo Gash Externo", label: "Parqueo Gash Externo", abbr: "PGE", color: "var(--z-pge)", hex: "E2843A" }
   ];
+
+  // "Sin ubicación": una zona especial, deliberadamente FUERA del arreglo
+  // ZONES de arriba. Es solo para que Actualización anote placas que no
+  // encuentra (puede que estén en otra ubicación todavía sin revisar) —
+  // por eso, a propósito, NO aparece en las pestañas de Admin, NO aparece
+  // en Resumen, y NO se exporta en el Excel (todos esos recorren ZONES).
+  const SIN_UBICACION_KEY = "SinUbicacion";
+  const SIN_UBICACION_INFO = { key: SIN_UBICACION_KEY, label: "Sin ubicación", abbr: "SU", color: "#8b8f94", hex: "8b8f94" };
 
   // Capacidades por defecto de los bloques sin numeración (solo se aplican si
   // el admin todavía no definió una capacidad propia para esa zona).
@@ -2207,7 +2220,10 @@
     showToast("Cambio deshecho");
   }
 
-  function zoneInfo(key){ return ZONES.find(z => z.key === key); }
+  function zoneInfo(key){
+    if(key === SIN_UBICACION_KEY) return SIN_UBICACION_INFO;
+    return ZONES.find(z => z.key === key);
+  }
   function normalizePlate(v){ return String(v).trim().toUpperCase(); }
 
   // ¿Se actualizó (movió, editó o registró) este vehículo hoy? Sirve para
@@ -2225,7 +2241,7 @@
   // Estas 3 zonas no tienen campos numerados nunca: todo su contenido vive
   // bajo "Sin asignar", así que su ocupación se mide por vehículos totales,
   // no por cantidad de campos numerados (que siempre sería cero).
-  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "MayaSinNumeracion", "Neon Nieto", "Parqueo Gash Externo"]);
+  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "Neon Nieto", "Parqueo Gash Externo", "SinUbicacion"]);
   function occupancyCountForZone(zoneKey){
     const campos = state.zones[zoneKey] || [];
     if(UNNUMBERED_ONLY_ZONES.has(zoneKey)){
@@ -2409,6 +2425,32 @@
     return true;
   }
 
+  // Fusiona "Maya Sin numeración" dentro de "Maya" — misma lógica que la
+  // fusión de Atrás: se conservan los números/líneas de cada campo tal cual
+  // estaban, solo agrupados bajo el mismo nombre. Se corre una sola vez.
+  function mergeMayaZonesIfNeeded(st){
+    const zones = st.zones;
+    if(!zones || !zones.MayaSinNumeracion) return false;
+    if(!zones.Maya) zones.Maya = [];
+    zones.MayaSinNumeracion.forEach(campoObj=>{
+      const existente = zones.Maya.find(c => c.campo === campoObj.campo);
+      if(existente){
+        existente.plates.push(...campoObj.plates);
+      } else {
+        zones.Maya.push(campoObj);
+      }
+    });
+    delete zones.MayaSinNumeracion;
+
+    if(st.capacities){
+      const total = (st.capacities.Maya || 0) + (st.capacities.MayaSinNumeracion || 0);
+      if(total > 0) st.capacities.Maya = total;
+      delete st.capacities.MayaSinNumeracion;
+    }
+    sortCampos(zones.Maya);
+    return true;
+  }
+
   async function loadState(){
     // storageAvailable ya fue calculado por runAuthGate() al arrancar la app,
     // antes de que revealApp() invoque esta función; se reutiliza en vez de
@@ -2426,6 +2468,7 @@
           needsResave = migrateNumberedZonesToLines(state) || needsResave;
           needsResave = applyPerCampoCapacityImportIfNeeded(state) || needsResave;
           needsResave = mergeAtrasZonesIfNeeded(state) || needsResave;
+          needsResave = mergeMayaZonesIfNeeded(state) || needsResave;
           if(needsResave) await saveState(true);
           return;
         }
@@ -2446,6 +2489,7 @@
           migrateNumberedZonesToLines(state);
           applyPerCampoCapacityImportIfNeeded(state);
           mergeAtrasZonesIfNeeded(state);
+          mergeMayaZonesIfNeeded(state);
           await saveState(true);
           return;
         }
@@ -2478,6 +2522,7 @@
     state = { zones: seedZonesFromScratch(), capacities: applyDefaultBlockCapacities({}), updatedAt: new Date().toISOString() };
     applyPerCampoCapacityImportIfNeeded(state);
     mergeAtrasZonesIfNeeded(state);
+    mergeMayaZonesIfNeeded(state);
     await saveState(true);
   }
 
@@ -5350,6 +5395,7 @@
   async function renderUpdaterPanel(){
     if(!(currentUser && currentUser.role === "actualizacion")) return;
     await loadState();
+    if(!state.zones[SIN_UBICACION_KEY]) state.zones[SIN_UBICACION_KEY] = [];
     await loadPlateRegistry();
     refreshModelSuggestions();
     const holder = document.getElementById("updaterPanel");
@@ -5481,8 +5527,9 @@
     // Cambiar de zona pide tocar dos veces (para no perder de vista el
     // espacio actual por un toque accidental cerca de otra zona).
     function drawSpaceZoneChips(){
-      spaceZoneChipsBox.innerHTML = ZONES.map(z=>`
-        <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}${armedZoneKey===z.key?' armed':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}${armedZoneKey===z.key ? " ¿Cambiar?" : ""}</button>
+      const chipZones = [...ZONES, SIN_UBICACION_INFO];
+      spaceZoneChipsBox.innerHTML = chipZones.map(z=>`
+        <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}${armedZoneKey===z.key?' armed':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}${armedZoneKey===z.key ? " ¿Cambiar?" : ""}</button>
       `).join("");
       zoneConfirmHint.style.display = armedZoneKey ? "inline" : "none";
       if(armedZoneKey) zoneConfirmHint.textContent = "Tocá de nuevo para confirmar";
@@ -5517,6 +5564,24 @@
       spaceCampoLabel.textContent = label;
       if(preselect !== undefined) selectedCampo = preselect;
       const arr = state.zones[spaceZone] || [];
+      const labelLower = label === "Líneas" ? "línea" : "campo";
+      if(arr.length === 0){
+        const esFemenino = labelLower === "línea";
+        spaceGridBox.innerHTML = `<button type="button" class="linkBackBtn" id="spaceCreateFirstBtn" style="text-decoration:none; font-weight:700;">+ Crear ${esFemenino ? "la primera" : "el primer"} ${labelLower}</button>`;
+        const createBtn = spaceGridBox.querySelector("#spaceCreateFirstBtn");
+        if(createBtn){
+          createBtn.addEventListener("click", ()=>{
+            const nuevo = UNNUMBERED_ONLY_ZONES.has(spaceZone) ? nextLineLabel(spaceZone) : nextAutoCampo(spaceZone);
+            getOrCreateCampo(spaceZone, nuevo);
+            saveState();
+            refreshSpaceGrid(nuevo);
+          });
+        }
+        editingPlateIdx = null;
+        movingPlateIdx = null;
+        drawSpaceInfo();
+        return;
+      }
       spaceGridBox.innerHTML = arr.map(c=>{
         const cap = c.capacidad;
         const occ = c.plates.length;
