@@ -568,7 +568,12 @@
   }
   /* Resumen tab */
   .resumenToolbar{
-    display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;
+    position: sticky;
+    z-index: 15;
+    background: var(--paper);
+    padding: 8px 0 6px;
+    margin: -8px 0 12px;
+    display:flex; gap:8px; flex-wrap:wrap;
     align-items:center;
   }
   .filterField{
@@ -632,6 +637,36 @@
     white-space:nowrap;
   }
   .clearFilterBtn:active{ background: var(--surface-3); }
+  .clearFilterBtn.active{
+    background: var(--line);
+    border-color: var(--line);
+    color: var(--asphalt);
+  }
+  thead th[data-sort]{
+    cursor:pointer;
+    user-select:none;
+  }
+  thead th[data-sort]:hover{ color: var(--ink); }
+  thead th[data-sort]::after{
+    content:"";
+    display:inline-block;
+    width:0; height:0;
+    margin-left:4px;
+    vertical-align:middle;
+    opacity:0.35;
+    border-left:4px solid transparent;
+    border-right:4px solid transparent;
+    border-top:5px solid currentColor;
+  }
+  thead th[data-sort].sortAsc::after{
+    opacity:1;
+    border-top:none;
+    border-bottom:5px solid var(--ink);
+  }
+  thead th[data-sort].sortDesc::after{
+    opacity:1;
+    border-top:5px solid var(--ink);
+  }
   .resultsCount{
     font-size:0.74rem;
     color:var(--muted);
@@ -732,6 +767,37 @@
   .occupancyDetailStats strong{ font-size:0.95rem; }
   .occupancyDetailPct{ color:var(--muted); font-weight:700; font-size:0.74rem; margin-left:4px; }
   .occupancyDetailFree{ font-size:0.7rem; color:var(--muted); font-weight:600; }
+  .stagnantZonesBox{
+    background:#fff6e0;
+    border:1px solid #f2c230;
+    border-radius: var(--radius);
+    padding:12px 14px;
+    margin-bottom:16px;
+  }
+  .stagnantZonesTitle{
+    font-size:0.78rem;
+    font-weight:800;
+    color:#8a5a1c;
+    margin-bottom:6px;
+  }
+  .stagnantZoneRow{
+    display:flex; align-items:center; justify-content:space-between;
+    width:100%;
+    background:none; border:none;
+    padding:6px 0;
+    font-size:0.82rem;
+    font-weight:700;
+    color:#8a5a1c;
+    cursor:pointer;
+    text-align:left;
+    border-bottom:1px solid rgba(138,90,28,0.15);
+  }
+  .stagnantZoneRow:last-child{ border-bottom:none; }
+  .stagnantZoneDays{
+    font-size:0.72rem;
+    font-weight:600;
+    color:#a17530;
+  }
   .capacityByZoneList{
     display:flex; flex-direction:column; gap:2px;
   }
@@ -1024,6 +1090,13 @@
     from{ opacity:0; transform: translateY(6px); }
     to{ opacity:1; transform: translateY(0); }
   }
+  .rowFadeIn{
+    animation: rowFadeIn 0.28s ease both;
+  }
+  @keyframes rowFadeIn{
+    from{ opacity:0; transform: translateY(4px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
   .slideInRight{ animation: slideInRight 0.2s ease; }
   @keyframes slideInRight{
     from{ opacity:0; transform: translateX(18px); }
@@ -1086,7 +1159,31 @@
     margin: 6px 0 0;
     line-height:1.4;
   }
-  #authChecking{ display:none; }
+  #authChecking{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    padding:20px 0;
+  }
+  .skeletonCircle{
+    width:44px; height:44px;
+    border-radius:50%;
+    background: linear-gradient(90deg, var(--border) 25%, var(--border-soft) 50%, var(--border) 75%);
+    background-size:200% 100%;
+    animation: skeletonPulse 1.4s ease-in-out infinite;
+  }
+  .skeletonLine{
+    height:11px;
+    border-radius:6px;
+    background: linear-gradient(90deg, var(--border) 25%, var(--border-soft) 50%, var(--border) 75%);
+    background-size:200% 100%;
+    animation: skeletonPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes skeletonPulse{
+    0%{ background-position: 200% 0; }
+    100%{ background-position: -200% 0; }
+  }
   #logoutBtn{
     background: transparent;
     color: var(--paper);
@@ -1381,6 +1478,39 @@
     gap:8px;
     margin-top:6px;
   }
+  .spaceGrid.groupedMode{
+    display:block;
+  }
+  .spaceGridGroup{
+    margin-bottom:14px;
+  }
+  .spaceGridGroup:last-child{
+    margin-bottom:0;
+  }
+  .spaceGridGroupLabel{
+    font-size:0.7rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color: var(--muted);
+    margin-bottom:6px;
+  }
+  .spaceGridGroup .spaceGrid{
+    margin-top:0;
+  }
+  .miniSpaceGrid{
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap:5px;
+    max-height:160px;
+    overflow-y:auto;
+    padding:2px;
+  }
+  .miniSpaceGrid .spaceGridBtn{
+    min-height:38px;
+    padding:5px 3px;
+  }
+  .miniSpaceGrid .spaceGridLabel{ font-size:0.7rem; }
+  .miniSpaceGrid .spaceGridCount{ font-size:0.58rem; }
   .spaceGridBtn{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:2px;
@@ -1460,7 +1590,9 @@
     border-bottom:1px solid var(--border-soft);
   }
   .spacePlateRow:last-of-type{ border-bottom:none; }
+  .spacePlateInfoWrap{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
   .spacePlateInfo{ flex:1; min-width:0; }
+  .lastMovedLabel{ font-size:0.66rem; color:var(--muted); font-weight:600; }
   .spaceEditForm{
     background:#f7f7f5;
     border-radius:8px;
@@ -1627,7 +1759,9 @@
     </div>
 
     <div id="authChecking">
-      <p class="authSub">Verificando acceso…</p>
+      <div class="skeletonCircle"></div>
+      <div class="skeletonLine" style="width:55%;"></div>
+      <div class="skeletonLine" style="width:38%;"></div>
     </div>
   </div>
 </div>
@@ -1660,6 +1794,7 @@
       <button id="logoutBtn">Cerrar sesión</button>
       <button id="undoBtn" disabled style="display:none;">Deshacer</button>
       <button id="exportBtn" style="display:none;">Exportar a Excel</button>
+      <button id="exportZoneBtn" style="display:none;">Exportar esta zona</button>
       <button id="shareExportBtn" style="display:none;">📤 Compartir Excel</button>
     </div>
   </div>
@@ -2194,26 +2329,31 @@
   let storageAvailable = true;
   let storageWarned = false;
   let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
-  const undoStack = []; // snapshots de state.zones (deep clone), máx 10
+  const undoStack = []; // { snapshot, description }, máx 10
   const UNDO_LIMIT = 10;
 
   function snapshotZones(){
     return JSON.parse(JSON.stringify(state.zones));
   }
-  function pushUndo(snapshot){
-    undoStack.push(snapshot);
+  function pushUndo(snapshot, description){
+    undoStack.push({ snapshot, description: description || "Cambio sin descripción" });
     if(undoStack.length > UNDO_LIMIT) undoStack.shift();
     updateUndoBtn();
   }
   function updateUndoBtn(){
     const btn = document.getElementById("undoBtn");
-    if(btn) btn.disabled = undoStack.length === 0;
+    if(!btn) return;
+    btn.disabled = undoStack.length === 0;
+    const last = undoStack[undoStack.length - 1];
+    btn.title = last ? `Deshacer: ${last.description}` : "";
   }
   async function doUndo(){
     if(!guardEdit()) return;
     if(undoStack.length === 0) return;
-    const prev = undoStack.pop();
-    state.zones = prev;
+    const entry = undoStack[undoStack.length - 1];
+    if(!confirm(`¿Deshacer esto?\n\n${entry.description}`)) return;
+    undoStack.pop();
+    state.zones = entry.snapshot;
     updateUndoBtn();
     await saveState(true);
     renderAll();
@@ -2234,6 +2374,17 @@
     if(isNaN(d.getTime())) return false;
     const now = new Date();
     return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+  }
+
+  // Texto relativo de "cuándo se movió por última vez" (hoy/ayer/antier/hace
+  // X días...), pensado para detectar de un vistazo, durante un recorrido,
+  // si una placa lleva mucho tiempo sin actualizarse en el mismo lugar.
+  function lastMovedLabel(entry){
+    if(!entry || !entry.lastUpdated) return "Última actualización: sin registro";
+    const d = new Date(entry.lastUpdated);
+    if(isNaN(d.getTime())) return "Última actualización: sin registro";
+    const fecha = d.toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
+    return `Última actualización: ${fecha}`;
   }
   function normalizeCampo(v){ return String(v).trim(); }
 
@@ -2692,6 +2843,12 @@
 
   function askMoveOrCancel(plate, fromZoneLabel, fromCampo, toZoneLabel, toCampo){
     return new Promise((resolve)=>{
+      // Cierra el teclado del celular antes de mostrar el diálogo, para que
+      // los botones "Mover"/"Cancelar" queden visibles y tocables de una,
+      // sin tener que cerrar el teclado a mano primero.
+      if(document.activeElement && typeof document.activeElement.blur === "function"){
+        document.activeElement.blur();
+      }
       const overlay = document.getElementById("dupModal");
       const msg = document.getElementById("dupModalMsg");
       msg.textContent = `${plate} ya está registrada en ${fromZoneLabel}, campo ${fromCampo}. ¿Se movió a ${toZoneLabel} (campo ${toCampo}), o fue un error al escribir la placa?`;
@@ -2754,6 +2911,7 @@
       </div>
       <div class="updaterInfoRow"><span>Aseguradora</span><strong>${entry.aseguradora ? escapeHtml(entry.aseguradora) : "—"}</strong></div>
       <div class="updaterInfoRow"><span>Modelo</span><strong>${entry.modelo ? escapeHtml(entry.modelo) : "—"}</strong></div>
+      <div class="updaterInfoRow"><span>Última actualización</span><strong>${lastMovedLabel(entry).replace("Última actualización: ", "")}</strong></div>
     `;
     overlay.classList.add("show");
 
@@ -2859,7 +3017,7 @@
         targetEntry.aseguradora = newAseguradora;
         targetEntry.modelo = newModelo;
         targetEntry.lastUpdated = new Date().toISOString();
-        pushUndo(snap);
+        pushUndo(snap, `Editar datos de ${plate}`);
         cleanup();
         await saveState();
         renderAll();
@@ -2880,7 +3038,7 @@
           removePlateEntryByRef(dup.zoneKey, dupCampoObj, dupEntry);
           removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
           getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() });
-          pushUndo(snap);
+          pushUndo(snap, `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`);
           cleanup();
           await saveState();
           await logUpdate(newPlate, zoneKey, currentCampo, newZone, newCampo);
@@ -2902,7 +3060,7 @@
       const snap = snapshotZones();
       removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
       getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() });
-      pushUndo(snap);
+      pushUndo(snap, `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`);
       cleanup();
       await saveState();
       if(!sameLocation){
@@ -2915,7 +3073,7 @@
       if(!confirm(`¿Eliminar ${plate} del inventario?`)) return;
       const snap = snapshotZones();
       removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
-      pushUndo(snap);
+      pushUndo(snap, `Eliminar ${plate}`);
       cleanup();
       await saveState();
       renderAll();
@@ -3072,6 +3230,7 @@
         <h2>${info.label}</h2>
         <div class="sub">${totalVeh} vehículo(s) en ${campos.length} campo(s)</div>
         ${occupancyHtml(zone.key, occupancyCountForZone(zone.key), info.color)}
+        ${canExport() ? `<button type="button" class="linkBackBtn" id="exportZoneBtn_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">📤 Exportar solo esta zona a Excel</button>` : ``}
       </div>
       <div id="zoneBrowse_${abbr}">
         <div class="spaceGrid" id="zoneGrid_${abbr}"></div>
@@ -3113,6 +3272,17 @@
       saveState();
       renderAll();
     });
+
+    const exportZoneBtn = wrap.querySelector(`#exportZoneBtn_${abbr}`);
+    if(exportZoneBtn){
+      exportZoneBtn.addEventListener("click", ()=>{
+        if(!guardExport()) return;
+        const built = buildSingleZoneWorkbook(zone.key);
+        if(!built){ showToast("No se pudo armar el Excel de esta zona."); return; }
+        XLSX.writeFile(built.wb, built.fileName);
+        showToast(`Excel de ${info.label} generado`);
+      });
+    }
 
     const browseBox = wrap.querySelector(`#zoneBrowse_${abbr}`);
     const gridBox = wrap.querySelector(`#zoneGrid_${abbr}`);
@@ -3199,7 +3369,8 @@
               <div id="zoneEditMoveBox_${abbr}" style="display:none;">
                 <label style="margin-top:8px;">Nueva zona</label>
                 <div class="zoneChipsRow" id="zoneEditZoneChips_${abbr}"></div>
-                <label id="zoneEditCampoLabel_${abbr}">Nuevo ${labelLower}</label>
+                <div class="spaceGrid miniSpaceGrid" id="zoneEditGrid_${abbr}"></div>
+                <label id="zoneEditCampoLabel_${abbr}" style="font-size:0.72rem; color:var(--muted); font-weight:600;">o escribí uno nuevo</label>
                 <input type="text" id="zoneEditCampo_${abbr}" class="plate" value="${escapeHtml(c.campo)}">
               </div>
               <div class="modalActions" style="margin-top:10px; flex-direction:row; gap:8px;">
@@ -3213,7 +3384,10 @@
         return `
           <div class="spacePlateRow" data-idx="${idx}">
             <span class="orderBadge">${idx+1}</span>
-            <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+            <div class="spacePlateInfoWrap">
+              <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+              <span class="lastMovedLabel">${lastMovedLabel(p)}</span>
+            </div>
             <button type="button" class="spaceMoveBtn" data-idx="${idx}" title="Mover a otro espacio">🔀</button>
             <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
             <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
@@ -3284,7 +3458,7 @@
         }
         sortCampos(state.zones[zone.key]);
         selectedCi = state.zones[zone.key].indexOf(existing || c);
-        pushUndo(snap);
+        pushUndo(snap, `Renombrar campo "${current}" a "${newCampo}"`);
         saveState();
         drawZoneGrid();
         drawZoneDetail();
@@ -3304,7 +3478,7 @@
           if(isNaN(n) || n <= 0){ showToast("Ingresá un número válido"); return; }
           c.capacidad = n;
         }
-        pushUndo(snap);
+        pushUndo(snap, `Cambiar capacidad del ${labelLower} ${c.campo}`);
         saveState();
         drawZoneGrid();
         drawZoneDetail();
@@ -3316,7 +3490,7 @@
         const snap = snapshotZones();
         const idx = state.zones[zone.key].indexOf(c);
         if(idx !== -1) state.zones[zone.key].splice(idx,1);
-        pushUndo(snap);
+        pushUndo(snap, `Eliminar ${labelLower} ${c.campo} completo`);
         saveState();
         selectedCi = null;
         editingPlateIdx = null;
@@ -3325,6 +3499,35 @@
         drawZoneGrid();
         drawZoneDetail();
       });
+
+      // Dibuja la mini-cuadrícula de espacios existentes en una zona, para
+      // elegir el destino tocando en vez de tener que escribir el número.
+      function drawMiniSpaceGrid(container, zoneKey, campoInput){
+        const arr = state.zones[zoneKey] || [];
+        if(arr.length === 0){
+          container.innerHTML = `<div class="dashEmptyNote" style="padding:8px;">Todavía no hay espacios acá — escribí uno nuevo abajo.</div>`;
+          return;
+        }
+        container.innerHTML = arr.map(cc=>{
+          const cap = cc.capacidad;
+          const occ = cc.plates.length;
+          let fillClass = "empty";
+          if(occ > 0) fillClass = (cap && occ >= cap) ? "full" : "partial";
+          return `
+            <button type="button" class="spaceGridBtn ${fillClass}${campoInput.value===cc.campo ? ' active' : ''}" data-campo="${escapeAttrLike(cc.campo)}">
+              <span class="spaceGridLabel">${escapeHtml(cc.campo)}</span>
+              <span class="spaceGridCount">${occ}${cap ? "/"+cap : ""}</span>
+            </button>
+          `;
+        }).join("");
+        container.querySelectorAll(".spaceGridBtn").forEach(btn=>{
+          btn.addEventListener("click", ()=>{
+            campoInput.value = btn.getAttribute("data-campo");
+            container.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
+            btn.classList.add("active");
+          });
+        });
+      }
 
       // --- edición inline de una placa ya existente ---
       if(editingPlateIdx !== null){
@@ -3342,13 +3545,17 @@
         editZoneChipsBox.innerHTML = ZONES.map(z=>`
           <button type="button" class="zoneChipBtn${zone.key===z.key?' active':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
         `).join("");
+        const editCampoInputAdmin = detailBox.querySelector(`#zoneEditCampo_${abbr}`);
+        const editMoveGridAdmin = detailBox.querySelector(`#zoneEditGrid_${abbr}`);
+        drawMiniSpaceGrid(editMoveGridAdmin, editTargetZone, editCampoInputAdmin);
         editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(btn=>{
           btn.addEventListener("click", ()=>{
             editTargetZone = btn.getAttribute("data-zone");
             editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(b=>b.classList.remove("active"));
             btn.classList.add("active");
             detailBox.querySelector(`#zoneEditCampoLabel_${abbr}`).textContent = `Nuevo ${UNNUMBERED_ONLY_ZONES.has(editTargetZone) ? "línea" : "campo"}`;
-            detailBox.querySelector(`#zoneEditCampo_${abbr}`).value = (editTargetZone === zone.key) ? c.campo : "";
+            editCampoInputAdmin.value = (editTargetZone === zone.key) ? c.campo : "";
+            drawMiniSpaceGrid(editMoveGridAdmin, editTargetZone, editCampoInputAdmin);
           });
         });
         detailBox.querySelector(`#zoneEditMoveToggle_${abbr}`).addEventListener("click", ()=>{
@@ -3420,7 +3627,7 @@
         rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
         const snap = snapshotZones();
         removePlateEntryByRef(zone.key, c, plateToRemove);
-        pushUndo(snap);
+        pushUndo(snap, `Quitar ${plateToRemove.plate}`);
         await saveState();
         showToast("Vehículo eliminado");
         editingPlateIdx = null;
@@ -3571,7 +3778,7 @@
         const snap = snapshotZones();
         const ok = await updaterAddNew(zone.key, c.campo, plateRaw, aseguradora, modeloInput.value, "last");
         if(ok){
-          pushUndo(snap);
+          pushUndo(snap, `Agregar ${normalizePlate(plateRaw)} en ${c.campo}`);
           showToast("Listo — vehículo en este espacio");
           drawZoneGrid();
           drawZoneDetail();
@@ -3593,7 +3800,7 @@
       if(yaExiste){ showToast(`El ${labelLower} "${campoLabel}" ya existe.`); return; }
       const snap = snapshotZones();
       getOrCreateCampo(zone.key, campoLabel); // ya inserta ordenado, sin importar si va en medio de la secuencia
-      pushUndo(snap);
+      pushUndo(snap, `Agregar ${labelLower} vacío "${campoLabel}"`);
       saveState();
       showToast(`${labelLower[0].toUpperCase()+labelLower.slice(1)} "${campoLabel}" agregado, vacío.`);
       drawZoneGrid();
@@ -3619,7 +3826,7 @@
         const ok = await addPlateToZone(zone.key, campoLabel, plate);
         if(ok) added++; else skipped++;
       }
-      if(added > 0) pushUndo(snap);
+      if(added > 0) pushUndo(snap, `Pegado masivo: agregar ${added} placa(s)`);
       bulkArea.value = "";
       saveState();
       renderAll();
@@ -3663,7 +3870,7 @@
         if(entry.capacidad){ campoObj.capacidad = entry.capacidad; }
         else { delete campoObj.capacidad; }
       });
-      pushUndo(snap);
+      pushUndo(snap, `Aplicar plantilla "${t.name}"`);
       saveState();
       showToast(`Plantilla "${t.name}" aplicada`);
       drawZoneGrid();
@@ -3726,16 +3933,28 @@
             ${ZONES.map(z=>`<option value="${z.key}">${z.label}</option>`).join("")}
           </select>
         </div>
+        <button type="button" class="clearFilterBtn" id="resumenTodayFilter">🕐 Solo hoy</button>
         <button class="clearFilterBtn" id="resumenClear" style="display:none;"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg> Limpiar filtros</button>
       </div>
       <div class="resultsCount" id="resultsCount"></div>
       <table>
-        <thead><tr><th style="width:70px;">Campo</th><th>Modelo</th><th>Placa</th><th>Zona</th><th>Aseguradora</th></tr></thead>
+        <thead><tr>
+          <th style="width:70px;" data-sort="campo">Campo</th>
+          <th data-sort="modelo">Modelo</th>
+          <th data-sort="placa">Placa</th>
+          <th data-sort="zoneLabel">Zona</th>
+          <th data-sort="aseguradora">Aseguradora</th>
+        </tr></thead>
         <tbody id="resumenTbody"></tbody>
       </table>
       <div id="resumenEmpty"></div>
     `;
     document.getElementById("mainArea").appendChild(wrap);
+
+    const headerEl = document.querySelector("header");
+    if(headerEl){
+      wrap.querySelector(".resumenToolbar").style.top = headerEl.offsetHeight + "px";
+    }
 
     if(pendingResumenFilter){
       wrap.querySelector("#resumenFilter").value = pendingResumenFilter;
@@ -3745,6 +3964,29 @@
     const filterInput = wrap.querySelector("#resumenFilter");
     const zoneSelect = wrap.querySelector("#resumenZoneFilter");
     const clearBtn = wrap.querySelector("#resumenClear");
+    const todayFilterBtn = wrap.querySelector("#resumenTodayFilter");
+    let onlyToday = false;
+    let sortState = { key: null, dir: 1 };
+
+    todayFilterBtn.addEventListener("click", ()=>{
+      onlyToday = !onlyToday;
+      todayFilterBtn.classList.toggle("active", onlyToday);
+      draw();
+    });
+
+    wrap.querySelectorAll("thead th[data-sort]").forEach(th=>{
+      th.addEventListener("click", ()=>{
+        const key = th.getAttribute("data-sort");
+        if(sortState.key === key){
+          sortState.dir = -sortState.dir;
+        } else {
+          sortState = { key, dir: 1 };
+        }
+        wrap.querySelectorAll("thead th[data-sort]").forEach(t=>t.classList.remove("sortAsc","sortDesc"));
+        th.classList.add(sortState.dir === 1 ? "sortAsc" : "sortDesc");
+        draw();
+      });
+    });
 
     // Tocar una tarjeta de zona filtra Resumen directo por esa zona.
     wrap.querySelectorAll(".resumenZoneCard").forEach(card=>{
@@ -3774,9 +4016,23 @@
       const totalCount = rows.length;
       if(filterZone) rows = rows.filter(r=>r.zoneKey===filterZone);
       if(filterText) rows = rows.filter(r=> r.placa.toUpperCase().includes(filterText) || String(r.campo).toUpperCase().includes(filterText) || (r.aseguradora||"").toUpperCase().includes(filterText) || (r.modelo||"").toUpperCase().includes(filterText));
+      if(onlyToday) rows = rows.filter(r=> wasUpdatedToday(r));
+
+      if(sortState.key){
+        const key = sortState.key;
+        rows = rows.slice().sort((a,b)=>{
+          let va = a[key] == null ? "" : String(a[key]);
+          let vb = b[key] == null ? "" : String(b[key]);
+          if(key === "campo"){
+            const na = parseFloat(va), nb = parseFloat(vb);
+            if(!isNaN(na) && !isNaN(nb) && na !== nb) return (na - nb) * sortState.dir;
+          }
+          return va.localeCompare(vb, "es", { numeric: true, sensitivity: "base" }) * sortState.dir;
+        });
+      }
 
       const countEl = wrap.querySelector("#resultsCount");
-      countEl.textContent = (filterText || filterZone)
+      countEl.textContent = (filterText || filterZone || onlyToday)
         ? `${rows.length} de ${totalCount} vehículo(s)`
         : `${totalCount} vehículo(s) en total`;
 
@@ -3786,9 +4042,10 @@
         wrap.querySelector("#resumenEmpty").innerHTML = `<div class="emptyState">No hay resultados.</div>`;
       } else {
         wrap.querySelector("#resumenEmpty").innerHTML = "";
-        rows.forEach(r=>{
+        rows.forEach((r, idx)=>{
           const tr = document.createElement("tr");
-          tr.className = "resumenRow" + (wasUpdatedToday(r) ? " updatedToday" : "");
+          tr.className = "resumenRow rowFadeIn" + (wasUpdatedToday(r) ? " updatedToday" : "");
+          tr.style.animationDelay = (Math.min(idx, 15) * 22) + "ms";
           tr.dataset.zone = r.zoneKey;
           tr.dataset.ci = r.ci;
           tr.dataset.pi = r.pi;
@@ -3817,6 +4074,8 @@
     clearBtn.addEventListener("click", ()=>{
       filterInput.value = "";
       zoneSelect.value = "";
+      onlyToday = false;
+      todayFilterBtn.classList.remove("active");
       draw();
       filterInput.focus();
     });
@@ -3868,6 +4127,46 @@
 
     const fechaHoy = new Date().toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
 
+    // Zonas sin ningún movimiento reciente (5+ días) — para detectar de un
+    // vistazo si un sector entero quedó fuera del recorrido regular.
+    const UMBRAL_ESTANCADO_DIAS = 5;
+    const zonasEstancadas = (()=>{
+      const umbralMs = UMBRAL_ESTANCADO_DIAS * 24*60*60*1000;
+      const ahora = Date.now();
+      const resultado = [];
+      ZONES.forEach(z=>{
+        const campos = state.zones[z.key] || [];
+        let totalVeh = 0;
+        let maxTs = null;
+        campos.forEach(c=>{
+          c.plates.forEach(p=>{
+            totalVeh++;
+            if(p.lastUpdated){
+              const t = new Date(p.lastUpdated).getTime();
+              if(!isNaN(t) && (maxTs === null || t > maxTs)) maxTs = t;
+            }
+          });
+        });
+        if(totalVeh === 0) return; // zona vacía, no aplica
+        if(maxTs === null || (ahora - maxTs) > umbralMs){
+          const dias = maxTs === null ? null : Math.floor((ahora - maxTs) / (24*60*60*1000));
+          resultado.push({ zoneKey: z.key, zoneLabel: z.label, dias });
+        }
+      });
+      return resultado;
+    })();
+    const zonasEstancadasHtml = zonasEstancadas.length > 0 ? `
+      <div class="stagnantZonesBox">
+        <div class="stagnantZonesTitle">⚠️ Zonas sin movimientos recientes</div>
+        ${zonasEstancadas.map(z=>`
+          <button type="button" class="stagnantZoneRow" data-zone="${z.zoneKey}">
+            <span>${escapeHtml(z.zoneLabel)}</span>
+            <span class="stagnantZoneDays">${z.dias === null ? "sin registro de movimiento" : `sin movimientos hace ${z.dias} día(s)`}</span>
+          </button>
+        `).join("")}
+      </div>
+    ` : ``;
+
     wrap.innerHTML = `
       <div class="dashboardHeader">
         <h2>Dashboard</h2>
@@ -3880,6 +4179,7 @@
         <div class="dashCard"><div class="dashCardValue">${totalSinAsignar}</div><div class="dashCardLabel">Sin asignar</div></div>
         <div class="dashCard"><div class="dashCardValue">${zonasConCapacidad}/${ZONES.length}</div><div class="dashCardLabel">Zonas con capacidad definida</div></div>
       </div>
+      ${zonasEstancadasHtml}
       <div class="chartCard">
         <h3>Vehículos por zona</h3>
         <div class="chartCanvasWrap"><canvas id="chartVehiclesByZone"></canvas></div>
@@ -3936,6 +4236,12 @@
     wrap.querySelector("#dashViewToggle").addEventListener("click", ()=>{
       setDashboardViewMode("compact");
       renderAll();
+    });
+    wrap.querySelectorAll(".stagnantZoneRow").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        activeTab = btn.getAttribute("data-zone");
+        renderAll();
+      });
     });
 
     if(canEdit()){
@@ -4087,6 +4393,10 @@
       renderZonePanel(zoneInfo(activeTab));
     }
     renderMeta();
+    const exportZoneBtn = document.getElementById("exportZoneBtn");
+    if(exportZoneBtn){
+      exportZoneBtn.style.display = (canExport() && ZONES.some(z=>z.key===activeTab)) ? "inline-block" : "none";
+    }
   }
 
   // ---- Global search ----
@@ -4188,7 +4498,7 @@
       const snap = snapshotZones();
       state.zones = payload.zones;
       state.capacities = payload.capacities || {};
-      pushUndo(snap);
+      pushUndo(snap, "Restaurar respaldo completo");
       await saveState();
       renderAll();
       showToast("Respaldo restaurado correctamente");
@@ -4197,54 +4507,78 @@
     reader.readAsText(file);
   });
 
+  function fechaCortaExcel(p){
+    if(!p.lastUpdated) return "";
+    const d = new Date(p.lastUpdated);
+    if(isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
+  }
+  function addZoneSheet(wb, z, fechaLarga, horaLarga){
+    const campos = state.zones[z.key] || [];
+    const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
+    const cap = state.capacities[z.key];
+    const capTxt = (cap && cap>0) ? ` · ${campos.length}/${cap} campos ocupados` : ``;
+
+    const data = [
+      [`${z.label} — Inventario de Parqueo`, "", "", "", ""],
+      [`Generado ${fechaLarga}, ${horaLarga} · ${totalVeh} vehículo(s) en ${campos.length} campo(s)${capTxt}`, "", "", "", ""],
+      [],
+      ["Campo","Placa","Aseguradora","Modelo","Última actualización"]
+    ];
+    campos.forEach(c => c.plates.forEach(p => data.push([c.campo, p.plate, p.aseguradora || "", p.modelo || "", fechaCortaExcel(p)])));
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws["!merges"] = [
+      { s:{r:0,c:0}, e:{r:0,c:4} },
+      { s:{r:1,c:0}, e:{r:1,c:4} }
+    ];
+    ws["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 18 }];
+    if(data.length > 4){
+      ws["!autofilter"] = { ref: `A4:E${data.length}` };
+    }
+    XLSX.utils.book_append_sheet(wb, ws, z.label.substring(0,31));
+  }
+
+  // Libro de Excel con una sola zona — para compartir un pedazo puntual del
+  // inventario sin mandar las 9 hojas completas.
+  function buildSingleZoneWorkbook(zoneKey){
+    const z = zoneInfo(zoneKey);
+    if(!z) return null;
+    const wb = XLSX.utils.book_new();
+    const now = new Date();
+    const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
+    const horaLarga = now.toLocaleTimeString("es-CR", {hour:"2-digit", minute:"2-digit"});
+    addZoneSheet(wb, z, fechaLarga, horaLarga);
+    const fecha = now.toISOString().slice(0,10);
+    const nombreArchivo = z.label.replace(/[^\w\sáéíóúÁÉÍÓÚñÑ-]/g, "").trim().replace(/\s+/g, "_");
+    return { wb, fileName: `Inventario_${nombreArchivo}_${fecha}.xlsx` };
+  }
+
   function buildInventoryWorkbook(){
     const wb = XLSX.utils.book_new();
     const now = new Date();
     const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
     const horaLarga = now.toLocaleTimeString("es-CR", {hour:"2-digit", minute:"2-digit"});
+    const fechaCorta = fechaCortaExcel;
 
-    ZONES.forEach(z=>{
-      const campos = state.zones[z.key] || [];
-      const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
-      const cap = state.capacities[z.key];
-      const capTxt = (cap && cap>0) ? ` · ${campos.length}/${cap} campos ocupados` : ``;
-
-      const data = [
-        [`${z.label} — Inventario de Parqueo`, "", "", ""],
-        [`Generado ${fechaLarga}, ${horaLarga} · ${totalVeh} vehículo(s) en ${campos.length} campo(s)${capTxt}`, "", "", ""],
-        [],
-        ["Campo","Placa","Aseguradora","Modelo"]
-      ];
-      campos.forEach(c => c.plates.forEach(p => data.push([c.campo, p.plate, p.aseguradora || "", p.modelo || ""])));
-
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      ws["!merges"] = [
-        { s:{r:0,c:0}, e:{r:0,c:3} },
-        { s:{r:1,c:0}, e:{r:1,c:3} }
-      ];
-      ws["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }];
-      if(data.length > 4){
-        ws["!autofilter"] = { ref: `A4:D${data.length}` };
-      }
-      XLSX.utils.book_append_sheet(wb, ws, z.label.substring(0,31));
-    });
+    ZONES.forEach(z=> addZoneSheet(wb, z, fechaLarga, horaLarga));
 
     const resumenRows = buildResumenRows();
     const resumenData = [
-      ["Resumen general — Inventario de Parqueo", "", "", "", ""],
-      [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", "", ""],
+      ["Resumen general — Inventario de Parqueo", "", "", "", "", ""],
+      [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", "", "", ""],
       [],
-      ["Campo","Placa","Zona","Aseguradora","Modelo"]
+      ["Campo","Placa","Zona","Aseguradora","Modelo","Última actualización"]
     ];
-    resumenRows.forEach(r=> resumenData.push([r.campo, r.placa, r.zoneLabel, r.aseguradora || "", r.modelo || ""]));
+    resumenRows.forEach(r=> resumenData.push([r.campo, r.placa, r.zoneLabel, r.aseguradora || "", r.modelo || "", fechaCorta(r)]));
     const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
     wsResumen["!merges"] = [
-      { s:{r:0,c:0}, e:{r:0,c:4} },
-      { s:{r:1,c:0}, e:{r:1,c:4} }
+      { s:{r:0,c:0}, e:{r:0,c:5} },
+      { s:{r:1,c:0}, e:{r:1,c:5} }
     ];
-    wsResumen["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 22 }];
+    wsResumen["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 22 }, { wch: 18 }];
     if(resumenData.length > 4){
-      wsResumen["!autofilter"] = { ref: `A4:E${resumenData.length}` };
+      wsResumen["!autofilter"] = { ref: `A4:F${resumenData.length}` };
     }
     XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
 
@@ -4311,12 +4645,42 @@
     return { wb, duplicadasCount: duplicadas.length, fileName: `Inventario_Parqueo_${fecha}.xlsx` };
   }
 
+  // Excel con una sola zona — para compartir un pedazo puntual del
+  // inventario sin mandar las 9 zonas completas.
+  function buildSingleZoneWorkbook(zoneKey){
+    const z = zoneInfo(zoneKey);
+    if(!z) return null;
+    const wb = XLSX.utils.book_new();
+    const now = new Date();
+    const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
+    const horaLarga = now.toLocaleTimeString("es-CR", {hour:"2-digit", minute:"2-digit"});
+    addZoneSheet(wb, z, fechaLarga, horaLarga);
+    const fecha = now.toISOString().slice(0,10);
+    const nombreArchivo = z.label.replace(/[^\p{L}\p{N}]+/gu, "_");
+    return { wb, fileName: `Inventario_${nombreArchivo}_${fecha}.xlsx` };
+  }
+
   document.getElementById("exportBtn").addEventListener("click", ()=>{
     if(!guardExport()) return;
     const { wb, duplicadasCount, fileName } = buildInventoryWorkbook();
     XLSX.writeFile(wb, fileName);
     showToast(duplicadasCount > 0 ? `Excel generado — se detectaron ${duplicadasCount} placa(s) duplicada(s)` : "Excel generado");
   });
+
+  const exportZoneBtn = document.getElementById("exportZoneBtn");
+  if(exportZoneBtn){
+    exportZoneBtn.addEventListener("click", ()=>{
+      if(!guardExport()) return;
+      if(!ZONES.some(z=>z.key===activeTab)){
+        showToast("Elegí una zona primero para exportarla sola");
+        return;
+      }
+      const result = buildSingleZoneWorkbook(activeTab);
+      if(!result) return;
+      XLSX.writeFile(result.wb, result.fileName);
+      showToast(`Excel de ${zoneInfo(activeTab).label} generado`);
+    });
+  }
 
   // ---- Compartir el Excel directo (WhatsApp, Gmail, etc., vía el menú
   // nativo de compartir del celular). Solo aparece si el navegador lo
@@ -5406,7 +5770,7 @@
           <button type="button" id="kioskToggleBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🖥️ Modo kiosco</button>
         </div>
         <div id="updBrowseSection">
-          <input type="text" id="updSearchInput" class="plate" placeholder="Buscar placa (te lleva a su espacio actual)…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
+          <input type="text" id="updSearchInput" class="plate" placeholder="Buscar por placa, aseguradora o modelo…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
           <div id="updSearchResults"></div>
           <details class="bulk" id="updGridDetails" ${currentUser.searchFocused ? "" : "open"} style="margin-top:14px;">
             <summary>${currentUser.searchFocused ? "Ver espacios y actualizar (opcional)" : "Zona y espacios"}</summary>
@@ -5566,6 +5930,7 @@
       const arr = state.zones[spaceZone] || [];
       const labelLower = label === "Líneas" ? "línea" : "campo";
       if(arr.length === 0){
+        spaceGridBox.classList.remove("groupedMode");
         const esFemenino = labelLower === "línea";
         spaceGridBox.innerHTML = `<button type="button" class="linkBackBtn" id="spaceCreateFirstBtn" style="text-decoration:none; font-weight:700;">+ Crear ${esFemenino ? "la primera" : "el primer"} ${labelLower}</button>`;
         const createBtn = spaceGridBox.querySelector("#spaceCreateFirstBtn");
@@ -5582,7 +5947,7 @@
         drawSpaceInfo();
         return;
       }
-      spaceGridBox.innerHTML = arr.map(c=>{
+      const renderGridBtnHtml = (c) => {
         const cap = c.capacidad;
         const occ = c.plates.length;
         let fillClass = "empty";
@@ -5597,7 +5962,35 @@
             <span class="spaceGridCount">${occ}${cap ? "/"+cap : ""}</span>
           </button>
         `;
-      }).join("");
+      };
+
+      // "Atrás" es la fusión de 3 zonas viejas (Atrás, Atrás entregas, Atrás
+      // Sólidos). Para completar más fácil, se siguen mostrando agrupadas
+      // por su origen en vez de una sola lista mezclada — usando los mismos
+      // rangos que tenían antes de fusionarse.
+      if(spaceZone === "Atras"){
+        spaceGridBox.classList.add("groupedMode");
+        const grupos = [
+          { label: "Atrás entregas", items: [] },
+          { label: "Atrás", items: [] },
+          { label: "Atrás Sólidos", items: [] }
+        ];
+        arr.forEach(c=>{
+          if(/^línea/i.test(c.campo)){ grupos[2].items.push(c); return; }
+          const n = parseInt(c.campo, 10);
+          if(!isNaN(n) && n >= 33 && n <= 36){ grupos[0].items.push(c); return; }
+          grupos[1].items.push(c);
+        });
+        spaceGridBox.innerHTML = grupos.filter(g=>g.items.length>0).map(g=>`
+          <div class="spaceGridGroup">
+            <div class="spaceGridGroupLabel">${g.label}</div>
+            <div class="spaceGrid">${g.items.map(renderGridBtnHtml).join("")}</div>
+          </div>
+        `).join("");
+      } else {
+        spaceGridBox.classList.remove("groupedMode");
+        spaceGridBox.innerHTML = arr.map(renderGridBtnHtml).join("");
+      }
       spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(btn=>{
         btn.addEventListener("click", ()=>{
           selectedCampo = btn.getAttribute("data-campo");
@@ -5635,18 +6028,29 @@
     // con coincidencia exacta, lo que parecía "no filtrar" al escribir).
     const searchResultsBox = holder.querySelector("#updSearchResults");
     function runUpdSearch(q){
-      q = q.trim().toUpperCase();
-      if(!q){ searchResultsBox.classList.remove("show"); searchResultsBox.innerHTML = ""; return; }
-      const rows = buildResumenRows().filter(r=>r.placa.toUpperCase().includes(q));
+      const qTrim = q.trim();
+      const qUpper = qTrim.toUpperCase();
+      if(!qUpper){ searchResultsBox.classList.remove("show"); searchResultsBox.innerHTML = ""; return; }
+      const rows = buildResumenRows().filter(r=>
+        r.placa.toUpperCase().includes(qUpper) ||
+        (r.aseguradora && r.aseguradora.toUpperCase().includes(qUpper)) ||
+        (r.modelo && r.modelo.toUpperCase().includes(qUpper))
+      );
       if(rows.length === 0){
         searchResultsBox.innerHTML = `<div class="updSearchResultRow" style="cursor:default;">Sin coincidencias</div>`;
       } else {
-        searchResultsBox.innerHTML = rows.slice(0,20).map(r=>`
-          <div class="updSearchResultRow" data-plate="${escapeAttrLike(r.placa)}">
-            <span class="plate">${escapeHtml(r.placa)}</span>
-            <span class="updSearchResultMeta">${r.zoneLabel} · campo ${escapeHtml(r.campo)}</span>
-          </div>
-        `).join("");
+        searchResultsBox.innerHTML = rows.slice(0,20).map(r=>{
+          const matchoPorPlaca = r.placa.toUpperCase().includes(qUpper);
+          const detalle = matchoPorPlaca ? "" :
+            (r.aseguradora && r.aseguradora.toUpperCase().includes(qUpper)) ? ` · ${escapeHtml(r.aseguradora)}` :
+            (r.modelo && r.modelo.toUpperCase().includes(qUpper)) ? ` · ${escapeHtml(r.modelo)}` : "";
+          return `
+            <div class="updSearchResultRow" data-plate="${escapeAttrLike(r.placa)}">
+              <span class="plate">${escapeHtml(r.placa)}</span>
+              <span class="updSearchResultMeta">${r.zoneLabel} · campo ${escapeHtml(r.campo)}${detalle}</span>
+            </div>
+          `;
+        }).join("");
         searchResultsBox.querySelectorAll(".updSearchResultRow[data-plate]").forEach(el=>{
           el.addEventListener("click", ()=>{
             searchInput.value = "";
@@ -5699,6 +6103,8 @@
             <div class="quickMoveForm" data-idx="${idx}">
               <div class="quickMoveTitle">🔀 Mover <strong>${escapeHtml(p.plate)}</strong> a:</div>
               <div class="zoneChipsRow" id="quickMoveZoneChips"></div>
+              <div class="spaceGrid miniSpaceGrid" id="quickMoveGrid"></div>
+              <label for="quickMoveCampo" style="font-size:0.72rem; color:var(--muted); font-weight:600;">o escribí uno nuevo</label>
               <input type="text" id="quickMoveCampo" class="plate" placeholder="Campo/línea destino" value="${escapeHtml(campoLabel)}">
               <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
                 <button type="button" class="primaryBtn" id="quickMoveConfirmBtn" style="flex:1;">Mover</button>
@@ -5721,7 +6127,8 @@
               <div id="spaceEditMoveBox" style="display:none;">
                 <label style="margin-top:8px;">Nueva zona</label>
                 <div class="zoneChipsRow" id="spaceEditZoneChips"></div>
-                <label for="spaceEditCampo" id="spaceEditCampoLabel">Nuevo ${labelLower}</label>
+                <div class="spaceGrid miniSpaceGrid" id="spaceEditGrid"></div>
+                <label for="spaceEditCampo" id="spaceEditCampoLabel" style="font-size:0.72rem; color:var(--muted); font-weight:600;">o escribí uno nuevo</label>
                 <input type="text" id="spaceEditCampo" class="plate" value="${escapeHtml(campoLabel)}">
               </div>
               <div class="modalActions" style="margin-top:10px; flex-direction:row; gap:8px;">
@@ -5735,7 +6142,10 @@
         return `
           <div class="spacePlateRow" data-idx="${idx}">
             <span class="orderBadge">${idx+1}</span>
-            <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}</span>
+            <div class="spacePlateInfoWrap">
+              <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+              <span class="lastMovedLabel">${lastMovedLabel(p)}</span>
+            </div>
             <button type="button" class="spaceMoveBtn" data-idx="${idx}" title="Mover a otro espacio">🔀</button>
             <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
             <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
@@ -5830,16 +6240,28 @@
         }).catch(()=>{});
 
         const editZoneChipsBox = spaceInfoBox.querySelector("#spaceEditZoneChips");
-        editZoneChipsBox.innerHTML = ZONES.map(z=>`
-          <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
+        editZoneChipsBox.innerHTML = [...ZONES, SIN_UBICACION_INFO].map(z=>`
+          <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
         `).join("");
+        const editMoveGrid = spaceInfoBox.querySelector("#spaceEditGrid");
+        drawMiniSpaceGrid(editMoveGrid, editTargetZone, editCampoInput);
         editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(btn=>{
           btn.addEventListener("click", ()=>{
             editTargetZone = btn.getAttribute("data-zone");
             editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(b=>b.classList.remove("active"));
             btn.classList.add("active");
             spaceInfoBox.querySelector("#spaceEditCampoLabel").textContent = `Nuevo ${UNNUMBERED_ONLY_ZONES.has(editTargetZone) ? "línea" : "campo"}`;
-            editCampoInput.value = (editTargetZone === spaceZone) ? campoLabel : "";
+            if(editTargetZone === spaceZone){
+              editCampoInput.value = campoLabel;
+            } else if(editTargetZone === SIN_UBICACION_KEY){
+              // "Sin ubicación" es solo un lugar para anotar la placa
+              // temporalmente — se sugiere la próxima línea libre para no
+              // obligar a pensar en un número.
+              editCampoInput.value = nextLineLabel(SIN_UBICACION_KEY);
+            } else {
+              editCampoInput.value = "";
+            }
+            drawMiniSpaceGrid(editMoveGrid, editTargetZone, editCampoInput);
           });
         });
 
@@ -5926,21 +6348,58 @@
         });
       });
 
+      // Dibuja la mini-cuadrícula de espacios existentes en una zona, para
+      // elegir el destino tocando en vez de tener que escribir el número.
+      function drawMiniSpaceGrid(container, zoneKey, campoInput){
+        const arr = state.zones[zoneKey] || [];
+        if(arr.length === 0){
+          container.innerHTML = `<div class="dashEmptyNote" style="padding:8px;">Todavía no hay espacios acá — escribí uno nuevo abajo.</div>`;
+          return;
+        }
+        container.innerHTML = arr.map(c=>{
+          const cap = c.capacidad;
+          const occ = c.plates.length;
+          let fillClass = "empty";
+          if(occ > 0) fillClass = (cap && occ >= cap) ? "full" : "partial";
+          return `
+            <button type="button" class="spaceGridBtn ${fillClass}${campoInput.value===c.campo ? ' active' : ''}" data-campo="${escapeAttrLike(c.campo)}">
+              <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
+              <span class="spaceGridCount">${occ}${cap ? "/"+cap : ""}</span>
+            </button>
+          `;
+        }).join("");
+        container.querySelectorAll(".spaceGridBtn").forEach(btn=>{
+          btn.addEventListener("click", ()=>{
+            campoInput.value = btn.getAttribute("data-campo");
+            container.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
+            btn.classList.add("active");
+          });
+        });
+      }
+
       // --- atajo: mover una placa a otro espacio, sin pasar por el resto del formulario ---
       if(movingPlateIdx !== null){
         let quickMoveTargetZone = spaceZone;
         const quickMoveZoneChips = spaceInfoBox.querySelector("#quickMoveZoneChips");
-        quickMoveZoneChips.innerHTML = ZONES.map(z=>`
-          <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
+        quickMoveZoneChips.innerHTML = [...ZONES, SIN_UBICACION_INFO].map(z=>`
+          <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
         `).join("");
         const quickMoveCampoInput = spaceInfoBox.querySelector("#quickMoveCampo");
+        const quickMoveGrid = spaceInfoBox.querySelector("#quickMoveGrid");
+        drawMiniSpaceGrid(quickMoveGrid, quickMoveTargetZone, quickMoveCampoInput);
         quickMoveZoneChips.querySelectorAll(".zoneChipBtn").forEach(btn=>{
           btn.addEventListener("click", ()=>{
             quickMoveTargetZone = btn.getAttribute("data-zone");
             quickMoveZoneChips.querySelectorAll(".zoneChipBtn").forEach(b2=>b2.classList.remove("active"));
             btn.classList.add("active");
-            quickMoveCampoInput.value = (quickMoveTargetZone === spaceZone) ? campoLabel : "";
-            quickMoveCampoInput.focus();
+            if(quickMoveTargetZone === spaceZone){
+              quickMoveCampoInput.value = campoLabel;
+            } else if(quickMoveTargetZone === SIN_UBICACION_KEY){
+              quickMoveCampoInput.value = nextLineLabel(SIN_UBICACION_KEY);
+            } else {
+              quickMoveCampoInput.value = "";
+            }
+            drawMiniSpaceGrid(quickMoveGrid, quickMoveTargetZone, quickMoveCampoInput);
           });
         });
         const confirmBtn = spaceInfoBox.querySelector("#quickMoveConfirmBtn");
@@ -6110,6 +6569,7 @@
     if(!newPlate){ showToast("Ingresá una placa válida"); return false; }
 
     const plateChanged = newPlate !== entry.plate;
+    const snap = snapshotZones();
     if(plateChanged){
       const dup = findPlate(newPlate, zoneKey, ci, pi);
       if(dup){
@@ -6136,6 +6596,10 @@
       removePlateEntryByRef(zoneKey, campoObj, entry);
       insertPlateAtPosition(getOrCreateCampo(newZone, newCampo), entry, position || "last");
     }
+    const descripcion = locationChanged
+      ? `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`
+      : `Editar datos de ${newPlate}`;
+    pushUndo(snap, descripcion);
     await saveState(true);
     if(locationChanged){
       await logUpdate(entry.plate, zoneKey, fromCampo, newZone, newCampo);
@@ -6219,6 +6683,23 @@
     applyTheme(current === "dark" ? "light" : "dark");
   });
   window.addEventListener("online", updateOfflineBanner);
+
+  // Avisa antes de cerrar/recargar si quedó una placa escrita en algún
+  // formulario de "agregar" sin confirmar todavía, para no perderla por un
+  // toque accidental (cerrar pestaña, recargar, botón atrás del celular).
+  function hasUnsavedFieldData(){
+    const el = document.getElementById("updSpaceNewPlaca");
+    if(el && el.value && el.value.trim()) return true;
+    const adminInputs = document.querySelectorAll('input[id^="zoneNewPlaca_"]');
+    for(const inp of adminInputs){ if(inp.value && inp.value.trim()) return true; }
+    return false;
+  }
+  window.addEventListener("beforeunload", (e)=>{
+    if(hasUnsavedFieldData()){
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
   window.addEventListener("offline", updateOfflineBanner);
 
   // Menú "⚙️ Administrar": agrupa Usuarios/Historial/Invitados/Respaldo/
