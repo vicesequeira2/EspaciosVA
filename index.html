@@ -727,6 +727,19 @@
     text-transform:uppercase;
     letter-spacing:0.04em;
   }
+  .dashCardSpark{
+    display:block;
+    width:100%;
+    height:24px;
+    margin-top:6px;
+  }
+  .dashCardFlash{
+    animation: dashCardFlashAnim 1.8s ease-out 1;
+  }
+  @keyframes dashCardFlashAnim{
+    0%{ box-shadow: 0 0 0 3px rgba(242,194,48,0.55); }
+    100%{ box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  }
   .chartCard{
     background:var(--surface);
     border:1px solid var(--border);
@@ -1318,6 +1331,63 @@
   .vehicleDetailPlate{ font-size:1.15rem; font-weight:800; color:var(--ink); letter-spacing:0.02em; }
   .vehicleDetailZone{ display:flex; align-items:center; gap:6px; font-size:0.76rem; color:var(--muted); font-weight:600; margin-top:2px; }
   .vehicleDetailZone .dot{ width:7px; height:7px; border-radius:50%; }
+  .checkinItemsBox{
+    display:flex; flex-direction:column; gap:2px;
+    margin-top:8px;
+    max-height:260px;
+    overflow-y:auto;
+  }
+  .checkinItemRow{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 4px;
+    border-bottom:1px solid var(--border-soft);
+    font-size:0.86rem;
+  }
+  .checkinItemRow:last-child{ border-bottom:none; }
+  .checkinItemRow input[type="checkbox"]{
+    width:19px; height:19px;
+    flex:0 0 auto;
+  }
+  #checkinNotes{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    font-size:0.85rem;
+    font-family:inherit;
+    resize:vertical;
+  }
+  .checkinSummaryTag{
+    font-size:0.68rem;
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:999px;
+    margin-left:6px;
+  }
+  .checkinSummaryTag.complete{ background:#e3f3ea; color:#1f6b45; }
+  .checkinSummaryTag.incomplete{ background:#fbdedb; color:#a13d33; }
+  .checkinItemsAdminList{
+    display:flex; flex-direction:column; gap:4px;
+    margin-top:8px;
+    max-height:320px;
+    overflow-y:auto;
+  }
+  .checkinItemsAdminRow{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 10px;
+    background: var(--surface-2);
+    border-radius:8px;
+    font-size:0.84rem;
+  }
+  .checkinItemsAdminRow span{ flex:1; }
+  .checkinItemsAdminRow button{
+    background:none; border:none;
+    font-size:0.9rem;
+    cursor:pointer;
+    padding:2px 4px;
+    color: var(--muted);
+  }
+  .checkinItemsAdminRow button:disabled{ opacity:0.25; cursor:default; }
   .zoneChipsRow{
     display:flex; flex-wrap:wrap; gap:6px;
     margin-top:4px;
@@ -1630,6 +1700,18 @@
     border:1px solid var(--border);
     font-size:0.85rem;
   }
+  .movedByDisplay{
+    flex:1; min-width:90px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px dashed var(--border);
+    background: var(--surface-2);
+    font-size:0.78rem;
+    font-weight:600;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+  }
   .reqField{
     border-left:3px solid var(--line-dim) !important;
   }
@@ -1788,6 +1870,7 @@
           <button id="backupBtn">💾 Respaldo</button>
           <button id="restoreBtn">📂 Restaurar</button>
           <button id="dataHealthBtn">🩺 Salud de datos</button>
+          <button id="checkinItemsBtn">📋 Ítems de check-in</button>
         </div>
       </div>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
@@ -1929,6 +2012,36 @@
     <div id="dataHealthContent" class="historyList"></div>
     <div class="modalActions" style="margin-top:14px;">
       <button class="secondaryBtn" id="dataHealthCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="checkinModal">
+  <div class="modalCard">
+    <h3 id="checkinModalTitle">Check-in del vehículo</h3>
+    <p style="font-size:0.8rem; color:var(--muted); margin-top:-8px;">Marcá lo que el vehículo SÍ tiene. Lo que quede sin marcar se entiende como faltante.</p>
+    <div id="checkinItemsBox" class="checkinItemsBox"></div>
+    <label for="checkinNotes" style="margin-top:10px;">Notas (opcional)</label>
+    <textarea id="checkinNotes" rows="2" placeholder="Ej. golpe en la puerta izquierda"></textarea>
+    <div class="historyMeta" id="checkinLastInfo" style="margin-top:6px;"></div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="primaryBtn" id="checkinSaveBtn">Guardar check-in</button>
+      <button class="secondaryBtn" id="checkinCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="checkinItemsModal">
+  <div class="modalCard">
+    <h3>Ítems del check-in</h3>
+    <p style="font-size:0.8rem; color:var(--muted); margin-top:-8px;">Esta lista es la que se usa en el check-in de Parqueo Gash Externo. Agregá, quitá o cambiá el orden con las flechas.</p>
+    <div id="checkinItemsAdminList" class="checkinItemsAdminList"></div>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+      <input type="text" id="checkinNewItemInput" class="plate" placeholder="Nuevo ítem (ej. Cargador)" style="flex:1;">
+      <button type="button" class="secondaryBtn" id="checkinAddItemBtn" style="flex:0 0 auto;">Agregar</button>
+    </div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="secondaryBtn" id="checkinItemsCloseBtn">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2104,8 +2217,82 @@
   // encuentra (puede que estén en otra ubicación todavía sin revisar) —
   // por eso, a propósito, NO aparece en las pestañas de Admin, NO aparece
   // en Resumen, y NO se exporta en el Excel (todos esos recorren ZONES).
+  // Check-in de vehículo: exclusivo de "Parqueo Gash Externo" — en ningún
+  // otro módulo/zona aparece este botón ni se usa este dato.
+  const CHECKIN_ZONE_KEY = "Parqueo Gash Externo";
+  const CHECKIN_ITEMS_KEY = "inventario_parqueo_checkin_items_v1"; // compartido: lista de ítems del check-in, editable por Admin
+  let CHECKIN_ITEMS = ["Llanta de repuesto", "Gata y herramientas", "Espejos laterales", "Radio/pantalla", "Tapones de rines", "Antena", "Batería"];
+  let checkinItemsLoaded = false;
+  async function loadCheckinItemsIfNeeded(){
+    if(checkinItemsLoaded) return;
+    checkinItemsLoaded = true;
+    try{
+      const res = await window.storage.get(CHECKIN_ITEMS_KEY, true);
+      if(res && res.value){
+        const parsed = JSON.parse(res.value);
+        if(Array.isArray(parsed) && parsed.length > 0) CHECKIN_ITEMS = parsed;
+      }
+    }catch(e){ /* no hay lista personalizada todavía, se usan los ítems por defecto */ }
+  }
+  async function saveCheckinItems(list){
+    CHECKIN_ITEMS = list;
+    try{
+      const result = await window.storage.set(CHECKIN_ITEMS_KEY, JSON.stringify(list), true);
+      return !!(result && typeof result === "object");
+    }catch(e){ console.error("Error guardando los ítems de check-in", e); return false; }
+  }
+
   const SIN_UBICACION_KEY = "SinUbicacion";
+
+  // Historial diario de los totales del Dashboard (compartido), para poder
+  // dibujar una mini-tendencia de los últimos días bajo cada tarjeta.
+  const DASHBOARD_HISTORY_KEY = "inventario_parqueo_dashboard_history_v1";
+  async function recordAndLoadDashboardHistory(totals){
+    let history = [];
+    try{
+      const res = await window.storage.get(DASHBOARD_HISTORY_KEY, true);
+      if(res && res.value) history = JSON.parse(res.value);
+    }catch(e){ /* todavía no hay historial guardado */ }
+    const hoy = new Date().toISOString().slice(0,10);
+    const idx = history.findIndex(h => h.date === hoy);
+    const entry = { date: hoy, ...totals };
+    if(idx === -1) history.push(entry);
+    else history[idx] = entry;
+    // nos quedamos con los últimos 30 días nomás
+    history = history.slice(-30);
+    try{ await window.storage.set(DASHBOARD_HISTORY_KEY, JSON.stringify(history), true); }catch(e){ /* no crítico */ }
+    return history;
+  }
+  function drawSparkline(svgEl, values){
+    if(!svgEl || values.length < 2) { if(svgEl) svgEl.innerHTML = ""; return; }
+    const w = 100, h = 28, pad = 3;
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = (max - min) || 1;
+    const pts = values.map((v,i)=>{
+      const x = pad + (i/(values.length-1)) * (w - pad*2);
+      const y = h - pad - ((v-min)/range) * (h - pad*2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const subiendo = values[values.length-1] >= values[0];
+    svgEl.innerHTML = `<polyline points="${pts.join(" ")}" fill="none" stroke="${subiendo ? '#5FB37A' : '#c0524a'}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
   const SIN_UBICACION_INFO = { key: SIN_UBICACION_KEY, label: "Sin ubicación", abbr: "SU", color: "#8b8f94", hex: "8b8f94" };
+  // No hay "espacios" distintos acá — es una sola lista plana, así que todo
+  // vive siempre bajo este único nombre de campo fijo.
+  const SIN_UBICACION_CAMPO = "General";
+  function ensureSinUbicacionConsolidada(){
+    const arr = state.zones[SIN_UBICACION_KEY];
+    if(!arr || arr.length === 0){
+      state.zones[SIN_UBICACION_KEY] = [{ campo: SIN_UBICACION_CAMPO, plates: [] }];
+      return;
+    }
+    if(arr.length === 1 && arr[0].campo === SIN_UBICACION_CAMPO) return; // ya está consolidada
+    // Si quedaron varias líneas de una versión anterior, se fusionan todas
+    // en una sola lista, sin perder ningún vehículo.
+    const todasLasPlacas = [];
+    arr.forEach(c => todasLasPlacas.push(...c.plates));
+    state.zones[SIN_UBICACION_KEY] = [{ campo: SIN_UBICACION_CAMPO, plates: todasLasPlacas }];
+  }
 
   // Capacidades por defecto de los bloques sin numeración (solo se aplican si
   // el admin todavía no definió una capacidad propia para esa zona).
@@ -2889,6 +3076,63 @@
 
   // Vista de solo lectura para el rol Búsqueda: muestra el detalle del
   // vehículo y permite copiar la info, sin ninguna posibilidad de editar.
+  // Check-in de vehículo (exclusivo de Parqueo Gash Externo). Se reutiliza
+  // desde el panel de Admin y el de Actualización.
+  function checkinSummary(entry){
+    if(!entry.checkin) return null;
+    const total = CHECKIN_ITEMS.length;
+    const presentes = CHECKIN_ITEMS.filter(it => entry.checkin.items && entry.checkin.items[it]).length;
+    return { presentes, total, completo: presentes === total };
+  }
+  function openCheckinModal(entry, onSaved){
+    const overlay = document.getElementById("checkinModal");
+    document.getElementById("checkinModalTitle").textContent = `Check-in — ${entry.plate}`;
+    const itemsBox = document.getElementById("checkinItemsBox");
+    const existing = entry.checkin || { items: {}, notes: "" };
+    itemsBox.innerHTML = CHECKIN_ITEMS.map((item, i)=>`
+      <label class="checkinItemRow">
+        <input type="checkbox" data-item="${i}" ${existing.items && existing.items[item] ? "checked" : ""}>
+        ${escapeHtml(item)}
+      </label>
+    `).join("");
+    document.getElementById("checkinNotes").value = existing.notes || "";
+    const lastInfo = document.getElementById("checkinLastInfo");
+    lastInfo.textContent = existing.updatedAt
+      ? `Último check-in: ${new Date(existing.updatedAt).toLocaleDateString("es-CR",{day:"2-digit",month:"short",year:"numeric"})} por ${existing.updatedBy || "?"}`
+      : "Todavía no se hizo un check-in a este vehículo.";
+    overlay.classList.add("show");
+
+    const saveBtn = document.getElementById("checkinSaveBtn");
+    const closeBtn = document.getElementById("checkinCloseBtn");
+    async function onSave(){
+      const items = {};
+      itemsBox.querySelectorAll('input[type="checkbox"]').forEach((cb, i)=>{
+        items[CHECKIN_ITEMS[i]] = cb.checked;
+      });
+      entry.checkin = {
+        items,
+        notes: document.getElementById("checkinNotes").value.trim(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser ? currentUser.username : "?"
+      };
+      await saveState(true);
+      overlay.classList.remove("show");
+      showToast("Check-in guardado");
+      cleanup();
+      if(onSaved) onSaved();
+    }
+    function onClose(){
+      overlay.classList.remove("show");
+      cleanup();
+    }
+    function cleanup(){
+      saveBtn.removeEventListener("click", onSave);
+      closeBtn.removeEventListener("click", onClose);
+    }
+    saveBtn.addEventListener("click", onSave);
+    closeBtn.addEventListener("click", onClose);
+  }
+
   function openViewDetailModal(zoneKey, ci, pi){
     const arr = state.zones[zoneKey];
     if(!arr || !arr[ci] || pi >= arr[ci].plates.length){
@@ -3220,6 +3464,7 @@
       return wrap;
     }
     await loadPlateRegistry();
+    await loadCheckinItemsIfNeeded();
     refreshModelSuggestions();
 
     const abbr = info.abbr;
@@ -3385,9 +3630,10 @@
           <div class="spacePlateRow" data-idx="${idx}">
             <span class="orderBadge">${idx+1}</span>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+              <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${zone.key===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel">${lastMovedLabel(p)}</span>
             </div>
+            ${zone.key===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
             <button type="button" class="spaceMoveBtn" data-idx="${idx}" title="Mover a otro espacio">🔀</button>
             <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
             <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
@@ -3420,7 +3666,10 @@
           <input type="text" id="zoneNewModelo_${abbr}" class="reqField" placeholder="Modelo *" list="modelSuggestions" style="margin-top:6px;">
           <div class="dupWarn" id="zoneNewDupWarn_${abbr}" style="display:none;"></div>
           <div class="similarWarn" id="zoneNewSimilarWarn_${abbr}" style="display:none;"></div>
-          <button type="button" class="primaryBtn authBtn" id="zoneNewAddBtn_${abbr}">Agregar en este espacio</button>
+          <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
+            <button type="button" class="primaryBtn authBtn" id="zoneNewAddBtn_${abbr}" style="flex:1;">Agregar en este espacio</button>
+            <button type="button" class="secondaryBtn" id="zoneNewCancelBtn_${abbr}" style="flex:0 0 auto;">Cancelar</button>
+          </div>
         </div>
         <button type="button" class="dangerBtn" id="zoneDeleteCampoBtn_${abbr}" style="width:100%; margin-top:16px;">Eliminar este ${labelLower} por completo</button>
       `;
@@ -3599,11 +3848,9 @@
           showToast("Vehículo actualizado");
           editingPlateIdx = null;
           movingPlateIdx = null;
-          if(editTargetZone !== zone.key){
-            renderAll();
-            return;
-          }
-          selectedCi = state.zones[zone.key].findIndex(x => x.campo === newCampo);
+          // Nos quedamos viendo el mismo espacio de siempre, sin saltar a
+          // la zona/campo nuevo del vehículo que se acaba de mover.
+          selectedCi = state.zones[zone.key].findIndex(x => x.campo === c.campo);
           drawZoneGrid();
           drawZoneDetail();
         }
@@ -3623,13 +3870,24 @@
 
       async function removeZonePlate(idx){
         const plateToRemove = c.plates[idx];
-        if(!confirm(`¿Quitar ${plateToRemove.plate} de este ${labelLower}?`)) return;
-        rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
-        const snap = snapshotZones();
-        removePlateEntryByRef(zone.key, c, plateToRemove);
-        pushUndo(snap, `Quitar ${plateToRemove.plate}`);
-        await saveState();
-        showToast("Vehículo eliminado");
+        if(zone.key === SIN_UBICACION_KEY){
+          // Ya está en Sin ubicación — acá "Quitar" sí borra de verdad, no
+          // hay a dónde más trasladarla.
+          if(!confirm(`¿Eliminar ${plateToRemove.plate} del inventario? No se puede deshacer desde acá.`)) return;
+          rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
+          const snap = snapshotZones();
+          removePlateEntryByRef(zone.key, c, plateToRemove);
+          pushUndo(snap, `Eliminar ${plateToRemove.plate}`);
+          await saveState();
+          showToast("Vehículo eliminado del inventario");
+        } else {
+          if(!confirm(`¿Quitar ${plateToRemove.plate} de este ${labelLower}? Se va a mover a "Sin ubicación" en vez de borrarse.`)) return;
+          ensureSinUbicacionConsolidada();
+          const ci = state.zones[zone.key].indexOf(c);
+          const ok = await updaterConfirmMove(zone.key, ci, idx, SIN_UBICACION_KEY, SIN_UBICACION_CAMPO, plateToRemove.aseguradora || "", plateToRemove.modelo || "", "last");
+          if(!ok) return;
+          showToast(`${plateToRemove.plate} se movió a Sin ubicación`);
+        }
         editingPlateIdx = null;
         movingPlateIdx = null;
         drawZoneGrid();
@@ -3651,6 +3909,12 @@
           movingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
           editingPlateIdx = null;
           drawZoneDetail();
+        });
+      });
+      detailBox.querySelectorAll(".spaceCheckinBtn").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const idx = parseInt(b.getAttribute("data-idx"),10);
+          openCheckinModal(c.plates[idx], ()=> drawZoneDetail());
         });
       });
 
@@ -3683,11 +3947,7 @@
             vibrateSuccess();
             showToast("Vehículo movido");
             movingPlateIdx = null;
-            if(quickMoveTargetZone !== zone.key){
-              renderAll();
-              return;
-            }
-            selectedCi = state.zones[zone.key].findIndex(x => x.campo === newCampo);
+            selectedCi = state.zones[zone.key].findIndex(x => x.campo === c.campo);
             drawZoneGrid();
             drawZoneDetail();
           });
@@ -3710,6 +3970,18 @@
         addToggleBtn.style.display = "none";
         detailBox.querySelector(`#zoneNewPlaca_${abbr}`).focus();
       });
+      const cancelAddBtn = detailBox.querySelector(`#zoneNewCancelBtn_${abbr}`);
+      if(cancelAddBtn){
+        cancelAddBtn.addEventListener("click", ()=>{
+          detailBox.querySelector(`#zoneNewPlaca_${abbr}`).value = "";
+          detailBox.querySelector(`#zoneNewAseguradora_${abbr}`).value = "";
+          detailBox.querySelector(`#zoneNewModelo_${abbr}`).value = "";
+          detailBox.querySelector(`#zoneNewDupWarn_${abbr}`).style.display = "none";
+          detailBox.querySelector(`#zoneNewSimilarWarn_${abbr}`).style.display = "none";
+          addBox.style.display = "none";
+          addToggleBtn.style.display = "block";
+        });
+      }
 
       const newPlacaInput = detailBox.querySelector(`#zoneNewPlaca_${abbr}`);
       const newDupWarn = detailBox.querySelector(`#zoneNewDupWarn_${abbr}`);
@@ -3726,7 +3998,7 @@
           const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
           const asegInput = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`);
           const modInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
-          if(dupEntry.aseguradora && !asegInput.value.trim()) asegInput.value = dupEntry.aseguradora;
+          if(asegInput && dupEntry.aseguradora && !asegInput.value.trim()) asegInput.value = dupEntry.aseguradora;
           if(dupEntry.modelo && !modInput.value.trim()) modInput.value = dupEntry.modelo;
           const yaAca = dup.zoneKey === zone.key && dupCampo === c.campo;
           newDupWarn.innerHTML = yaAca
@@ -3741,7 +4013,7 @@
           const modInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
           let sePreCompleto = false;
           if(recordada){
-            if(recordada.aseguradora && !asegInput.value.trim()){ asegInput.value = recordada.aseguradora; sePreCompleto = true; }
+            if(asegInput && recordada.aseguradora && !asegInput.value.trim()){ asegInput.value = recordada.aseguradora; sePreCompleto = true; }
             if(recordada.modelo && !modInput.value.trim()){ modInput.value = recordada.modelo; sePreCompleto = true; }
           }
           if(sePreCompleto){
@@ -4150,7 +4422,8 @@
         if(totalVeh === 0) return; // zona vacía, no aplica
         if(maxTs === null || (ahora - maxTs) > umbralMs){
           const dias = maxTs === null ? null : Math.floor((ahora - maxTs) / (24*60*60*1000));
-          resultado.push({ zoneKey: z.key, zoneLabel: z.label, dias });
+          const fechaExacta = maxTs === null ? null : new Date(maxTs).toLocaleDateString("es-CR", { day:"2-digit", month:"short" });
+          resultado.push({ zoneKey: z.key, zoneLabel: z.label, dias, fechaExacta });
         }
       });
       return resultado;
@@ -4161,7 +4434,7 @@
         ${zonasEstancadas.map(z=>`
           <button type="button" class="stagnantZoneRow" data-zone="${z.zoneKey}">
             <span>${escapeHtml(z.zoneLabel)}</span>
-            <span class="stagnantZoneDays">${z.dias === null ? "sin registro de movimiento" : `sin movimientos hace ${z.dias} día(s)`}</span>
+            <span class="stagnantZoneDays">${z.dias === null ? "sin registro de movimiento" : `sin movimientos hace ${z.dias} día(s) · ${z.fechaExacta}`}</span>
           </button>
         `).join("")}
       </div>
@@ -4174,9 +4447,9 @@
       </div>
       ${toggleBtnHtml}
       <div class="dashboardGrid">
-        <div class="dashCard"><div class="dashCardValue">${totalVeh}</div><div class="dashCardLabel">Vehículos totales</div></div>
-        <div class="dashCard"><div class="dashCardValue">${totalCampos}</div><div class="dashCardLabel">Campos numerados en uso</div></div>
-        <div class="dashCard"><div class="dashCardValue">${totalSinAsignar}</div><div class="dashCardLabel">Sin asignar</div></div>
+        <div class="dashCard" id="dashCardTotalVeh" data-metric="totalVeh" data-value="${totalVeh}"><div class="dashCardValue">${totalVeh}</div><div class="dashCardLabel">Vehículos totales</div><svg class="dashCardSpark" id="sparkTotalVeh" viewBox="0 0 100 28"></svg></div>
+        <div class="dashCard" id="dashCardCampos" data-metric="totalCampos" data-value="${totalCampos}"><div class="dashCardValue">${totalCampos}</div><div class="dashCardLabel">Campos numerados en uso</div><svg class="dashCardSpark" id="sparkTotalCampos" viewBox="0 0 100 28"></svg></div>
+        <div class="dashCard" id="dashCardSinAsignar" data-metric="totalSinAsignar" data-value="${totalSinAsignar}"><div class="dashCardValue">${totalSinAsignar}</div><div class="dashCardLabel">Sin asignar</div><svg class="dashCardSpark" id="sparkTotalSinAsignar" viewBox="0 0 100 28"></svg></div>
         <div class="dashCard"><div class="dashCardValue">${zonasConCapacidad}/${ZONES.length}</div><div class="dashCardLabel">Zonas con capacidad definida</div></div>
       </div>
       ${zonasEstancadasHtml}
@@ -4244,6 +4517,32 @@
       });
     });
 
+    // Resalta con un destello la tarjeta cuyo valor cambió mucho desde la
+    // última vez que se vio en este mismo dispositivo (guardado en
+    // localStorage, no compartido con nadie más).
+    wrap.querySelectorAll(".dashCard[data-metric]").forEach(card=>{
+      const metric = card.getAttribute("data-metric");
+      const valorActual = parseInt(card.getAttribute("data-value"), 10);
+      let anterior = null;
+      try{ const raw = localStorage.getItem("inv_local_dashlast_" + metric); if(raw !== null) anterior = parseInt(raw, 10); }catch(e){ /* no crítico */ }
+      if(anterior !== null && !isNaN(anterior)){
+        const delta = Math.abs(valorActual - anterior);
+        const huboCambioGrande = delta >= 5 || (anterior > 0 && delta / anterior >= 0.15);
+        if(huboCambioGrande) card.classList.add("dashCardFlash");
+      }
+      try{ localStorage.setItem("inv_local_dashlast_" + metric, String(valorActual)); }catch(e){ /* no crítico */ }
+    });
+
+    // Mini-tendencia de los últimos días bajo cada tarjeta (se arma con un
+    // historial diario propio que se va guardando solo, un punto por día).
+    recordAndLoadDashboardHistory({ totalVeh, totalCampos, totalSinAsignar }).then(history=>{
+      const ultimos = history.slice(-7);
+      if(ultimos.length < 2) return; // recién empieza a juntar datos, todavía no hay tendencia que mostrar
+      drawSparkline(document.getElementById("sparkTotalVeh"), ultimos.map(h=>h.totalVeh));
+      drawSparkline(document.getElementById("sparkTotalCampos"), ultimos.map(h=>h.totalCampos));
+      drawSparkline(document.getElementById("sparkTotalSinAsignar"), ultimos.map(h=>h.totalSinAsignar));
+    }).catch(()=>{});
+
     if(canEdit()){
       loadRecentActivity();
       wrap.querySelectorAll(".capacityByZoneList .capacityEditBtn").forEach(btn=>{
@@ -4278,13 +4577,17 @@
     try{
       if(typeof Chart === "undefined") throw new Error("Chart.js no está disponible");
       const ctx1 = wrap.querySelector("#chartVehiclesByZone").getContext("2d");
+      const zonasOrdenadas = ZONES.map(z=>({
+        z, count: (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0)
+      })).sort((a,b)=> b.count - a.count);
+      const promedioVeh = zonasOrdenadas.length ? zonasOrdenadas.reduce((a,x)=>a+x.count,0) / zonasOrdenadas.length : 0;
       const chart1 = new Chart(ctx1, {
         type: "bar",
         data: {
-          labels: ZONES.map(z=>z.label),
+          labels: zonasOrdenadas.map(x=>x.z.label),
           datasets: [{
-            data: ZONES.map(z=> (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0)),
-            backgroundColor: ZONES.map(z=>"#"+z.hex),
+            data: zonasOrdenadas.map(x=>x.count),
+            backgroundColor: zonasOrdenadas.map(x=>"#"+x.z.hex),
             borderRadius: 5,
             maxBarThickness: 46
           }]
@@ -4296,8 +4599,45 @@
           scales: {
             y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: "rgba(0,0,0,0.05)" } },
             x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+          },
+          onClick: (evt, elements) => {
+            if(!elements || elements.length === 0) return;
+            activeTab = zonasOrdenadas[elements[0].index].z.key;
+            renderAll();
           }
-        }
+        },
+        plugins: [{
+          id: "valueLabelsAndAverage",
+          afterDatasetsDraw(chart){
+            const { ctx, scales } = chart;
+            const meta = chart.getDatasetMeta(0);
+            ctx.save();
+            ctx.font = "700 11px Inter, sans-serif";
+            ctx.fillStyle = "#1b1e21";
+            ctx.textAlign = "center";
+            meta.data.forEach((bar, i)=>{
+              const val = zonasOrdenadas[i].count;
+              ctx.fillText(String(val), bar.x, bar.y - 6);
+            });
+            // Línea de referencia con el promedio de vehículos entre zonas
+            if(promedioVeh > 0){
+              const yPix = scales.y.getPixelForValue(promedioVeh);
+              ctx.strokeStyle = "#8b9198";
+              ctx.setLineDash([5,4]);
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(scales.x.left, yPix);
+              ctx.lineTo(scales.x.right, yPix);
+              ctx.stroke();
+              ctx.setLineDash([]);
+              ctx.textAlign = "left";
+              ctx.fillStyle = "#8b9198";
+              ctx.font = "600 10px Inter, sans-serif";
+              ctx.fillText(`Promedio: ${promedioVeh.toFixed(1)}`, scales.x.left + 4, yPix - 4);
+            }
+            ctx.restore();
+          }
+        }]
       });
       dashboardCharts.push(chart1);
     }catch(e){
@@ -4513,28 +4853,53 @@
     if(isNaN(d.getTime())) return "";
     return d.toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
   }
+  // Texto legible del estado de check-in de un vehículo, para el Excel.
+  function checkinExcelInfo(p){
+    if(!p.checkin) return { status: "Sin check-in", notes: "" };
+    const faltantes = CHECKIN_ITEMS.filter(it => !(p.checkin.items && p.checkin.items[it]));
+    const status = faltantes.length === 0 ? "Completo" : `Falta: ${faltantes.join(", ")}`;
+    return { status, notes: p.checkin.notes || "" };
+  }
+
   function addZoneSheet(wb, z, fechaLarga, horaLarga){
     const campos = state.zones[z.key] || [];
     const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
     const cap = state.capacities[z.key];
     const capTxt = (cap && cap>0) ? ` · ${campos.length}/${cap} campos ocupados` : ``;
+    // El check-in es exclusivo de Parqueo Gash Externo — solo esa hoja
+    // suma las columnas de Check-in y Notas, ninguna otra zona las tiene.
+    const esCheckinZone = z.key === CHECKIN_ZONE_KEY;
+    const headerCols = esCheckinZone
+      ? ["Campo","Placa","Aseguradora","Modelo","Última actualización","Check-in","Notas del check-in"]
+      : ["Campo","Placa","Aseguradora","Modelo","Última actualización"];
+    const lastCol = headerCols.length - 1;
 
     const data = [
-      [`${z.label} — Inventario de Parqueo`, "", "", "", ""],
-      [`Generado ${fechaLarga}, ${horaLarga} · ${totalVeh} vehículo(s) en ${campos.length} campo(s)${capTxt}`, "", "", "", ""],
+      [`${z.label} — Inventario de Parqueo`, ...Array(lastCol).fill("")],
+      [`Generado ${fechaLarga}, ${horaLarga} · ${totalVeh} vehículo(s) en ${campos.length} campo(s)${capTxt}`, ...Array(lastCol).fill("")],
       [],
-      ["Campo","Placa","Aseguradora","Modelo","Última actualización"]
+      headerCols
     ];
-    campos.forEach(c => c.plates.forEach(p => data.push([c.campo, p.plate, p.aseguradora || "", p.modelo || "", fechaCortaExcel(p)])));
+    campos.forEach(c => c.plates.forEach(p => {
+      const row = [c.campo, p.plate, p.aseguradora || "", p.modelo || "", fechaCortaExcel(p)];
+      if(esCheckinZone){
+        const info = checkinExcelInfo(p);
+        row.push(info.status, info.notes);
+      }
+      data.push(row);
+    }));
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     ws["!merges"] = [
-      { s:{r:0,c:0}, e:{r:0,c:4} },
-      { s:{r:1,c:0}, e:{r:1,c:4} }
+      { s:{r:0,c:0}, e:{r:0,c:lastCol} },
+      { s:{r:1,c:0}, e:{r:1,c:lastCol} }
     ];
-    ws["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 18 }];
+    ws["!cols"] = esCheckinZone
+      ? [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 32 }, { wch: 26 }]
+      : [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 18 }];
     if(data.length > 4){
-      ws["!autofilter"] = { ref: `A4:E${data.length}` };
+      const lastColLetter = String.fromCharCode(65 + lastCol);
+      ws["!autofilter"] = { ref: `A4:${lastColLetter}${data.length}` };
     }
     XLSX.utils.book_append_sheet(wb, ws, z.label.substring(0,31));
   }
@@ -5289,7 +5654,7 @@
     if(sessionData){
       const found = users.find(u => u.username.toLowerCase() === sessionData.username.toLowerCase() && u.active !== false);
       if(found && (found.sessionVersion || 0) === sessionData.v){
-        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused };
+        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy };
         revealApp();
         return;
       } else if(found){
@@ -5309,7 +5674,7 @@
         if(storageAvailable) await logAccess(found.username, "login_failed");
         return false;
       }
-      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused };
+      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy };
       if(storageAvailable){
         await setSessionUsername(found.username, found.sessionVersion || 0);
         await logAccess(found.username, "login");
@@ -5368,7 +5733,7 @@
         <div class="userRow ${u.active===false ? 'inactive' : ''}">
           <div class="userRowInfo">
             <span class="userRowName">${escapeHtml(u.username)} ${currentUser.username.toLowerCase()===u.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
-            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}${u.featured ? ' · logo propio' : ''}${(u.role!=="admin" && u.canExport) ? ' · puede exportar' : ''}${u.searchFocused ? ' · enfocado en buscar' : ''}</span>
+            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}${u.featured ? ' · logo propio' : ''}${(u.role!=="admin" && u.canExport) ? ' · puede exportar' : ''}${u.searchFocused ? ' · enfocado en buscar' : ''}${u.showMovedBy ? ' · muestra quién movió' : ''}</span>
           </div>
           <div class="userRowBtns">
             <button class="renameUserBtn" data-i="${i}">Renombrar</button>
@@ -5376,6 +5741,7 @@
             <button class="featureUserBtn" data-i="${i}">${u.featured ? "Quitar logo" : "Dar logo propio"}</button>
             ${u.role!=="admin" ? `<button class="exportPermBtn" data-i="${i}">${u.canExport ? "Quitar Excel" : "Dar acceso a Excel"}</button>` : ``}
             ${u.role==="actualizacion" ? `<button class="searchFocusBtn" data-i="${i}" title="Al entrar, prioriza el buscador de placas y deja la edición en segundo plano (colapsada, pero disponible)">${u.searchFocused ? "Quitar enfoque en buscar" : "Enfocar en buscar ubicación"}</button>` : ``}
+            ${u.role==="actualizacion" ? `<button class="movedByBtn" data-i="${i}" title="Reemplaza el campo Aseguradora por quién hizo el último movimiento del vehículo — ya no se pide ni se muestra aseguradora para esta cuenta">${u.showMovedBy ? "Quitar \"quién movió\"" : "Mostrar quién movió (en vez de aseguradora)"}</button>` : ``}
             <button class="revokeSessionBtn" data-i="${i}" title="Fuerza a que esta cuenta tenga que volver a iniciar sesión en cualquier dispositivo donde haya quedado recordada">Cerrar sesión en otros dispositivos</button>
             <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "Activar" : "Desactivar"}</button>
             <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
@@ -5447,6 +5813,17 @@
           showToast(users[i].searchFocused
             ? `"${users[i].username}" ahora entra directo al buscador (edición queda colapsada, pero disponible)`
             : `"${users[i].username}" vuelve a ver la pantalla completa de Actualización`);
+          draw();
+        });
+      });
+      listEl.querySelectorAll(".movedByBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          users[i].showMovedBy = !users[i].showMovedBy;
+          await saveUsers(users);
+          showToast(users[i].showMovedBy
+            ? `"${users[i].username}" ahora ve quién movió cada vehículo en vez de la aseguradora`
+            : `"${users[i].username}" vuelve a ver la aseguradora normalmente`);
           draw();
         });
       });
@@ -5739,6 +6116,78 @@
   }
   document.getElementById("dataHealthBtn").addEventListener("click", openDataHealthModal);
 
+  // ---- Administrar los ítems del check-in (solo Admin) ----
+  async function openCheckinItemsModal(){
+    if(!guardEdit()) return;
+    await loadCheckinItemsIfNeeded();
+    const overlay = document.getElementById("checkinItemsModal");
+    const listBox = document.getElementById("checkinItemsAdminList");
+    let items = CHECKIN_ITEMS.slice(); // copia de trabajo, se guarda recién al confirmar cada acción
+
+    function draw(){
+      listBox.innerHTML = items.length ? items.map((item, i)=>`
+        <div class="checkinItemsAdminRow">
+          <button type="button" class="checkinItemUpBtn" data-i="${i}" ${i===0 ? "disabled" : ""} title="Subir">▲</button>
+          <button type="button" class="checkinItemDownBtn" data-i="${i}" ${i===items.length-1 ? "disabled" : ""} title="Bajar">▼</button>
+          <span>${escapeHtml(item)}</span>
+          <button type="button" class="checkinItemRemoveBtn" data-i="${i}" title="Quitar">✕</button>
+        </div>
+      `).join("") : `<div class="dashEmptyNote">Sin ítems — agregá al menos uno abajo.</div>`;
+
+      listBox.querySelectorAll(".checkinItemUpBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          [items[i-1], items[i]] = [items[i], items[i-1]];
+          await saveCheckinItems(items);
+          draw();
+        });
+      });
+      listBox.querySelectorAll(".checkinItemDownBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          [items[i+1], items[i]] = [items[i], items[i+1]];
+          await saveCheckinItems(items);
+          draw();
+        });
+      });
+      listBox.querySelectorAll(".checkinItemRemoveBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          if(!confirm(`¿Quitar "${items[i]}" de la lista? Los check-in ya guardados con este ítem no se tocan, solo deja de pedirse en los nuevos.`)) return;
+          items.splice(i,1);
+          await saveCheckinItems(items);
+          draw();
+        });
+      });
+    }
+    draw();
+
+    const newItemInput = document.getElementById("checkinNewItemInput");
+    newItemInput.value = "";
+    async function addItem(){
+      const v = newItemInput.value.trim();
+      if(!v) return;
+      if(items.some(it => it.toLowerCase() === v.toLowerCase())){ showToast("Ese ítem ya está en la lista"); return; }
+      items.push(v);
+      await saveCheckinItems(items);
+      newItemInput.value = "";
+      draw();
+    }
+    const addBtn = document.getElementById("checkinAddItemBtn");
+    function onAddClick(){ addItem(); }
+    function onEnter(e){ if(e.key === "Enter") addItem(); }
+    addBtn.addEventListener("click", onAddClick);
+    newItemInput.addEventListener("keydown", onEnter);
+
+    overlay.classList.add("show");
+    document.getElementById("checkinItemsCloseBtn").onclick = ()=>{
+      overlay.classList.remove("show");
+      addBtn.removeEventListener("click", onAddClick);
+      newItemInput.removeEventListener("keydown", onEnter);
+    };
+  }
+  document.getElementById("checkinItemsBtn").addEventListener("click", openCheckinItemsModal);
+
   // ---- Helpers de chips de zona tocables (reemplazan el <select> en el panel de Actualización) ----
   function zoneChipsHtml(containerId, selectedKey){
     return `<div class="zoneChipsRow" id="${containerId}">
@@ -5761,7 +6210,26 @@
     await loadState();
     if(!state.zones[SIN_UBICACION_KEY]) state.zones[SIN_UBICACION_KEY] = [];
     await loadPlateRegistry();
+    await loadCheckinItemsIfNeeded();
     refreshModelSuggestions();
+
+    // Para cuentas con "mostrar quién movió" activo, se arma un mapa
+    // placa → usuario del último movimiento (a partir del Historial), para
+    // mostrarlo en vez de la aseguradora en toda la pantalla.
+    let movedByMap = {};
+    if(currentUser.showMovedBy){
+      const historial = await readLog(HISTORY_KEY);
+      historial.forEach(h=>{
+        // El historial está en orden cronológico (más viejo primero), así
+        // que la última vez que aparece la placa es su movimiento más reciente.
+        movedByMap[normalizePlate(h.placa)] = h.username;
+      });
+    }
+    function movedByText(plate){
+      const u = movedByMap[normalizePlate(plate)];
+      return u ? `Movido por: ${u}` : "Movido por: sin registro";
+    }
+
     const holder = document.getElementById("updaterPanel");
     holder.innerHTML = `
       <div class="updaterCard">
@@ -5909,11 +6377,20 @@
             // segundo toque sobre la misma zona: confirma el cambio
             spaceZone = zoneKey;
             armedZoneKey = null;
-            selectedCampo = "";
             editingPlateIdx = null;
             movingPlateIdx = null;
             drawSpaceZoneChips();
-            refreshSpaceGrid();
+            if(zoneKey === SIN_UBICACION_KEY){
+              // No hay cuadrícula de espacios acá — es una sola lista, así
+              // que se entra directo a verla, sin pasar por "elegir un
+              // espacio" primero.
+              ensureSinUbicacionConsolidada();
+              saveState();
+              refreshSpaceGrid(SIN_UBICACION_CAMPO);
+            } else {
+              selectedCampo = "";
+              refreshSpaceGrid();
+            }
           } else {
             // primer toque: solo "arma" la zona, todavía no cambia
             armedZoneKey = zoneKey;
@@ -5982,6 +6459,25 @@
           grupos[1].items.push(c);
         });
         spaceGridBox.innerHTML = grupos.filter(g=>g.items.length>0).map(g=>`
+          <div class="spaceGridGroup">
+            <div class="spaceGridGroupLabel">${g.label}</div>
+            <div class="spaceGrid">${g.items.map(renderGridBtnHtml).join("")}</div>
+          </div>
+        `).join("");
+      } else if(spaceZone === "Maya"){
+        // "Maya" es la fusión de 2 zonas viejas (Maya numerada, Maya Sin
+        // numeración). Mismo criterio que Atrás: se agrupan por su origen
+        // para completar más fácil, en vez de una sola lista mezclada.
+        spaceGridBox.classList.add("groupedMode");
+        const gruposMaya = [
+          { label: "Maya", items: [] },
+          { label: "Maya Sin numeración", items: [] }
+        ];
+        arr.forEach(c=>{
+          if(/^línea/i.test(c.campo)){ gruposMaya[1].items.push(c); return; }
+          gruposMaya[0].items.push(c);
+        });
+        spaceGridBox.innerHTML = gruposMaya.filter(g=>g.items.length>0).map(g=>`
           <div class="spaceGridGroup">
             <div class="spaceGridGroupLabel">${g.label}</div>
             <div class="spaceGrid">${g.items.map(renderGridBtnHtml).join("")}</div>
@@ -6118,7 +6614,10 @@
             <div class="spaceEditForm" data-idx="${idx}">
               <div class="spaceEditQuickRow">
                 <input type="text" id="spaceEditPlaca" class="plate reqField" value="${escapeHtml(p.plate)}" placeholder="Placa *">
-                <input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" placeholder="Aseguradora">
+                ${currentUser.showMovedBy
+                  ? `<div class="movedByDisplay">${escapeHtml(movedByText(p.plate))}</div>`
+                  : `<input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" placeholder="Aseguradora">`
+                }
                 <input type="text" id="spaceEditModelo" class="reqField" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo *" list="modelSuggestions">
               </div>
               <div class="dupWarn" id="spaceEditDupWarn" style="display:none;"></div>
@@ -6143,9 +6642,10 @@
           <div class="spacePlateRow" data-idx="${idx}">
             <span class="orderBadge">${idx+1}</span>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo">${escapeHtml(p.plate)}${p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : ""}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+              <span class="spacePlateInfo">${escapeHtml(p.plate)}${currentUser.showMovedBy ? ` · ${escapeHtml(movedByText(p.plate))}` : (p.aseguradora ? ` · ${escapeHtml(p.aseguradora)}` : "")}${p.modelo ? ` · ${escapeHtml(p.modelo)}` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${spaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel">${lastMovedLabel(p)}</span>
             </div>
+            ${spaceZone===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
             <button type="button" class="spaceMoveBtn" data-idx="${idx}" title="Mover a otro espacio">🔀</button>
             <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
             <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
@@ -6161,12 +6661,13 @@
       spaceInfoBox.classList.remove("slideInRight");
       void spaceInfoBox.offsetWidth; // fuerza el reflujo para poder repetir la animación
       spaceInfoBox.classList.add("slideInRight");
+      const esSinUbicacion = spaceZone === SIN_UBICACION_KEY;
       spaceInfoBox.innerHTML = `
-        <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">← Volver a la lista de espacios</button>
-        <div class="spaceNavRow">
+        <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">${esSinUbicacion ? "← Volver / cambiar de zona" : "← Volver a la lista de espacios"}</button>
+        ${esSinUbicacion ? "" : `<div class="spaceNavRow">
           <button type="button" id="spacePrevBtn" ${anterior ? "" : "disabled"}>← ${anterior ? escapeHtml(anterior.campo) : "—"}</button>
           <button type="button" id="spaceNextBtn" ${siguiente ? "" : "disabled"}>${siguiente ? escapeHtml(siguiente.campo) : "—"} →</button>
-        </div>
+        </div>`}
         <div class="spaceInfoHeader">
           <strong>${zoneInfo(spaceZone).label} · ${escapeHtml(campoLabel)}</strong>
           ${cap ? `<span class="spaceCapBadge${full ? " full" : ""}">${occ}/${cap}</span>` : ``}
@@ -6176,11 +6677,14 @@
         <button type="button" class="linkBackBtn" id="updSpaceAddToggle" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="updSpaceAddBox" style="display:none;">
           <input type="text" id="updSpaceNewPlaca" class="plate reqField" placeholder="Placa *">
-          <input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">
+          ${currentUser.showMovedBy ? `` : `<input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">`}
           <input type="text" id="updSpaceNewModelo" class="reqField" placeholder="Modelo *" list="modelSuggestions" style="margin-top:6px;">
           <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
           <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
-          <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn">Agregar en este espacio</button>
+          <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
+            <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn" style="flex:1;">Agregar en este espacio</button>
+            <button type="button" class="secondaryBtn" id="updSpaceAddCancelBtn" style="flex:0 0 auto;">Cancelar</button>
+          </div>
         </div>
       `;
       const addToggleBtn = spaceInfoBox.querySelector("#updSpaceAddToggle");
@@ -6190,24 +6694,52 @@
         addToggleBtn.style.display = "none";
         spaceInfoBox.querySelector("#updSpaceNewPlaca").focus();
       });
+      const cancelAddBtn = spaceInfoBox.querySelector("#updSpaceAddCancelBtn");
+      if(cancelAddBtn){
+        cancelAddBtn.addEventListener("click", ()=>{
+          spaceInfoBox.querySelector("#updSpaceNewPlaca").value = "";
+          const asegField = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
+          if(asegField) asegField.value = "";
+          spaceInfoBox.querySelector("#updSpaceNewModelo").value = "";
+          spaceInfoBox.querySelector("#updSpaceDupWarn").style.display = "none";
+          spaceInfoBox.querySelector("#updSpaceSimilarWarn").style.display = "none";
+          addBox.style.display = "none";
+          addToggleBtn.style.display = "block";
+        });
+      }
 
-      // Quita una placa de este espacio (compartido entre el botón de la fila y el de edición)
+      // Quita una placa de este espacio (compartido entre el botón de la fila y el de edición).
+      // En cualquier zona real, "Quitar" ahora traslada la placa a "Sin
+      // ubicación" en vez de borrarla del inventario. Si ya está en "Sin
+      // ubicación", ahí sí se elimina de verdad (no hay a dónde más moverla).
       async function removePlateFromSpace(idx, btn){
         const plateToRemove = entry.plates[idx];
-        if(!confirm(`¿Quitar ${plateToRemove.plate} de este ${labelLower}?`)) return;
+        const yaEnSinUbicacion = spaceZone === SIN_UBICACION_KEY;
+        const mensajeConfirmar = yaEnSinUbicacion
+          ? `¿Eliminar ${plateToRemove.plate} del inventario? No se puede deshacer desde acá.`
+          : `¿Quitar ${plateToRemove.plate} de este ${labelLower}? Se va a mover a "Sin ubicación" en vez de borrarse.`;
+        if(!confirm(mensajeConfirmar)) return;
         const doRemove = async ()=>{
-          rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
-          removePlateEntryByRef(spaceZone, entry, plateToRemove);
-          await saveState(true);
-          await appendLog(HISTORY_KEY, {
-            ts: nowStamp(),
-            username: currentUser.username,
-            placa: plateToRemove.plate,
-            desde: `${zoneInfo(spaceZone).label} · campo ${campoLabel}`,
-            hasta: "Eliminado del inventario"
-          }, 300);
+          if(yaEnSinUbicacion){
+            rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
+            removePlateEntryByRef(spaceZone, entry, plateToRemove);
+            await saveState(true);
+            await appendLog(HISTORY_KEY, {
+              ts: nowStamp(),
+              username: currentUser.username,
+              placa: plateToRemove.plate,
+              desde: `${zoneInfo(spaceZone).label}`,
+              hasta: "Eliminado del inventario"
+            }, 300);
+            showToast("Vehículo eliminado del inventario");
+          } else {
+            ensureSinUbicacionConsolidada();
+            const ci = state.zones[spaceZone].indexOf(entry);
+            const ok = await updaterConfirmMove(spaceZone, ci, idx, SIN_UBICACION_KEY, SIN_UBICACION_CAMPO, plateToRemove.aseguradora || "", plateToRemove.modelo || "", "last");
+            if(!ok) return;
+            showToast(`${plateToRemove.plate} se movió a Sin ubicación`);
+          }
           vibrateSuccess();
-          showToast("Vehículo eliminado");
           editingPlateIdx = null;
           movingPlateIdx = null;
           const stillExists = (state.zones[spaceZone] || []).some(c => c.campo === campoLabel);
@@ -6289,7 +6821,7 @@
 
         async function saveEdit(){
           const newPlate = editPlacaInput.value;
-          const newAseguradora = editAsegInput.value.trim();
+          const newAseguradora = editAsegInput ? editAsegInput.value.trim() : (entry.plates[editingPlateIdx].aseguradora || "");
           const newModelo = editModeloInput.value.trim();
           const newCampo = normalizeCampo(editCampoInput.value);
           if(!newCampo){ showToast("Ingresá un campo válido"); return; }
@@ -6304,13 +6836,10 @@
             showToast("Vehículo actualizado");
             editingPlateIdx = null;
             movingPlateIdx = null;
-            if(editTargetZone !== spaceZone){
-              spaceZone = editTargetZone;
-              drawSpaceZoneChips();
-              refreshSpaceGrid(newCampo);
-            } else {
-              refreshSpaceGrid(newCampo);
-            }
+            // Nos quedamos viendo el mismo espacio de siempre (sin saltar a
+            // la zona/campo nuevo), para poder seguir trabajando ahí mismo
+            // sin tener que volver a entrar cada vez que se mueve algo.
+            refreshSpaceGrid(campoLabel);
             drawZoneFilterRow();
             drawAllList();
           });
@@ -6323,7 +6852,7 @@
           drawSpaceInfo();
         });
         spaceInfoBox.querySelector("#spaceEditRemoveBtn").addEventListener("click", (e)=> removePlateFromSpace(editingPlateIdx, e.currentTarget));
-        [editPlacaInput, editAsegInput, editModeloInput, editCampoInput].forEach(inp=>{
+        [editPlacaInput, editAsegInput, editModeloInput, editCampoInput].filter(Boolean).forEach(inp=>{
           inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") saveEdit(); });
         });
         editPlacaInput.focus();
@@ -6345,6 +6874,12 @@
           movingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
           editingPlateIdx = null;
           drawSpaceInfo();
+        });
+      });
+      spaceInfoBox.querySelectorAll(".spaceCheckinBtn").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const idx = parseInt(b.getAttribute("data-idx"),10);
+          openCheckinModal(entry.plates[idx], ()=> refreshSpaceGrid(campoLabel));
         });
       });
 
@@ -6414,13 +6949,9 @@
             vibrateSuccess();
             showToast("Vehículo movido");
             movingPlateIdx = null;
-            if(quickMoveTargetZone !== spaceZone){
-              spaceZone = quickMoveTargetZone;
-              drawSpaceZoneChips();
-              refreshSpaceGrid(newCampo);
-            } else {
-              refreshSpaceGrid(newCampo);
-            }
+            // Igual que al editar: nos quedamos en el mismo espacio, sin
+            // seguir a la placa hasta su nuevo lugar.
+            refreshSpaceGrid(campoLabel);
             drawZoneFilterRow();
             drawAllList();
           });
@@ -6451,7 +6982,7 @@
           const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
           const asegInput = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
           const modInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
-          if(dupEntry.aseguradora && !asegInput.value.trim()) asegInput.value = dupEntry.aseguradora;
+          if(asegInput && dupEntry.aseguradora && !asegInput.value.trim()) asegInput.value = dupEntry.aseguradora;
           if(dupEntry.modelo && !modInput.value.trim()) modInput.value = dupEntry.modelo;
           const yaAca = dup.zoneKey === spaceZone && dupCampo === campoLabel;
           if(yaAca){
@@ -6468,7 +6999,7 @@
           const modInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
           let sePreCompleto = false;
           if(recordada){
-            if(recordada.aseguradora && !asegInput.value.trim()){ asegInput.value = recordada.aseguradora; sePreCompleto = true; }
+            if(asegInput && recordada.aseguradora && !asegInput.value.trim()){ asegInput.value = recordada.aseguradora; sePreCompleto = true; }
             if(recordada.modelo && !modInput.value.trim()){ modInput.value = recordada.modelo; sePreCompleto = true; }
           }
           if(sePreCompleto){
@@ -6502,7 +7033,8 @@
       async function confirmSpaceAdd(){
         const plateRaw = spacePlacaInput.value;
         if(!normalizePlate(plateRaw)){ showToast("Ingresá una placa válida"); return; }
-        const aseguradora = spaceInfoBox.querySelector("#updSpaceNewAseguradora").value;
+        const asegField = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
+        const aseguradora = asegField ? asegField.value : "";
         const modeloInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
         const modelo = modeloInput.value;
         if(!modelo.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
@@ -6520,17 +7052,20 @@
         });
       }
       spaceAddBtn.addEventListener("click", confirmSpaceAdd);
-      [spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewAseguradora"), spaceInfoBox.querySelector("#updSpaceNewModelo")].forEach(inp=>{
+      [spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewAseguradora"), spaceInfoBox.querySelector("#updSpaceNewModelo")].filter(Boolean).forEach(inp=>{
         inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmSpaceAdd(); });
       });
 
-      spaceInfoBox.querySelector("#spaceBackBtn").addEventListener("click", ()=>{
-        selectedCampo = "";
-        editingPlateIdx = null;
-        movingPlateIdx = null;
-        spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
-        drawSpaceInfo();
-      });
+      const backBtn = spaceInfoBox.querySelector("#spaceBackBtn");
+      if(backBtn){
+        backBtn.addEventListener("click", ()=>{
+          selectedCampo = "";
+          editingPlateIdx = null;
+          movingPlateIdx = null;
+          spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
+          drawSpaceInfo();
+        });
+      }
       const prevBtn = spaceInfoBox.querySelector("#spacePrevBtn");
       const nextBtn = spaceInfoBox.querySelector("#spaceNextBtn");
       if(prevBtn && anterior) prevBtn.addEventListener("click", ()=> refreshSpaceGrid(anterior.campo));
