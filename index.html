@@ -96,24 +96,24 @@
   header{
     background: linear-gradient(180deg, var(--asphalt) 0%, var(--asphalt-2) 100%);
     color: var(--paper);
-    padding: 18px 16px 14px;
+    padding: 10px 14px 8px;
     position: sticky; top:0; z-index: 20;
-    border-bottom: 4px solid var(--line);
+    border-bottom: 3px solid var(--line);
   }
   header .top-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
   }
   header h1{
-    font-size: 1.15rem;
+    font-size: 1rem;
     margin:0;
     font-weight: 800;
     letter-spacing: 0.02em;
   }
   header h1 .dash{color:var(--line);}
   .meta{
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     color: var(--muted);
-    margin-top:2px;
+    margin-top:1px;
   }
   #exportBtn, #shareExportBtn{
     background: var(--line);
@@ -128,7 +128,13 @@
   }
   #exportBtn:active, #shareExportBtn:active{transform: translateY(1px);}
   .headerBtns{
-    display:flex; flex-direction:column; gap:6px; align-items:stretch;
+    display:flex; flex-direction:row; flex-wrap:wrap; gap:5px; align-items:center; justify-content:flex-end;
+    max-width: 62vw;
+  }
+  .headerBtns > button, .headerBtns .adminMenuWrap > button{
+    padding: 5px 8px !important;
+    font-size: 0.72rem !important;
+    line-height:1.3;
   }
   #undoBtn{
     background: transparent;
@@ -1263,8 +1269,8 @@
   .adminMenuDropdown button:active{ background: var(--surface-2); }
   .identityRow{
     display:flex; align-items:center; gap:8px;
-    margin-top:8px;
-    font-size:0.72rem;
+    margin-top:5px;
+    font-size:0.7rem;
     color: var(--muted);
     flex-wrap:wrap;
   }
@@ -1921,8 +1927,8 @@
       <div class="meta" id="metaLine">cargando…</div>
     </div>
     <div class="headerBtns">
-      <button id="refreshBtn">🔄 Actualizar</button>
-      <button id="themeToggleBtn">🌙 Oscuro</button>
+      <button id="refreshBtn" title="Actualizar">🔄</button>
+      <button id="themeToggleBtn" title="Cambiar tema">🌙</button>
       <div class="adminMenuWrap" id="adminMenuWrap" style="display:none;">
         <button type="button" id="adminMenuBtn">⚙️ Administrar</button>
         <div class="adminMenuDropdown" id="adminMenuDropdown">
@@ -1936,11 +1942,11 @@
         </div>
       </div>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
-      <button id="logoutBtn">Cerrar sesión</button>
-      <button id="undoBtn" disabled style="display:none;">Deshacer</button>
-      <button id="exportBtn" style="display:none;">Exportar a Excel</button>
-      <button id="exportZoneBtn" style="display:none;">Exportar esta zona</button>
-      <button id="shareExportBtn" style="display:none;">📤 Compartir Excel</button>
+      <button id="undoBtn" disabled style="display:none;">↩️</button>
+      <button id="exportBtn" style="display:none;">Excel</button>
+      <button id="exportZoneBtn" style="display:none;">Esta zona</button>
+      <button id="shareExportBtn" style="display:none;">📤</button>
+      <button id="logoutBtn" title="Cerrar sesión">🚪</button>
     </div>
   </div>
   <div class="identityRow" id="identityRow"></div>
@@ -2541,12 +2547,26 @@
   }
 
   document.addEventListener("fullscreenchange", ()=>{
-    // Si la persona sale de pantalla completa con un gesto del sistema (no
-    // con nuestro botón), sincronizamos el resto del modo kiosco con eso.
+    // En muchos celulares Android, el teclado que aparece al escribir hace
+    // que el navegador salga de pantalla completa por su cuenta — sin que
+    // la persona haya tocado nada para salir. Antes eso apagaba TODO el
+    // modo kiosco (encabezado volvía a aparecer, pantalla podía apagarse).
+    // Ahora, si la pantalla completa se pierde así, el modo kiosco sigue
+    // activo igual — solo se intenta recuperar la pantalla completa en el
+    // próximo toque, sin forzar una salida que nadie pidió.
     if(!document.fullscreenElement && kioskModeActive){
-      exitKioskMode();
+      fullscreenLostWhileKiosk = true;
     }
   });
+  let fullscreenLostWhileKiosk = false;
+  document.addEventListener("click", async ()=>{
+    if(kioskModeActive && fullscreenLostWhileKiosk && !document.fullscreenElement){
+      fullscreenLostWhileKiosk = false;
+      try{
+        if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+      }catch(e){ /* el navegador no lo permitió justo en este toque; se reintenta con el próximo */ fullscreenLostWhileKiosk = true; }
+    }
+  }, true);
   document.getElementById("kioskFloatingExitBtn").addEventListener("click", exitKioskMode);
 
 
@@ -2578,14 +2598,15 @@
   let storageAvailable = true;
   let storageWarned = false;
   let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
-  const undoStack = []; // { snapshot, description }, máx 10
+  let pendingResumenState = null; // { zoneKey, onlyToday, sortKey, sortDir } — se usa junto con pendingResumenFilter al refrescar en segundo plano
+  const undoStack = []; // { snapshot, description, ts }, máx 10
   const UNDO_LIMIT = 10;
 
   function snapshotZones(){
     return JSON.parse(JSON.stringify(state.zones));
   }
   function pushUndo(snapshot, description){
-    undoStack.push({ snapshot, description: description || "Cambio sin descripción" });
+    undoStack.push({ snapshot, description: description || "Cambio sin descripción", ts: Date.now() });
     if(undoStack.length > UNDO_LIMIT) undoStack.shift();
     updateUndoBtn();
   }
@@ -2600,13 +2621,33 @@
     if(!guardEdit()) return;
     if(undoStack.length === 0) return;
     const entry = undoStack[undoStack.length - 1];
-    if(!confirm(`¿Deshacer esto?\n\n${entry.description}`)) return;
+    const minutosPasados = entry.ts ? Math.round((Date.now() - entry.ts) / 60000) : null;
+    // Si ya pasó bastante rato, el aviso lo aclara — deshacer algo de hace
+    // rato puede sorprender si mientras tanto se hicieron más cambios encima.
+    const avisoTiempo = (minutosPasados !== null && minutosPasados >= 10)
+      ? `\n\n⚠️ Esto pasó hace ${minutosPasados >= 60 ? Math.round(minutosPasados/60) + " hora(s)" : minutosPasados + " minuto(s)"}. Si hiciste otros cambios después, revisalos también — deshacer esto no los toca a ellos.`
+      : "";
+    if(!confirm(`¿Deshacer esto?\n\n${entry.description}${avisoTiempo}`)) return;
     undoStack.pop();
     state.zones = entry.snapshot;
     updateUndoBtn();
     await saveState(true);
     renderAll();
     showToast("Cambio deshecho");
+  }
+
+  // Ir a una zona desde el Dashboard: Admin entra al panel de esa zona
+  // (puede editar ahí); Búsqueda no tiene acceso a esa pantalla, así que en
+  // cambio va a Resumen ya filtrado por esa zona, que es donde sí puede
+  // consultarla.
+  function goToZoneFromDashboard(zoneKey){
+    if(canEdit()){
+      activeTab = zoneKey;
+    } else {
+      activeTab = "__resumen__";
+      pendingResumenState = { zoneKey, onlyToday: false, sortKey: null, sortDir: 1 };
+    }
+    renderAll();
   }
 
   function zoneInfo(key){
@@ -3038,7 +3079,12 @@
 
   // Busca una placa en todas las zonas/campos. Devuelve {zoneKey, campoIdx, plateIdx} o null.
   function findPlate(plateUpper, excludeZone, excludeCampoIdx, excludePlateIdx){
-    for(const z of ZONES){
+    // Se busca en ZONES + Sin ubicación (aunque esta última quede afuera de
+    // Excel/Resumen/pestañas a propósito) — si no se buscara ahí también,
+    // una placa que ya está en Sin ubicación no se detectaría como
+    // duplicado al agregarla en un lugar real, y quedaría repetida en los
+    // dos lados en vez de moverse.
+    for(const z of [...ZONES, SIN_UBICACION_INFO]){
       const arr = state.zones[z.key] || [];
       for(let ci=0; ci<arr.length; ci++){
         const plates = arr[ci].plates;
@@ -3075,7 +3121,7 @@
   function findSimilarPlates(plateUpper, excludeZone, excludeCampoIdx, excludePlateIdx){
     if(!plateUpper || plateUpper.length < 4) return [];
     const results = [];
-    for(const z of ZONES){
+    for(const z of [...ZONES, SIN_UBICACION_INFO]){
       const arr = state.zones[z.key] || [];
       for(let ci=0; ci<arr.length; ci++){
         const plates = arr[ci].plates;
@@ -4325,6 +4371,20 @@
     let onlyToday = false;
     let sortState = { key: null, dir: 1 };
 
+    if(pendingResumenState){
+      if(pendingResumenState.zoneKey) zoneSelect.value = pendingResumenState.zoneKey;
+      if(pendingResumenState.onlyToday){
+        onlyToday = true;
+        todayFilterBtn.classList.add("active");
+      }
+      if(pendingResumenState.sortKey){
+        sortState = { key: pendingResumenState.sortKey, dir: pendingResumenState.sortDir || 1 };
+        const th = wrap.querySelector(`thead th[data-sort="${pendingResumenState.sortKey}"]`);
+        if(th) th.classList.add(sortState.dir === 1 ? "sortAsc" : "sortDesc");
+      }
+      pendingResumenState = null;
+    }
+
     todayFilterBtn.addEventListener("click", ()=>{
       onlyToday = !onlyToday;
       todayFilterBtn.classList.toggle("active", onlyToday);
@@ -4597,8 +4657,7 @@
     });
     wrap.querySelectorAll(".stagnantZoneRow").forEach(btn=>{
       btn.addEventListener("click", ()=>{
-        activeTab = btn.getAttribute("data-zone");
-        renderAll();
+        goToZoneFromDashboard(btn.getAttribute("data-zone"));
       });
     });
 
@@ -4687,8 +4746,7 @@
           },
           onClick: (evt, elements) => {
             if(!elements || elements.length === 0) return;
-            activeTab = zonasOrdenadas[elements[0].index].z.key;
-            renderAll();
+            goToZoneFromDashboard(zonasOrdenadas[elements[0].index].z.key);
           }
         },
         plugins: [{
@@ -4919,7 +4977,15 @@
         showToast("Ese archivo no tiene el formato esperado de un respaldo");
         return;
       }
-      if(!confirm("Esto reemplaza TODO el inventario actual por el contenido del respaldo. ¿Continuar?")) return;
+      const contarVehiculos = (zonesObj) => Object.values(zonesObj || {}).reduce((total, campos) =>
+        total + (Array.isArray(campos) ? campos.reduce((a,c)=>a+((c && c.plates) ? c.plates.length : 0), 0) : 0), 0);
+      const totalActual = contarVehiculos(state.zones);
+      const totalRespaldo = contarVehiculos(payload.zones);
+      const fechaRespaldo = payload.exportadoEn
+        ? new Date(payload.exportadoEn).toLocaleDateString("es-CR", { day:"2-digit", month:"long", year:"numeric" })
+        : "fecha desconocida";
+      const mensaje = `Esto va a reemplazar los ${totalActual} vehículo(s) actuales por los ${totalRespaldo} del respaldo (generado el ${fechaRespaldo}).\n\nEsta acción afecta TODO el inventario. ¿Continuar?`;
+      if(!confirm(mensaje)) return;
       const snap = snapshotZones();
       state.zones = payload.zones;
       state.capacities = payload.capacities || {};
@@ -5645,6 +5711,15 @@
       if(activeTab === "__resumen__"){
         const fi = document.getElementById("resumenFilter");
         if(fi) preservedFilter = fi.value;
+        const zoneSel = document.getElementById("resumenZoneFilter");
+        const todayBtn = document.getElementById("resumenTodayFilter");
+        const activeSortTh = document.querySelector("#mainArea thead th.sortAsc, #mainArea thead th.sortDesc");
+        pendingResumenState = {
+          zoneKey: zoneSel ? zoneSel.value : "",
+          onlyToday: todayBtn ? todayBtn.classList.contains("active") : false,
+          sortKey: activeSortTh ? activeSortTh.getAttribute("data-sort") : null,
+          sortDir: activeSortTh && activeSortTh.classList.contains("sortDesc") ? -1 : 1
+        };
       }
       await loadState();
       if(currentUser.role === "actualizacion"){
@@ -7347,7 +7422,10 @@
   function applyTheme(theme){
     document.documentElement.setAttribute("data-theme", theme);
     const btn = document.getElementById("themeToggleBtn");
-    if(btn) btn.textContent = theme === "dark" ? "☀️ Claro" : "🌙 Oscuro";
+    if(btn){
+      btn.textContent = theme === "dark" ? "☀️" : "🌙";
+      btn.title = theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+    }
     try{ localStorage.setItem("inv_local_theme", theme); }catch(e){ /* no crítico */ }
   }
   (function initTheme(){
