@@ -110,10 +110,18 @@
     letter-spacing: 0.02em;
   }
   header h1 .dash{color:var(--line);}
+  .titleBlock{
+    min-width:0;
+    flex:1 1 auto;
+    overflow:hidden;
+  }
   .meta{
     font-size: 0.68rem;
     color: var(--muted);
     margin-top:1px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   #exportBtn, #shareExportBtn{
     background: var(--line);
@@ -129,7 +137,7 @@
   #exportBtn:active, #shareExportBtn:active{transform: translateY(1px);}
   .headerBtns{
     display:flex; flex-direction:row; flex-wrap:wrap; gap:5px; align-items:center; justify-content:flex-end;
-    max-width: 62vw;
+    flex-shrink:0;
   }
   .headerBtns > button, .headerBtns .adminMenuWrap > button{
     padding: 5px 8px !important;
@@ -736,6 +744,19 @@
     line-height:1.1;
     letter-spacing:-0.02em;
     font-variant-numeric: tabular-nums;
+  }
+  .dashCardGood{
+    border-top-color:#5FB37A;
+    background: linear-gradient(180deg, #f3faf5 0%, var(--surface) 60%);
+  }
+  html[data-theme="dark"] .dashCardGood{
+    background: linear-gradient(180deg, rgba(95,179,122,0.12) 0%, var(--surface) 60%);
+  }
+  .dashCardGoodMark{
+    font-size:1.65rem;
+    font-weight:800;
+    color:#5FB37A;
+    line-height:1.1;
   }
   .dashCard .dashCardLabel{
     font-size:0.66rem;
@@ -1922,7 +1943,7 @@
 
 <header>
   <div class="top-row">
-    <div>
+    <div class="titleBlock">
       <h1>Inventario <span class="dash">·</span> Parqueo</h1>
       <div class="meta" id="metaLine">cargando…</div>
     </div>
@@ -2335,7 +2356,13 @@
     if(!svgEl || values.length < 2) { if(svgEl) svgEl.innerHTML = ""; return; }
     const w = 100, h = 28, pad = 3;
     const min = Math.min(...values), max = Math.max(...values);
-    const range = (max - min) || 1;
+    if(min === max){
+      // Todos los valores son iguales: una línea recta no dice nada útil y
+      // se ve como un dato roto en vez de "sin cambios" — mejor no mostrar nada.
+      svgEl.innerHTML = "";
+      return;
+    }
+    const range = max - min;
     const pts = values.map((v,i)=>{
       const x = pad + (i/(values.length-1)) * (w - pad*2);
       const y = h - pad - ((v-min)/range) * (h - pad*2);
@@ -3031,6 +3058,14 @@
     }, 6000);
   }
 
+  function relativeTimeShort(d){
+    const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+    if(mins < 1) return "recién";
+    if(mins < 60) return `hace ${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    if(hrs < 24) return `hace ${hrs} h`;
+    return `hace ${Math.floor(hrs/24)} d`;
+  }
   function renderMeta(){
     let totalVeh = 0, totalCampos = 0;
     ZONES.forEach(z=>{
@@ -3039,9 +3074,7 @@
       arr.forEach(c => totalVeh += c.plates.length);
     });
     const d = new Date(state.updatedAt);
-    const fecha = d.toLocaleDateString("es-CR", {day:"2-digit", month:"short", year:"numeric"});
-    const hora = d.toLocaleTimeString("es-CR", {hour:"2-digit", minute:"2-digit"});
-    document.getElementById("metaLine").textContent = `${totalVeh} vehículos en ${totalCampos} campos · actualizado ${fecha}, ${hora}`;
+    document.getElementById("metaLine").textContent = `${totalVeh} vehículos · ${totalCampos} campos · ${relativeTimeShort(d)}`;
   }
 
   function renderTabs(){
@@ -3075,6 +3108,17 @@
 
   function escapeHtml(s){
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  // Envuelve en <mark> la parte del texto que coincide con la búsqueda, para
+  // que se vea de un vistazo por qué apareció ese resultado. filterText ya
+  // debe venir en mayúsculas (así se comparan los filtros en toda la app).
+  function highlightMatch(text, filterText){
+    const escaped = escapeHtml(text == null ? "" : text);
+    if(!filterText) return escaped;
+    const idx = escaped.toUpperCase().indexOf(filterText);
+    if(idx === -1) return escaped;
+    return escaped.slice(0, idx) + '<mark class="searchHighlight">' + escaped.slice(idx, idx+filterText.length) + '</mark>' + escaped.slice(idx+filterText.length);
   }
 
   // Busca una placa en todas las zonas/campos. Devuelve {zoneKey, campoIdx, plateIdx} o null.
@@ -4414,15 +4458,7 @@
       });
     });
 
-    // Envuelve en <mark> la parte del texto que coincide con la búsqueda,
-    // para que se vea de un vistazo por qué apareció esa fila.
-    function highlightMatch(text, filterText){
-      const escaped = escapeHtml(String(text == null ? "" : text));
-      if(!filterText) return escaped;
-      const idx = escaped.toUpperCase().indexOf(filterText);
-      if(idx === -1) return escaped;
-      return escaped.slice(0, idx) + '<mark class="searchHighlight">' + escaped.slice(idx, idx+filterText.length) + '</mark>' + escaped.slice(idx+filterText.length);
-    }
+    // El resaltado de coincidencias usa la función compartida highlightMatch().
 
     function draw(){
       const filterText = filterInput.value.trim().toUpperCase();
@@ -4594,7 +4630,14 @@
       <div class="dashboardGrid">
         <div class="dashCard" id="dashCardTotalVeh" data-metric="totalVeh" data-value="${totalVeh}"><div class="dashCardValue">${totalVeh}</div><div class="dashCardLabel">Vehículos totales</div><svg class="dashCardSpark" id="sparkTotalVeh" viewBox="0 0 100 28"></svg></div>
         <div class="dashCard" id="dashCardCampos" data-metric="totalCampos" data-value="${totalCampos}"><div class="dashCardValue">${totalCampos}</div><div class="dashCardLabel">Campos numerados en uso</div><svg class="dashCardSpark" id="sparkTotalCampos" viewBox="0 0 100 28"></svg></div>
-        <div class="dashCard" id="dashCardSinAsignar" data-metric="totalSinAsignar" data-value="${totalSinAsignar}"><div class="dashCardValue">${totalSinAsignar}</div><div class="dashCardLabel">Sin asignar</div><svg class="dashCardSpark" id="sparkTotalSinAsignar" viewBox="0 0 100 28"></svg></div>
+        <div class="dashCard${totalSinAsignar === 0 ? ' dashCardGood' : ''}" id="dashCardSinAsignar" data-metric="totalSinAsignar" data-value="${totalSinAsignar}">
+          ${totalSinAsignar === 0
+            ? `<div class="dashCardGoodMark">✓</div>`
+            : `<div class="dashCardValue">${totalSinAsignar}</div>`
+          }
+          <div class="dashCardLabel">Sin asignar</div>
+          <svg class="dashCardSpark" id="sparkTotalSinAsignar" viewBox="0 0 100 28"></svg>
+        </div>
         <div class="dashCard"><div class="dashCardValue">${zonasConCapacidad}/${ZONES.length}</div><div class="dashCardLabel">Zonas con capacidad definida</div></div>
       </div>
       ${zonasEstancadasHtml}
@@ -5650,10 +5693,15 @@
 
   function applyRoleUI(){
     const role = currentUser.role;
+    const nombreRol = ROLES[role] || role;
+    // Si el nombre de la cuenta ya es igual al rol (ej. una cuenta llamada
+    // "Búsqueda" con rol Búsqueda), mostrarlo dos veces es redundante.
+    const normalizarParaComparar = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const nombreYaEsElRol = currentUser.username && normalizarParaComparar(currentUser.username.trim()) === normalizarParaComparar(nombreRol);
     document.getElementById("identityRow").innerHTML = `
       <span class="idRoleIcon">${ROLE_ICONS[role] || ""}</span>
       <span class="idName">${escapeHtml(currentUser.username)}</span>
-      <span class="idRole">${ROLES[role] || role}</span>
+      ${nombreYaEsElRol ? `` : `<span class="idRole">${nombreRol}</span>`}
       <span class="idClock"></span>
     `;
     startClock();
@@ -6468,8 +6516,8 @@
       function rowHtml(r){
         return `
           <div class="updaterAllListRow${wasUpdatedToday(r) ? ' updatedToday' : ''}" data-plate="${escapeAttrLike(r.placa)}">
-            <span class="plate">${escapeHtml(r.placa)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
-            <span class="updaterAllListMeta">${r.zoneLabel} · campo ${escapeHtml(r.campo)}</span>
+            <span class="plate">${highlightMatch(r.placa, q)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+            <span class="updaterAllListMeta">${highlightMatch(r.zoneLabel, q)} · campo ${highlightMatch(r.campo, q)}${r.aseguradora ? ` · ${highlightMatch(r.aseguradora, q)}` : ""}${r.modelo ? ` · ${highlightMatch(r.modelo, q)}` : ""}</span>
           </div>
         `;
       }
