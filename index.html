@@ -37,6 +37,9 @@
     --z-maya-sn: #c7a6e8;
     --z-neon: #e0529c;
     --z-pge: #e2843a;
+    --z-recepcion: #3aa6a0;
+    --z-taller: #c97a3d;
+    --z-salida: #4a5b4a;
     --radius: 10px;
     /* Superficies (para que el modo oscuro sea un simple cambio de variables) */
     --surface: #ffffff;
@@ -520,6 +523,28 @@
     font-weight:800;
     padding:0 3px;
   }
+  .orderBadgeGroup{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:1px;
+    flex:0 0 auto;
+  }
+  .orderMoveBtn{
+    width:16px; height:12px;
+    padding:0;
+    border:none;
+    background:none;
+    color: var(--muted);
+    font-size:0.5rem;
+    line-height:1;
+    cursor:pointer;
+  }
+  .orderMoveBtn:disabled{
+    opacity:0.2;
+    cursor:default;
+  }
+  .orderMoveBtn:not(:disabled):active{ color: var(--ink); }
   .orderTag{
     font-size:0.62rem;
     font-weight:700;
@@ -795,6 +820,42 @@
     text-transform:uppercase;
     letter-spacing:0.05em;
   }
+  .mapaParqueoFlow{
+    display:flex; flex-wrap:wrap; align-items:center; gap:4px;
+  }
+  .mapaParqueoBox{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px;
+    min-width:84px;
+    padding:10px 8px;
+    border:2px solid var(--border);
+    border-radius:10px;
+    background: var(--surface-2);
+    cursor:pointer;
+    position:relative;
+  }
+  .mapaParqueoBoxLabel{ font-size:0.74rem; font-weight:800; color:var(--ink); text-align:center; }
+  .mapaParqueoBoxCount{ font-size:0.9rem; font-weight:800; color:var(--muted); }
+  .mapaParqueoArrow{
+    font-size:1.1rem;
+    color:var(--border);
+    font-weight:800;
+    padding:0 2px;
+  }
+  .mapaParqueoOtras{
+    margin-top:18px;
+    padding-top:12px;
+    border-top:1px dashed var(--border-soft);
+  }
+  .mapaParqueoOtrasLabel{
+    display:block;
+    font-size:0.66rem;
+    font-weight:700;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    margin-bottom:6px;
+  }
   .chartCanvasWrap{
     position:relative;
     height:220px;
@@ -819,37 +880,6 @@
   .occupancyDetailStats strong{ font-size:0.95rem; }
   .occupancyDetailPct{ color:var(--muted); font-weight:700; font-size:0.74rem; margin-left:4px; }
   .occupancyDetailFree{ font-size:0.7rem; color:var(--muted); font-weight:600; }
-  .stagnantZonesBox{
-    background:#fff6e0;
-    border:1px solid #f2c230;
-    border-radius: var(--radius);
-    padding:12px 14px;
-    margin-bottom:16px;
-  }
-  .stagnantZonesTitle{
-    font-size:0.78rem;
-    font-weight:800;
-    color:#8a5a1c;
-    margin-bottom:6px;
-  }
-  .stagnantZoneRow{
-    display:flex; align-items:center; justify-content:space-between;
-    width:100%;
-    background:none; border:none;
-    padding:6px 0;
-    font-size:0.82rem;
-    font-weight:700;
-    color:#8a5a1c;
-    cursor:pointer;
-    text-align:left;
-    border-bottom:1px solid rgba(138,90,28,0.15);
-  }
-  .stagnantZoneRow:last-child{ border-bottom:none; }
-  .stagnantZoneDays{
-    font-size:0.72rem;
-    font-weight:600;
-    color:#a17530;
-  }
   .capacityByZoneList{
     display:flex; flex-direction:column; gap:2px;
   }
@@ -1397,6 +1427,54 @@
   .historyItem-eliminado .historyItemIcon{ color:#a13d33; }
   .historyItem-movido{ border-left-color:#8b9198; }
   .historyItem-movido .historyItemIcon{ color:#6b7178; }
+  .activityTimeline{
+    display:flex; flex-direction:column;
+  }
+  .activityTimelineRow{
+    display:flex; gap:10px;
+  }
+  .activityTimelineMarker{
+    display:flex; flex-direction:column; align-items:center;
+    flex:0 0 auto;
+  }
+  .activityTimelineAvatar{
+    width:26px; height:26px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.7rem;
+    font-weight:800;
+    color:#fff;
+    flex:0 0 auto;
+  }
+  .activityTimelineAvatar-nuevo{ background:#5FB37A; }
+  .activityTimelineAvatar-eliminado{ background:#c0524a; }
+  .activityTimelineAvatar-movido{ background:#8b9198; }
+  .activityTimelineLine{
+    width:2px;
+    flex:1 1 auto;
+    background: var(--border-soft);
+    margin-top:2px;
+  }
+  .activityTimelineRow.last .activityTimelineLine{ display:none; }
+  .activityTimelineBody{
+    flex:1 1 auto;
+    min-width:0;
+    padding-bottom:14px;
+  }
+  .activityTimelineRow.last .activityTimelineBody{ padding-bottom:0; }
+  .activityTimelineText{
+    font-size:0.82rem;
+    line-height:1.4;
+    color:var(--ink);
+  }
+  .activityTimelineIcon{ margin-right:2px; }
+  .activityTimelinePlate{ font-size:0.78rem; padding:1px 5px; background:var(--surface-2); border-radius:5px; }
+  .activityTimelineWhen{
+    font-size:0.68rem;
+    color:var(--muted);
+    font-weight:600;
+    margin-top:2px;
+  }
   .updaterCard{
     max-width:420px; margin:20px auto; background:var(--surface);
     border-radius: var(--radius); padding:18px; box-shadow:0 1px 2px rgba(0,0,0,0.05);
@@ -2356,10 +2434,12 @@
   window.storage = storage;
 
   const ZONES = [
+    { key: "Recepcion", label: "Recepción / Salida", abbr: "REC", color: "var(--z-recepcion)", hex: "3AA6A0" },
     { key: "Avaluo", label: "Avalúo", abbr: "AV", color: "var(--z-avaluo)", hex: "4F8FD1" },
     { key: "AvaluoPuff", label: "Avalúo Puff", abbr: "AVP", color: "var(--z-avaluo-puff)", hex: "8FB9E0" },
-    { key: "Atras", label: "Atrás", abbr: "AT", color: "var(--z-atras)", hex: "5FB37A" },
     { key: "Maya", label: "Maya", abbr: "MY", color: "var(--z-malla)", hex: "A175D4" },
+    { key: "Atras", label: "Atrás", abbr: "AT", color: "var(--z-atras)", hex: "5FB37A" },
+    { key: "TallerPintura", label: "Taller de Pintura", abbr: "TP", color: "var(--z-taller)", hex: "C97A3D" },
     { key: "Neon Nieto", label: "Neon Nieto", abbr: "NN", color: "var(--z-neon)", hex: "E0529C" },
     { key: "Parqueo Gash Externo", label: "Parqueo Gash Externo", abbr: "PGE", color: "var(--z-pge)", hex: "E2843A" }
   ];
@@ -2435,13 +2515,21 @@
     svgEl.innerHTML = `<polyline points="${pts.join(" ")}" fill="none" stroke="${subiendo ? '#5FB37A' : '#c0524a'}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
   }
   const SIN_UBICACION_INFO = { key: SIN_UBICACION_KEY, label: "Sin ubicación", abbr: "SU", color: "#8b8f94", hex: "8b8f94" };
-  // No hay "espacios" distintos acá — es una sola lista plana, así que todo
-  // vive siempre bajo este único nombre de campo fijo.
+  // No hay "espacios" distintos en estas zonas — son una sola lista plana,
+  // así que todo vive siempre bajo este único nombre de campo fijo. Aplica
+  // a "Sin ubicación" y también a "Recepción / Salida".
   const SIN_UBICACION_CAMPO = "General";
-  function ensureSinUbicacionConsolidada(){
-    const arr = state.zones[SIN_UBICACION_KEY];
+  const SINGLE_BUCKET_ZONES = new Set([SIN_UBICACION_KEY, "Recepcion"]);
+  // Zonas donde los "campos" en realidad son sub-zonas con nombre propio,
+  // que solo Admin puede crear y nombrar (ej. "Zona de lijado" en vez de
+  // "Línea 1" automático). Actualización solo trabaja dentro de las que
+  // ya existen, nunca crea una nueva ahí.
+  const CUSTOM_NAMED_ZONES = new Set(["TallerPintura"]);
+  function ensureSinUbicacionConsolidada(zoneKey){
+    zoneKey = zoneKey || SIN_UBICACION_KEY;
+    const arr = state.zones[zoneKey];
     if(!arr || arr.length === 0){
-      state.zones[SIN_UBICACION_KEY] = [{ campo: SIN_UBICACION_CAMPO, plates: [] }];
+      state.zones[zoneKey] = [{ campo: SIN_UBICACION_CAMPO, plates: [] }];
       return;
     }
     if(arr.length === 1 && arr[0].campo === SIN_UBICACION_CAMPO) return; // ya está consolidada
@@ -2449,7 +2537,7 @@
     // en una sola lista, sin perder ningún vehículo.
     const todasLasPlacas = [];
     arr.forEach(c => todasLasPlacas.push(...c.plates));
-    state.zones[SIN_UBICACION_KEY] = [{ campo: SIN_UBICACION_CAMPO, plates: todasLasPlacas }];
+    state.zones[zoneKey] = [{ campo: SIN_UBICACION_CAMPO, plates: todasLasPlacas }];
   }
 
   // Capacidades por defecto de los bloques sin numeración (solo se aplican si
@@ -2744,6 +2832,7 @@
     if(key === SIN_UBICACION_KEY) return SIN_UBICACION_INFO;
     return ZONES.find(z => z.key === key);
   }
+
   function normalizePlate(v){ return String(v).trim().toUpperCase(); }
 
   // ¿Se actualizó (movió, editó o registró) este vehículo hoy? Sirve para
@@ -2777,7 +2866,7 @@
   // Estas 3 zonas no tienen campos numerados nunca: todo su contenido vive
   // bajo "Sin asignar", así que su ocupación se mide por vehículos totales,
   // no por cantidad de campos numerados (que siempre sería cero).
-  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "Neon Nieto", "Parqueo Gash Externo", "SinUbicacion"]);
+  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "Neon Nieto", "Parqueo Gash Externo", "SinUbicacion", "Recepcion", "TallerPintura"]);
   function occupancyCountForZone(zoneKey){
     const campos = state.zones[zoneKey] || [];
     if(UNNUMBERED_ONLY_ZONES.has(zoneKey)){
@@ -2987,6 +3076,32 @@
     return true;
   }
 
+  // Fusiona "Salida" dentro de "Recepción" — mismo patrón que las fusiones
+  // anteriores: se conservan las líneas tal cual estaban (fusionando las
+  // que coincidan en nombre), sin perder ningún vehículo. Se corre una sola vez.
+  function mergeRecepcionSalidaIfNeeded(st){
+    const zones = st.zones;
+    if(!zones || !zones.Salida) return false;
+    if(!zones.Recepcion) zones.Recepcion = [];
+    zones.Salida.forEach(campoObj=>{
+      const existente = zones.Recepcion.find(c => c.campo === campoObj.campo);
+      if(existente){
+        existente.plates.push(...campoObj.plates);
+      } else {
+        zones.Recepcion.push(campoObj);
+      }
+    });
+    delete zones.Salida;
+
+    if(st.capacities){
+      const total = (st.capacities.Recepcion || 0) + (st.capacities.Salida || 0);
+      if(total > 0) st.capacities.Recepcion = total;
+      delete st.capacities.Salida;
+    }
+    sortCampos(zones.Recepcion);
+    return true;
+  }
+
   async function loadState(){
     // storageAvailable ya fue calculado por runAuthGate() al arrancar la app,
     // antes de que revealApp() invoque esta función; se reutiliza en vez de
@@ -3005,6 +3120,7 @@
           needsResave = applyPerCampoCapacityImportIfNeeded(state) || needsResave;
           needsResave = mergeAtrasZonesIfNeeded(state) || needsResave;
           needsResave = mergeMayaZonesIfNeeded(state) || needsResave;
+          needsResave = mergeRecepcionSalidaIfNeeded(state) || needsResave;
           if(needsResave) await saveState(true);
           return;
         }
@@ -3026,6 +3142,7 @@
           applyPerCampoCapacityImportIfNeeded(state);
           mergeAtrasZonesIfNeeded(state);
           mergeMayaZonesIfNeeded(state);
+          mergeRecepcionSalidaIfNeeded(state);
           await saveState(true);
           return;
         }
@@ -3059,6 +3176,7 @@
     applyPerCampoCapacityImportIfNeeded(state);
     mergeAtrasZonesIfNeeded(state);
     mergeMayaZonesIfNeeded(state);
+    mergeRecepcionSalidaIfNeeded(state);
     await saveState(true);
   }
 
@@ -3549,6 +3667,7 @@
   }
 
   function getOrCreateCampo(zoneKey, campoLabel){
+    if(!state.zones[zoneKey]) state.zones[zoneKey] = [];
     const arr = state.zones[zoneKey];
     let entry = arr.find(c => c.campo === campoLabel);
     if(!entry){
@@ -3672,6 +3791,7 @@
 
   async function renderZonePanel(zone){
     const info = zoneInfo(zone.key);
+    if(SINGLE_BUCKET_ZONES.has(zone.key)) ensureSinUbicacionConsolidada(zone.key);
     const campos = state.zones[zone.key] || [];
     const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
     const wrap = document.createElement("div");
@@ -3683,12 +3803,13 @@
       document.getElementById("mainArea").appendChild(wrap);
       return wrap;
     }
+    if(SINGLE_BUCKET_ZONES.has(zone.key)) await saveState(true);
     await loadPlateRegistry();
     await loadCheckinItemsIfNeeded();
     refreshModelSuggestions();
 
     const abbr = info.abbr;
-    const labelLower = UNNUMBERED_ONLY_ZONES.has(zone.key) ? "línea" : "campo";
+    const labelLower = CUSTOM_NAMED_ZONES.has(zone.key) ? "zona" : (UNNUMBERED_ONLY_ZONES.has(zone.key) ? "línea" : "campo");
 
     wrap.innerHTML = `
       <div class="zoneHeadCard">
@@ -3760,7 +3881,26 @@
       const arr = state.zones[zone.key] || [];
       if(arr.length === 0){
         gridBox.classList.remove("groupedMode");
-        gridBox.innerHTML = `<div class="dashEmptyNote">Sin campos registrados en esta zona todavía.</div>`;
+        const esFemenino = labelLower === "línea" || labelLower === "zona";
+        gridBox.innerHTML = `<button type="button" class="linkBackBtn" id="zoneCreateFirstBtn" style="text-decoration:none; font-weight:700;">+ Crear ${esFemenino ? "la primera" : "el primer"} ${labelLower}</button>`;
+        const createBtn = gridBox.querySelector("#zoneCreateFirstBtn");
+        if(createBtn){
+          createBtn.addEventListener("click", ()=>{
+            let nuevo;
+            if(CUSTOM_NAMED_ZONES.has(zone.key)){
+              const nombre = prompt(`Nombre de la primera zona dentro de ${info.label} (ej. "Zona de lijado"):`, "");
+              if(!nombre || !nombre.trim()) return;
+              nuevo = normalizeCampo(nombre);
+            } else {
+              nuevo = UNNUMBERED_ONLY_ZONES.has(zone.key) ? nextLineLabel(zone.key) : nextAutoCampo(zone.key);
+            }
+            getOrCreateCampo(zone.key, nuevo);
+            saveState();
+            selectedCi = state.zones[zone.key].findIndex(x => x.campo === nuevo);
+            drawZoneGrid();
+            drawZoneDetail();
+          });
+        }
         return;
       }
       let contLlenos = 0, contParciales = 0, contVacios = 0, contSinLimite = 0, contSobrecargados = 0;
@@ -3898,7 +4038,11 @@
         }
         return `
           <div class="spacePlateRow" data-idx="${idx}" data-search="${escapeAttrLike((p.plate + " " + (p.aseguradora||"") + " " + (p.modelo||"")).toLowerCase())}">
-            <span class="orderBadge" title="Orden de llegada">${idx+1}</span>
+            <div class="orderBadgeGroup">
+              <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="up" ${idx===0 ? "disabled" : ""} title="Mover antes">▲</button>
+              <span class="orderBadge" title="Orden de llegada — se puede cambiar con las flechas">${idx+1}</span>
+              <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===c.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
+            </div>
             <div class="spacePlateInfoWrap">
               <span class="spacePlateInfo"><span class="platePlateText">${escapeHtml(p.plate)}</span>${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${zone.key===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
@@ -4075,7 +4219,9 @@
             editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(b=>b.classList.remove("active"));
             btn.classList.add("active");
             detailBox.querySelector(`#zoneEditCampoLabel_${abbr}`).textContent = `Nuevo ${UNNUMBERED_ONLY_ZONES.has(editTargetZone) ? "línea" : "campo"}`;
-            editCampoInputAdmin.value = (editTargetZone === zone.key) ? c.campo : "";
+            editCampoInputAdmin.value = (editTargetZone === zone.key)
+              ? c.campo
+              : (SINGLE_BUCKET_ZONES.has(editTargetZone) ? SIN_UBICACION_CAMPO : "");
             drawMiniSpaceGrid(editMoveGridAdmin, editTargetZone, editCampoInputAdmin);
           });
         });
@@ -4176,6 +4322,19 @@
       detailBox.querySelectorAll(".spaceRemoveBtn").forEach(b=>{
         b.addEventListener("click", ()=> removeZonePlate(parseInt(b.getAttribute("data-idx"),10)));
       });
+      detailBox.querySelectorAll(".orderMoveBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const idx = parseInt(b.getAttribute("data-idx"),10);
+          const dir = b.getAttribute("data-dir") === "up" ? -1 : 1;
+          const otro = idx + dir;
+          if(otro < 0 || otro >= c.plates.length) return;
+          const snap = snapshotZones();
+          [c.plates[idx], c.plates[otro]] = [c.plates[otro], c.plates[idx]];
+          pushUndo(snap, `Reordenar ${c.plates[dir===-1?idx:otro].plate} en ${info.label} · ${c.campo}`);
+          await saveState(true);
+          drawZoneDetail();
+        });
+      });
       detailBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
         b.addEventListener("click", ()=>{
           movingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
@@ -4203,7 +4362,9 @@
             quickMoveTargetZone = btn.getAttribute("data-zone");
             quickMoveZoneChips.querySelectorAll(".zoneChipBtn").forEach(b2=>b2.classList.remove("active"));
             btn.classList.add("active");
-            quickMoveCampoInput.value = (quickMoveTargetZone === zone.key) ? c.campo : "";
+            quickMoveCampoInput.value = (quickMoveTargetZone === zone.key)
+              ? c.campo
+              : (SINGLE_BUCKET_ZONES.has(quickMoveTargetZone) ? SIN_UBICACION_CAMPO : "");
             quickMoveCampoInput.focus();
           });
         });
@@ -4345,10 +4506,17 @@
 
     const addEmptyCampoBtn = wrap.querySelector(`#addEmptyCampoBtn_${abbr}`);
     addEmptyCampoBtn.addEventListener("click", ()=>{
-      const sugerido = UNNUMBERED_ONLY_ZONES.has(zone.key) ? nextLineLabel(zone.key) : nextAutoCampo(zone.key);
-      const input = prompt(`Número/nombre del nuevo ${labelLower} (en blanco = siguiente disponible, "${sugerido}"):`, "");
-      if(input === null) return;
-      const campoLabel = normalizeCampo(input) || sugerido;
+      let campoLabel;
+      if(CUSTOM_NAMED_ZONES.has(zone.key)){
+        const nombre = prompt(`Nombre de la nueva zona dentro de ${info.label} (ej. "Zona de lijado"):`, "");
+        if(!nombre || !nombre.trim()) return;
+        campoLabel = normalizeCampo(nombre);
+      } else {
+        const sugerido = UNNUMBERED_ONLY_ZONES.has(zone.key) ? nextLineLabel(zone.key) : nextAutoCampo(zone.key);
+        const input = prompt(`Número/nombre del nuevo ${labelLower} (en blanco = siguiente disponible, "${sugerido}"):`, "");
+        if(input === null) return;
+        campoLabel = normalizeCampo(input) || sugerido;
+      }
       const yaExiste = (state.zones[zone.key] || []).some(x => x.campo === campoLabel);
       if(yaExiste){ showToast(`El ${labelLower} "${campoLabel}" ya existe.`); return; }
       const snap = snapshotZones();
@@ -4705,47 +4873,6 @@
 
     const fechaHoy = new Date().toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
 
-    // Zonas sin ningún movimiento reciente (5+ días) — para detectar de un
-    // vistazo si un sector entero quedó fuera del recorrido regular.
-    const UMBRAL_ESTANCADO_DIAS = 5;
-    const zonasEstancadas = (()=>{
-      const umbralMs = UMBRAL_ESTANCADO_DIAS * 24*60*60*1000;
-      const ahora = Date.now();
-      const resultado = [];
-      ZONES.forEach(z=>{
-        const campos = state.zones[z.key] || [];
-        let totalVeh = 0;
-        let maxTs = null;
-        campos.forEach(c=>{
-          c.plates.forEach(p=>{
-            totalVeh++;
-            if(p.lastUpdated){
-              const t = new Date(p.lastUpdated).getTime();
-              if(!isNaN(t) && (maxTs === null || t > maxTs)) maxTs = t;
-            }
-          });
-        });
-        if(totalVeh === 0) return; // zona vacía, no aplica
-        if(maxTs === null || (ahora - maxTs) > umbralMs){
-          const dias = maxTs === null ? null : Math.floor((ahora - maxTs) / (24*60*60*1000));
-          const fechaExacta = maxTs === null ? null : new Date(maxTs).toLocaleDateString("es-CR", { day:"2-digit", month:"short" });
-          resultado.push({ zoneKey: z.key, zoneLabel: z.label, dias, fechaExacta });
-        }
-      });
-      return resultado;
-    })();
-    const zonasEstancadasHtml = zonasEstancadas.length > 0 ? `
-      <div class="stagnantZonesBox">
-        <div class="stagnantZonesTitle">⚠️ Zonas sin movimientos recientes</div>
-        ${zonasEstancadas.map(z=>`
-          <button type="button" class="stagnantZoneRow" data-zone="${z.zoneKey}">
-            <span>${escapeHtml(z.zoneLabel)}</span>
-            <span class="stagnantZoneDays">${z.dias === null ? "sin registro de movimiento" : `sin movimientos hace ${z.dias} día(s) · ${z.fechaExacta}`}</span>
-          </button>
-        `).join("")}
-      </div>
-    ` : ``;
-
     wrap.innerHTML = `
       <div class="dashboardHeader">
         <h2>Dashboard</h2>
@@ -4765,14 +4892,41 @@
         </div>
         <div class="dashCard"><div class="dashCardValue">${zonasConCapacidad}/${ZONES.length}</div><div class="dashCardLabel">Zonas con capacidad definida</div></div>
       </div>
-      ${zonasEstancadasHtml}
+      <div class="chartCard">
+        <h3>🗺️ Mapa del parqueo</h3>
+        <div class="mapaParqueoFlow">
+          ${["Recepcion","Avaluo","AvaluoPuff","Maya","Atras","TallerPintura"].map((zk, i, arr)=>{
+            const z = zoneInfo(zk);
+            const totalZona = (state.zones[zk]||[]).reduce((a,c)=>a+c.plates.length,0);
+            return `
+              <button type="button" class="mapaParqueoBox" data-zone="${zk}" style="border-color:#${z.hex};">
+                <span class="mapaParqueoBoxLabel">${z.label}</span>
+                <span class="mapaParqueoBoxCount">${totalZona}</span>
+              </button>
+              ${i < arr.length-1 ? `<span class="mapaParqueoArrow">→</span>` : ``}
+            `;
+          }).join("")}
+        </div>
+        ${["Neon Nieto","Parqueo Gash Externo"].some(zk=>state.zones[zk]) ? `
+        <div class="mapaParqueoOtras">
+          <span class="mapaParqueoOtrasLabel">Otras zonas</span>
+          <div class="mapaParqueoFlow">
+            ${["Neon Nieto","Parqueo Gash Externo"].map(zk=>{
+              const z = zoneInfo(zk);
+              const totalZona = (state.zones[zk]||[]).reduce((a,c)=>a+c.plates.length,0);
+              return `
+                <button type="button" class="mapaParqueoBox" data-zone="${zk}" style="border-color:#${z.hex};">
+                  <span class="mapaParqueoBoxLabel">${z.label}</span>
+                  <span class="mapaParqueoBoxCount">${totalZona}</span>
+                </button>
+              `;
+            }).join("")}
+          </div>
+        </div>` : ``}
+      </div>
       <div class="chartCard">
         <h3>Vehículos por zona</h3>
         <div class="chartCanvasWrap"><canvas id="chartVehiclesByZone"></canvas></div>
-      </div>
-      <div class="chartCard">
-        <h3>Ocupación vs. capacidad</h3>
-        <div id="occupancyChartHolder"></div>
       </div>
       ${canEdit() ? `
       <div class="chartCard">
@@ -4813,17 +4967,22 @@
       ` : ``}
       ${canEdit() ? `
       <div class="chartCard">
-        <h3>Actividad reciente</h3>
+        <h3>🔑 Sesiones recientes</h3>
         <div id="recentActivityCard" class="dashEmptyNote">Cargando…</div>
       </div>
       ` : ``}
+      <div class="chartCard">
+        <h3>📋 Actividad reciente</h3>
+        <div id="liveActivityFeed" class="dashEmptyNote">Cargando…</div>
+      </div>
     `;
     document.getElementById("mainArea").appendChild(wrap);
     wrap.querySelector("#dashViewToggle").addEventListener("click", ()=>{
       setDashboardViewMode("compact");
       renderAll();
     });
-    wrap.querySelectorAll(".stagnantZoneRow").forEach(btn=>{
+    loadLiveActivityFeed();
+    wrap.querySelectorAll(".mapaParqueoBox").forEach(btn=>{
       btn.addEventListener("click", ()=>{
         goToZoneFromDashboard(btn.getAttribute("data-zone"));
       });
@@ -4968,74 +5127,6 @@
     }catch(e){
       console.error("No se pudo dibujar el gráfico de vehículos por zona", e);
       wrap.querySelector(".chartCanvasWrap").innerHTML = `<div class="dashEmptyNote">No se pudo cargar el gráfico (revisá tu conexión a internet).</div>`;
-    }
-
-    // ---- Gráfico 2: ocupación vs capacidad (solo zonas con capacidad definida) ----
-    const zonasConCap = ZONES.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0);
-    const holder = wrap.querySelector("#occupancyChartHolder");
-    if(zonasConCap.length === 0){
-      holder.innerHTML = `<div class="dashEmptyNote">Todavía no definiste capacidad en ninguna zona. Entrá a una zona y tocá "definir capacidad" para ver aquí el porcentaje de ocupación.</div>`;
-    } else {
-      try{
-        if(typeof Chart === "undefined") throw new Error("Chart.js no está disponible");
-        holder.innerHTML = `<div class="chartCanvasWrap"><canvas id="chartOccupancy"></canvas></div><div id="occupancyBarDetail" class="occupancyDetailBox" style="display:none;"></div>`;
-        const ctx2 = holder.querySelector("#chartOccupancy").getContext("2d");
-        const detailBox = holder.querySelector("#occupancyBarDetail");
-        const chart2 = new Chart(ctx2, {
-          type: "bar",
-          data: {
-            labels: zonasConCap.map(z=>z.label),
-            datasets: [
-              {
-                label: "Ocupado",
-                data: zonasConCap.map(z => occupancyCountForZone(z.key)),
-                backgroundColor: "#f2c230",
-                maxBarThickness: 22
-              },
-              {
-                label: "Libre",
-                data: zonasConCap.map(z => Math.max(0, state.capacities[z.key] - occupancyCountForZone(z.key))),
-                backgroundColor: "#e3e5e8",
-                maxBarThickness: 22
-              }
-            ]
-          },
-          options: {
-            indexAxis: "y",
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "bottom",
-                labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: "rectRounded", font: { size: 11 }, color: "#8b9198" }
-              }
-            },
-            scales: {
-              x: { stacked: true, beginAtZero: true, ticks: { precision: 0, font: { size: 11 }, color: "#8b9198" }, grid: { color: "rgba(0,0,0,0.05)" } },
-              y: { stacked: true, ticks: { font: { size: 11 }, color: "#1b1e21" }, grid: { display: false } }
-            },
-            onClick: (evt, elements) => {
-              if(!elements || elements.length === 0) return;
-              const idx = elements[0].index;
-              const z = zonasConCap[idx];
-              const ocupados = occupancyCountForZone(z.key);
-              const cap = state.capacities[z.key];
-              const libres = Math.max(0, cap - ocupados);
-              const pct = cap ? Math.round((ocupados/cap)*100) : 0;
-              detailBox.innerHTML = `
-                <span class="occupancyDetailZone">${escapeHtml(z.label)}</span>
-                <span class="occupancyDetailStats"><strong>${ocupados}</strong> / ${cap} ocupados <span class="occupancyDetailPct">${pct}%</span></span>
-                <span class="occupancyDetailFree">${libres} espacio(s) libre(s)</span>
-              `;
-              detailBox.style.display = "flex";
-            }
-          }
-        });
-        dashboardCharts.push(chart2);
-      }catch(e){
-        console.error("No se pudo dibujar el gráfico de ocupación", e);
-        holder.innerHTML = `<div class="dashEmptyNote">No se pudo cargar el gráfico (revisá tu conexión a internet).</div>`;
-      }
     }
 
     return wrap;
@@ -5568,6 +5659,51 @@
   // Cuenta cuántas cuentas distintas iniciaron sesión en las últimas 2 horas,
   // como referencia de actividad reciente del equipo (no es "en línea ahora
   // mismo": no hay forma de saber si esa persona sigue con la app abierta).
+  // Feed de las últimas acciones reales sobre vehículos (quién, qué, y
+  // cuándo) — visible para cualquier rol, a diferencia de "Actividad
+  // reciente" (sesiones iniciadas) que es solo para Admin.
+  async function loadLiveActivityFeed(){
+    const el = document.getElementById("liveActivityFeed");
+    if(!el) return;
+    try{
+      const updates = await readLog(HISTORY_KEY);
+      if(!el) return; // por si el panel ya cambió mientras esto cargaba
+      if(updates.length === 0){
+        el.innerHTML = `<div class="dashEmptyNote">Todavía no hay movimientos registrados.</div>`;
+        return;
+      }
+      const ultimos = updates.slice(-6).reverse();
+      el.className = "activityTimeline";
+      el.innerHTML = ultimos.map((h, idx)=>{
+        const esNuevo = h.desde === "Vehículo nuevo";
+        const esEliminado = h.hasta === "Eliminado del inventario";
+        const tipo = esNuevo ? "nuevo" : (esEliminado ? "eliminado" : "movido");
+        const icono = esNuevo ? "＋" : (esEliminado ? "✕" : "🔀");
+        const verbo = esNuevo ? "agregó" : (esEliminado ? "eliminó" : "movió");
+        const cuando = h.tsMillis ? relativeTimeShort(new Date(h.tsMillis)) : (h.ts || "");
+        const inicial = (h.username || "?").trim().charAt(0).toUpperCase();
+        return `
+          <div class="activityTimelineRow${idx === ultimos.length-1 ? ' last' : ''}">
+            <div class="activityTimelineMarker">
+              <span class="activityTimelineAvatar activityTimelineAvatar-${tipo}">${inicial}</span>
+              <span class="activityTimelineLine"></span>
+            </div>
+            <div class="activityTimelineBody">
+              <div class="activityTimelineText">
+                <span class="activityTimelineIcon">${icono}</span>
+                <strong>${escapeHtml(h.username)}</strong> ${verbo} <span class="plate activityTimelinePlate">${escapeHtml(h.placa)}</span>${esNuevo || esEliminado ? "" : ` a ${escapeHtml(h.hasta)}`}
+              </div>
+              <div class="activityTimelineWhen">${escapeHtml(cuando)}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }catch(e){
+      console.error("Error cargando la actividad reciente", e);
+      el.innerHTML = `<div class="dashEmptyNote">No se pudo cargar la actividad reciente.</div>`;
+    }
+  }
+
   async function loadRecentActivity(){
     const el = document.getElementById("recentActivityCard");
     if(!el) return;
@@ -6758,11 +6894,11 @@
             editingPlateIdx = null;
             movingPlateIdx = null;
             drawSpaceZoneChips();
-            if(zoneKey === SIN_UBICACION_KEY){
+            if(SINGLE_BUCKET_ZONES.has(zoneKey)){
               // No hay cuadrícula de espacios acá — es una sola lista, así
               // que se entra directo a verla, sin pasar por "elegir un
               // espacio" primero.
-              ensureSinUbicacionConsolidada();
+              ensureSinUbicacionConsolidada(zoneKey);
               saveState();
               refreshSpaceGrid(SIN_UBICACION_CAMPO);
             } else {
@@ -6779,13 +6915,22 @@
     }
 
     function refreshSpaceGrid(preselect){
-      const label = UNNUMBERED_ONLY_ZONES.has(spaceZone) ? "Líneas" : "Campos";
+      const label = CUSTOM_NAMED_ZONES.has(spaceZone) ? "Zonas" : (UNNUMBERED_ONLY_ZONES.has(spaceZone) ? "Líneas" : "Campos");
       spaceCampoLabel.textContent = label;
       if(preselect !== undefined) selectedCampo = preselect;
       const arr = state.zones[spaceZone] || [];
-      const labelLower = label === "Líneas" ? "línea" : "campo";
+      const labelLower = label === "Zonas" ? "zona" : (label === "Líneas" ? "línea" : "campo");
       if(arr.length === 0){
         spaceGridBox.classList.remove("groupedMode");
+        if(CUSTOM_NAMED_ZONES.has(spaceZone)){
+          // Solo Admin crea y nombra las zonas acá — Actualización no tiene
+          // este botón, para no terminar con nombres improvisados.
+          spaceGridBox.innerHTML = `<div class="dashEmptyNote">Todavía no hay zonas creadas en ${zoneInfo(spaceZone).label}. Pedile a un Admin que cree la primera.</div>`;
+          editingPlateIdx = null;
+          movingPlateIdx = null;
+          drawSpaceInfo();
+          return;
+        }
         const esFemenino = labelLower === "línea";
         spaceGridBox.innerHTML = `<button type="button" class="linkBackBtn" id="spaceCreateFirstBtn" style="text-decoration:none; font-weight:700;">+ Crear ${esFemenino ? "la primera" : "el primer"} ${labelLower}</button>`;
         const createBtn = spaceGridBox.querySelector("#spaceCreateFirstBtn");
@@ -7021,7 +7166,7 @@
       const cap = entry.capacidad;
       const occ = entry.plates.length;
       const full = cap && occ >= cap;
-      const labelLower = UNNUMBERED_ONLY_ZONES.has(spaceZone) ? "línea" : "campo";
+      const labelLower = CUSTOM_NAMED_ZONES.has(spaceZone) ? "zona" : (UNNUMBERED_ONLY_ZONES.has(spaceZone) ? "línea" : "campo");
 
       const plateRowsHtml = entry.plates.length ? entry.plates.map((p,idx)=>{
         if(idx === movingPlateIdx){
@@ -7070,7 +7215,11 @@
         }
         return `
           <div class="spacePlateRow" data-idx="${idx}" data-search="${escapeAttrLike((p.plate + " " + (p.aseguradora||"") + " " + (p.modelo||"")).toLowerCase())}">
-            <span class="orderBadge" title="Orden de llegada">${idx+1}</span>
+            <div class="orderBadgeGroup">
+              <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="up" ${idx===0 ? "disabled" : ""} title="Mover antes">▲</button>
+              <span class="orderBadge" title="Orden de llegada — se puede cambiar con las flechas">${idx+1}</span>
+              <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===entry.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
+            </div>
             <div class="spacePlateInfoWrap">
               <span class="spacePlateInfo"><span class="platePlateText">${escapeHtml(p.plate)}</span>${currentUser.showMovedBy ? ` <span class="plateMuted">· ${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${spaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
@@ -7091,7 +7240,7 @@
       spaceInfoBox.classList.remove("slideInRight");
       void spaceInfoBox.offsetWidth; // fuerza el reflujo para poder repetir la animación
       spaceInfoBox.classList.add("slideInRight");
-      const esSinUbicacion = spaceZone === SIN_UBICACION_KEY;
+      const esSinUbicacion = SINGLE_BUCKET_ZONES.has(spaceZone);
       spaceInfoBox.innerHTML = `
         <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">${esSinUbicacion ? "← Volver / cambiar de zona" : "← Volver a la lista de espacios"}</button>
         ${esSinUbicacion ? "" : `<div class="spaceNavRow">
@@ -7223,14 +7372,23 @@
             editTargetZone = btn.getAttribute("data-zone");
             editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(b=>b.classList.remove("active"));
             btn.classList.add("active");
-            spaceInfoBox.querySelector("#spaceEditCampoLabel").textContent = `Nuevo ${UNNUMBERED_ONLY_ZONES.has(editTargetZone) ? "línea" : "campo"}`;
+            const esNombrePersonalizado = CUSTOM_NAMED_ZONES.has(editTargetZone);
+            spaceInfoBox.querySelector("#spaceEditCampoLabel").textContent = esNombrePersonalizado
+              ? "Elegí una zona existente arriba ↑"
+              : `Nuevo ${UNNUMBERED_ONLY_ZONES.has(editTargetZone) ? "línea" : "campo"}`;
+            editCampoInput.readOnly = esNombrePersonalizado;
             if(editTargetZone === spaceZone){
               editCampoInput.value = campoLabel;
-            } else if(editTargetZone === SIN_UBICACION_KEY){
-              // "Sin ubicación" es solo un lugar para anotar la placa
-              // temporalmente — se sugiere la próxima línea libre para no
-              // obligar a pensar en un número.
-              editCampoInput.value = nextLineLabel(SIN_UBICACION_KEY);
+            } else if(SINGLE_BUCKET_ZONES.has(editTargetZone)){
+              // Las zonas de lista plana (Sin ubicación, Recepción/Salida)
+              // siempre usan el mismo campo único — no hace falta pensar en
+              // un número.
+              editCampoInput.value = SIN_UBICACION_CAMPO;
+            } else if(esNombrePersonalizado){
+              // Solo Admin crea zonas nuevas en Taller de Pintura —
+              // Actualización elige entre las que ya existen, sin poder
+              // escribir un nombre nuevo.
+              editCampoInput.value = "";
             } else {
               editCampoInput.value = "";
             }
@@ -7310,6 +7468,19 @@
       spaceInfoBox.querySelectorAll(".spaceRemoveBtn").forEach(b=>{
         b.addEventListener("click", (e)=> removePlateFromSpace(parseInt(b.getAttribute("data-idx"),10), e.currentTarget));
       });
+      spaceInfoBox.querySelectorAll(".orderMoveBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const idx = parseInt(b.getAttribute("data-idx"),10);
+          const dir = b.getAttribute("data-dir") === "up" ? -1 : 1;
+          const otro = idx + dir;
+          if(otro < 0 || otro >= entry.plates.length) return;
+          const snap = snapshotZones();
+          [entry.plates[idx], entry.plates[otro]] = [entry.plates[otro], entry.plates[idx]];
+          pushUndo(snap, `Reordenar ${entry.plates[dir===-1?idx:otro].plate} en ${zoneInfo(spaceZone).label} · ${campoLabel}`);
+          await saveState(true);
+          drawSpaceInfo();
+        });
+      });
       spaceInfoBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
         b.addEventListener("click", ()=>{
           movingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
@@ -7368,10 +7539,13 @@
             quickMoveTargetZone = btn.getAttribute("data-zone");
             quickMoveZoneChips.querySelectorAll(".zoneChipBtn").forEach(b2=>b2.classList.remove("active"));
             btn.classList.add("active");
+            const esNombrePersonalizado = CUSTOM_NAMED_ZONES.has(quickMoveTargetZone);
+            quickMoveCampoInput.readOnly = esNombrePersonalizado;
+            quickMoveCampoInput.placeholder = esNombrePersonalizado ? "Elegí una zona existente arriba ↑" : "Campo/línea destino";
             if(quickMoveTargetZone === spaceZone){
               quickMoveCampoInput.value = campoLabel;
-            } else if(quickMoveTargetZone === SIN_UBICACION_KEY){
-              quickMoveCampoInput.value = nextLineLabel(SIN_UBICACION_KEY);
+            } else if(SINGLE_BUCKET_ZONES.has(quickMoveTargetZone)){
+              quickMoveCampoInput.value = SIN_UBICACION_CAMPO;
             } else {
               quickMoveCampoInput.value = "";
             }
@@ -7514,7 +7688,17 @@
     }
 
     drawSpaceZoneChips();
-    refreshSpaceGrid();
+    // La carga inicial usa la misma lógica que el clic en un chip de zona:
+    // si la zona por defecto es de lista plana (ej. Recepción/Salida, ahora
+    // primera en la lista), hay que consolidarla y entrar directo a verla,
+    // en vez de mostrar una cuadrícula vacía.
+    if(SINGLE_BUCKET_ZONES.has(spaceZone)){
+      ensureSinUbicacionConsolidada(spaceZone);
+      saveState();
+      refreshSpaceGrid(SIN_UBICACION_CAMPO);
+    } else {
+      refreshSpaceGrid();
+    }
 
     drawZoneFilterRow();
     drawAllList();
@@ -7576,6 +7760,18 @@
     if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
+    }
+    if(currentUser.role === "actualizacion" && !SINGLE_BUCKET_ZONES.has(newZone)){
+      // Actualización nunca crea un campo/zona nuevo al mover un vehículo —
+      // si se escribe mal el destino, antes se creaba uno nuevo por error en
+      // vez de avisar. Ahora tiene que ser un campo/zona que ya exista;
+      // crear uno nuevo de cero queda solo para Admin.
+      const yaExiste = (state.zones[newZone] || []).some(c => c.campo === newCampo);
+      if(!yaExiste){
+        const nombreLugar = CUSTOM_NAMED_ZONES.has(newZone) ? "zona" : (UNNUMBERED_ONLY_ZONES.has(newZone) ? "línea" : "campo");
+        showToast(`"${newCampo}" no existe todavía en ${zoneInfo(newZone).label}. Revisá que esté bien escrito, o pedile a un Admin que cree ese ${nombreLugar}.`, 5000);
+        return false;
+      }
     }
     const campoObj = state.zones[zoneKey][ci];
     const entry = campoObj.plates[pi];
