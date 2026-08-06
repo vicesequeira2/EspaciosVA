@@ -911,6 +911,15 @@
     text-align:left;
     cursor:pointer;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    position:relative;
+  }
+  .resumenZoneCard::after{
+    content:"›";
+    position:absolute;
+    top:8px; right:10px;
+    font-size:1rem;
+    font-weight:800;
+    color: var(--border);
   }
   .resumenZoneCard:active{ background: var(--surface-2); }
   .resumenZoneCardTop{ display:flex; align-items:center; gap:6px; }
@@ -949,6 +958,16 @@
   tbody tr:last-child td{border-bottom:none;}
   tbody tr:nth-child(even):not(.updatedToday){ background: rgba(0,0,0,0.014); }
   .resumenRow{cursor:pointer;}
+  .resumenRow.campoGroupStart td{ border-top:2px solid var(--border); }
+  .tableScrollWrap{
+    overflow-x:auto;
+    position:relative;
+    border-radius: var(--radius);
+    -webkit-overflow-scrolling:touch;
+  }
+  .tableScrollWrap.hasMoreRight{
+    box-shadow: inset -14px 0 10px -10px rgba(0,0,0,0.18);
+  }
   .resumenRow.updatedToday{ background:#e3f3ea; }
   .resumenRow.updatedToday:hover{ background:#d3ebdc; }
   .resumenRow:active{background:var(--border-soft);}
@@ -1317,6 +1336,17 @@
     display:flex; flex-direction:column; gap:6px;
     max-height:220px; overflow-y:auto;
   }
+  .usersGroupHeader{
+    font-size:0.68rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color: var(--muted);
+    margin:12px 0 4px;
+    padding-top:8px;
+    border-top:1px solid var(--border-soft);
+  }
+  .usersGroupHeader:first-child{ margin-top:0; padding-top:0; border-top:none; }
   .userRow{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
     background:var(--surface-2); border-radius:8px; padding:8px 10px;
@@ -1350,8 +1380,23 @@
   .historyItem{
     background:var(--surface-2); border-radius:8px; padding:8px 10px;
     font-size:0.78rem; line-height:1.4;
+    border-left:3px solid var(--border);
+    position:relative;
+    padding-left:28px;
   }
   .historyItem .historyMeta{ color:var(--muted); font-size:0.68rem; }
+  .historyItemIcon{
+    position:absolute;
+    left:8px; top:8px;
+    font-size:0.8rem;
+    font-weight:800;
+  }
+  .historyItem-nuevo{ border-left-color:#5FB37A; }
+  .historyItem-nuevo .historyItemIcon{ color:#2e7d4f; }
+  .historyItem-eliminado{ border-left-color:#c0524a; }
+  .historyItem-eliminado .historyItemIcon{ color:#a13d33; }
+  .historyItem-movido{ border-left-color:#8b9198; }
+  .historyItem-movido .historyItemIcon{ color:#6b7178; }
   .updaterCard{
     max-width:420px; margin:20px auto; background:var(--surface);
     border-radius: var(--radius); padding:18px; box-shadow:0 1px 2px rgba(0,0,0,0.05);
@@ -1631,6 +1676,7 @@
     min-height:52px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     transition: transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    position:relative;
   }
   .spaceGridBtn:active{
     transform: scale(0.95);
@@ -1638,17 +1684,33 @@
   }
   .spaceGridLabel{ font-size:0.92rem; font-weight:800; color:var(--ink); line-height:1.1; }
   .spaceGridCount{ font-size:0.6rem; color:var(--muted); font-weight:600; opacity:0.85; }
-  .spaceGridBtn.empty{ background:#fafaf9; border-color:var(--border); }
+  .spaceGridBtn.empty{ background:#f4f7fa; border-color:#d7e0e8; }
   .spaceGridBtn.partial{ background:#fff3d6; border-color:#f0cd6e; }
   .spaceGridBtn.partial .spaceGridCount{ color:#8a6a1c; }
   .spaceGridBtn.full{ background:#fbdedb; border-color:#e79a92; }
   .spaceGridBtn.full .spaceGridCount{ color:#a13d33; }
+  .spaceGridBtn.overloaded{ background:#f5c2ba; border-color:#c0524a; border-width:2px; }
+  .spaceGridBtn.overloaded .spaceGridCount{ color:#7a2a20; font-weight:800; }
+  .spaceGridOverloadTag{
+    position:absolute;
+    top:2px; left:4px;
+    font-size:0.6rem;
+  }
+  .spaceGridBtn.overloaded .spaceGridBarFill{ background:#7a2a20; }
   .spaceGridBtn.nocap{
     background:#fafaf9;
     border-color:var(--border);
     border-style:dashed;
   }
-  .spaceGridBtn.nocap .spaceGridCount{ opacity:0.6; }
+  .spaceGridNoCapText{ font-style:italic; opacity:0.7; }
+  .spaceGridSummary{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;
+    font-size:0.72rem;
+    color:var(--muted);
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .spaceGridGoFreeBtn{ font-size:0.72rem !important; margin-top:0 !important; }
   .spaceGridBar{
     display:block;
     width:80%;
@@ -2100,6 +2162,7 @@
     <p>Revisión automática de cosas que suelen convenir corregir. No se toca nada solo — cada hallazgo te lleva a donde está para que lo arregles vos.</p>
     <div id="dataHealthContent" class="historyList"></div>
     <div class="modalActions" style="margin-top:14px;">
+      <button class="secondaryBtn" id="dataHealthRefreshBtn">🔄 Actualizar</button>
       <button class="secondaryBtn" id="dataHealthCloseBtn">Cerrar</button>
     </div>
   </div>
@@ -3696,29 +3759,72 @@
     function drawZoneGrid(){
       const arr = state.zones[zone.key] || [];
       if(arr.length === 0){
+        gridBox.classList.remove("groupedMode");
         gridBox.innerHTML = `<div class="dashEmptyNote">Sin campos registrados en esta zona todavía.</div>`;
         return;
       }
-      gridBox.innerHTML = arr.map((c, ci)=>{
+      let contLlenos = 0, contParciales = 0, contVacios = 0, contSinLimite = 0, contSobrecargados = 0;
+      let primerLibreCi = null;
+      arr.forEach((c, ci)=>{
+        const cap = c.capacidad;
+        const occ = c.plates.length;
+        if(!cap){
+          contSinLimite++;
+        } else if(occ > cap){
+          contSobrecargados++;
+        } else if(occ === cap){
+          contLlenos++;
+        } else if(occ > 0){
+          contParciales++;
+          if(primerLibreCi === null) primerLibreCi = ci;
+        } else {
+          contVacios++;
+          if(primerLibreCi === null) primerLibreCi = ci;
+        }
+      });
+      const resumenPartes = [];
+      if(contSobrecargados) resumenPartes.push(`${contSobrecargados} sobrecargado(s)`);
+      if(contLlenos) resumenPartes.push(`${contLlenos} lleno(s)`);
+      if(contParciales) resumenPartes.push(`${contParciales} parcial(es)`);
+      if(contVacios) resumenPartes.push(`${contVacios} vacío(s)`);
+      if(contSinLimite) resumenPartes.push(`${contSinLimite} sin límite`);
+      const resumenHtml = `
+        <div class="spaceGridSummary">
+          <span class="spaceGridSummaryText">${resumenPartes.join(" · ")}</span>
+          ${primerLibreCi !== null ? `<button type="button" class="linkBackBtn spaceGridGoFreeBtn" id="zoneGridGoFreeBtn" style="text-decoration:none; font-weight:700;">Ir al primer libre →</button>` : ``}
+        </div>
+      `;
+      gridBox.classList.add("groupedMode");
+      gridBox.innerHTML = resumenHtml + `<div class="spaceGrid">${arr.map((c, ci)=>{
         const cap = c.capacidad;
         const occ = c.plates.length;
         let fillClass;
         if(!cap){
           fillClass = "nocap";
         } else {
-          fillClass = occ >= cap ? "full" : (occ > 0 ? "partial" : "empty");
+          fillClass = occ > cap ? "overloaded" : (occ === cap ? "full" : (occ > 0 ? "partial" : "empty"));
         }
         const hechoHoy = c.plates.some(p => wasUpdatedToday(p));
         const pct = cap ? Math.min(100, Math.round((occ/cap)*100)) : 0;
         return `
           <button type="button" class="spaceGridBtn ${fillClass}${hechoHoy ? ' hechoHoy' : ''}${selectedCi===ci ? ' active' : ''}" data-ci="${ci}">
             ${hechoHoy ? `<span class="spaceGridDoneTag" title="Actualizado hoy">✓</span>` : ``}
+            ${fillClass === "overloaded" ? `<span class="spaceGridOverloadTag" title="Tiene más vehículos que el límite definido">⚠️</span>` : ``}
             <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
-            <span class="spaceGridCount">${occ}${cap ? "/"+cap : ""}</span>
+            ${cap ? `<span class="spaceGridCount">${occ}/${cap}</span>` : `<span class="spaceGridCount spaceGridNoCapText">sin límite</span>`}
             ${cap ? `<span class="spaceGridBar"><span class="spaceGridBarFill" style="width:${pct}%"></span></span>` : ``}
           </button>
         `;
-      }).join("");
+      }).join("")}</div>`;
+      const goFreeBtn = gridBox.querySelector("#zoneGridGoFreeBtn");
+      if(goFreeBtn){
+        goFreeBtn.addEventListener("click", ()=>{
+          selectedCi = primerLibreCi;
+          editingPlateIdx = null;
+          movingPlateIdx = null;
+          drawZoneDetail();
+        });
+      }
       gridBox.querySelectorAll(".spaceGridBtn").forEach(btn=>{
         btn.addEventListener("click", ()=>{
           selectedCi = parseInt(btn.getAttribute("data-ci"),10);
@@ -4372,7 +4478,7 @@
       <div class="resumenToolbar">
         <div class="filterField">
           <svg class="filterIcon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="6"/><line x1="13.5" y1="13.5" x2="18" y2="18"/></svg>
-          <input type="text" id="resumenFilter" placeholder="Buscar por placa o campo…" class="plate" autocomplete="off">
+          <input type="text" id="resumenFilter" placeholder="Buscar por placa, campo, modelo o aseguradora…" class="plate" autocomplete="off">
         </div>
         <div class="filterField selectField">
           <select id="resumenZoneFilter">
@@ -4384,16 +4490,18 @@
         <button class="clearFilterBtn" id="resumenClear" style="display:none;"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg> Limpiar filtros</button>
       </div>
       <div class="resultsCount" id="resultsCount"></div>
-      <table>
-        <thead><tr>
-          <th style="width:70px;" data-sort="campo">Campo</th>
-          <th data-sort="modelo">Modelo</th>
-          <th data-sort="placa">Placa</th>
-          <th data-sort="zoneLabel">Zona</th>
-          <th data-sort="aseguradora">Aseguradora</th>
-        </tr></thead>
-        <tbody id="resumenTbody"></tbody>
-      </table>
+      <div class="tableScrollWrap" id="resumenTableScrollWrap">
+        <table>
+          <thead><tr>
+            <th style="width:70px;" data-sort="campo">Campo</th>
+            <th data-sort="zoneLabel">Zona</th>
+            <th data-sort="modelo">Modelo</th>
+            <th data-sort="placa">Placa</th>
+            <th data-sort="aseguradora">Aseguradora</th>
+          </tr></thead>
+          <tbody id="resumenTbody"></tbody>
+        </table>
+      </div>
       <div id="resumenEmpty"></div>
     `;
     document.getElementById("mainArea").appendChild(wrap);
@@ -4401,6 +4509,19 @@
     const headerEl = document.querySelector("header");
     if(headerEl){
       wrap.querySelector(".resumenToolbar").style.top = headerEl.offsetHeight + "px";
+    }
+
+    // Sombra sutil al borde derecho de la tabla, solo mientras haya más
+    // columnas para deslizar (desaparece al llegar al final).
+    const tableScrollWrap = wrap.querySelector("#resumenTableScrollWrap");
+    function updateTableScrollShadow(){
+      if(!tableScrollWrap) return;
+      const haySobrante = tableScrollWrap.scrollWidth - tableScrollWrap.clientWidth - tableScrollWrap.scrollLeft > 2;
+      tableScrollWrap.classList.toggle("hasMoreRight", haySobrante);
+    }
+    if(tableScrollWrap){
+      tableScrollWrap.addEventListener("scroll", updateTableScrollShadow);
+      updateTableScrollShadow();
     }
 
     if(pendingResumenFilter){
@@ -4495,18 +4616,21 @@
         wrap.querySelector("#resumenEmpty").innerHTML = `<div class="emptyState">No hay resultados.</div>`;
       } else {
         wrap.querySelector("#resumenEmpty").innerHTML = "";
+        let campoAnterior = null, zonaAnterior = null;
         rows.forEach((r, idx)=>{
+          const esNuevoGrupo = (r.campo !== campoAnterior || r.zoneKey !== zonaAnterior);
+          campoAnterior = r.campo; zonaAnterior = r.zoneKey;
           const tr = document.createElement("tr");
-          tr.className = "resumenRow rowFadeIn" + (wasUpdatedToday(r) ? " updatedToday" : "");
+          tr.className = "resumenRow rowFadeIn" + (wasUpdatedToday(r) ? " updatedToday" : "") + (esNuevoGrupo && idx > 0 ? " campoGroupStart" : "");
           tr.style.animationDelay = (Math.min(idx, 15) * 22) + "ms";
           tr.dataset.zone = r.zoneKey;
           tr.dataset.ci = r.ci;
           tr.dataset.pi = r.pi;
           tr.innerHTML = `
             <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${highlightMatch(r.campo, filterText)}</span></td>
+            <td>${highlightMatch(r.zoneLabel, filterText)}</td>
             <td>${r.modelo ? highlightMatch(r.modelo, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
             <td class="plate">${highlightMatch(r.placa, filterText)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</td>
-            <td>${r.zoneLabel}</td>
             <td>${r.aseguradora ? highlightMatch(r.aseguradora, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
           `;
           tr.addEventListener("click", ()=>{
@@ -4519,6 +4643,7 @@
           tbody.appendChild(tr);
         });
       }
+      updateTableScrollShadow();
     }
     filterInput.addEventListener("input", draw);
     filterInput.addEventListener("keyup", draw);
@@ -4771,7 +4896,7 @@
       const chart1 = new Chart(ctx1, {
         type: "bar",
         data: {
-          labels: zonasOrdenadas.map(x=>x.z.label),
+          labels: zonasOrdenadas.map(x=>x.z.abbr),
           datasets: [{
             data: zonasOrdenadas.map(x=>x.count),
             backgroundColor: zonasOrdenadas.map(x=>"#"+x.z.hex),
@@ -4782,10 +4907,17 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => items.length ? zonasOrdenadas[items[0].dataIndex].z.label : ""
+              }
+            }
+          },
           scales: {
             y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: "rgba(0,0,0,0.05)" } },
-            x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+            x: { ticks: { font: { size: 11 }, maxRotation: 0, minRotation: 0 }, grid: { display: false } }
           },
           onClick: (evt, elements) => {
             if(!elements || elements.length === 0) return;
@@ -4805,7 +4937,10 @@
               const val = zonasOrdenadas[i].count;
               ctx.fillText(String(val), bar.x, bar.y - 6);
             });
-            // Línea de referencia con el promedio de vehículos entre zonas
+            // Línea de referencia con el promedio de vehículos entre zonas.
+            // Se ancla del lado derecho (donde están las barras más chicas,
+            // ya que el gráfico va de mayor a menor) para no quedar tapada
+            // detrás de la barra más alta.
             if(promedioVeh > 0){
               const yPix = scales.y.getPixelForValue(promedioVeh);
               ctx.strokeStyle = "#8b9198";
@@ -4816,10 +4951,14 @@
               ctx.lineTo(scales.x.right, yPix);
               ctx.stroke();
               ctx.setLineDash([]);
-              ctx.textAlign = "left";
-              ctx.fillStyle = "#8b9198";
+              const etiqueta = `Promedio: ${promedioVeh.toFixed(1)}`;
               ctx.font = "600 10px Inter, sans-serif";
-              ctx.fillText(`Promedio: ${promedioVeh.toFixed(1)}`, scales.x.left + 4, yPix - 4);
+              const anchoTexto = ctx.measureText(etiqueta).width;
+              ctx.fillStyle = "rgba(255,255,255,0.85)";
+              ctx.fillRect(scales.x.right - anchoTexto - 8, yPix - 15, anchoTexto + 8, 14);
+              ctx.textAlign = "right";
+              ctx.fillStyle = "#8b9198";
+              ctx.fillText(etiqueta, scales.x.right - 4, yPix - 4);
             }
             ctx.restore();
           }
@@ -4856,7 +4995,7 @@
               {
                 label: "Libre",
                 data: zonasConCap.map(z => Math.max(0, state.capacities[z.key] - occupancyCountForZone(z.key))),
-                backgroundColor: "rgba(0,0,0,0.06)",
+                backgroundColor: "#e3e5e8",
                 maxBarThickness: 22
               }
             ]
@@ -5936,8 +6075,20 @@
 
     let users = await loadUsers();
 
+    const ROLE_ORDER = ["admin", "actualizacion", "consulta"];
     function draw(){
-      listEl.innerHTML = users.map((u,i)=>`
+      // Se ordenan los ÍNDICES por rol para agrupar visualmente — el
+      // arreglo "users" en sí no cambia de orden, así que data-i sigue
+      // apuntando al usuario correcto en cada botón.
+      const indices = users.map((u,i)=>i).sort((a,b)=>
+        ROLE_ORDER.indexOf(users[a].role) - ROLE_ORDER.indexOf(users[b].role)
+      );
+      let lastRole = null;
+      listEl.innerHTML = indices.map(i=>{
+        const u = users[i];
+        const headerHtml = u.role !== lastRole ? `<div class="usersGroupHeader">${ROLES[u.role] || u.role}</div>` : "";
+        lastRole = u.role;
+        return headerHtml + `
         <div class="userRow ${u.active===false ? 'inactive' : ''}">
           <div class="userRowInfo">
             <span class="userRowName">${escapeHtml(u.username)} ${currentUser.username.toLowerCase()===u.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
@@ -5955,7 +6106,8 @@
             <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
           </div>
         </div>
-      `).join("");
+      `;
+      }).join("");
       listEl.querySelectorAll(".renameUserBtn").forEach(b=>{
         b.addEventListener("click", async ()=>{
           const i = parseInt(b.getAttribute("data-i"),10);
@@ -6121,20 +6273,32 @@
         (typeLabel[a.type] || a.type || "").toUpperCase().includes(q)
       ) : access;
 
-      listUpdates.innerHTML = filteredUpdates.length ? filteredUpdates.map(h=>`
-        <div class="historyItem">
+      listUpdates.innerHTML = filteredUpdates.length ? filteredUpdates.map(h=>{
+        const esNuevo = h.desde === "Vehículo nuevo";
+        const esEliminado = h.hasta === "Eliminado del inventario";
+        const tipo = esNuevo ? "nuevo" : (esEliminado ? "eliminado" : "movido");
+        const icono = esNuevo ? "＋" : (esEliminado ? "✕" : "🔀");
+        return `
+        <div class="historyItem historyItem-${tipo}">
+          <span class="historyItemIcon">${icono}</span>
           <strong>${escapeHtml(h.placa)}</strong> movida por ${escapeHtml(h.username)}<br>
           de ${escapeHtml(h.desde)} a ${escapeHtml(h.hasta)}
           <div class="historyMeta">${escapeHtml(h.ts)}</div>
         </div>
-      `).join("") : `<div class="dashEmptyNote">${q ? "Sin resultados para esa búsqueda." : "Todavía no hay movimientos registrados."}</div>`;
+      `;
+      }).join("") : `<div class="dashEmptyNote">${q ? "Sin resultados para esa búsqueda." : "Todavía no hay movimientos registrados."}</div>`;
 
-      listAccess.innerHTML = filteredAccess.length ? filteredAccess.map(a=>`
-        <div class="historyItem">
+      listAccess.innerHTML = filteredAccess.length ? filteredAccess.map(a=>{
+        const tipo = a.type === "login" ? "nuevo" : (a.type === "login_failed" ? "eliminado" : "movido");
+        const icono = a.type === "login" ? "→" : (a.type === "login_failed" ? "⚠️" : "←");
+        return `
+        <div class="historyItem historyItem-${tipo}">
+          <span class="historyItemIcon">${icono}</span>
           ${typeLabel[a.type] || a.type} — <strong>${escapeHtml(a.username)}</strong>
           <div class="historyMeta">${escapeHtml(a.ts)}</div>
         </div>
-      `).join("") : `<div class="dashEmptyNote">${q ? "Sin resultados para esa búsqueda." : "Todavía no hay accesos registrados."}</div>`;
+      `;
+      }).join("") : `<div class="dashEmptyNote">${q ? "Sin resultados para esa búsqueda." : "Todavía no hay accesos registrados."}</div>`;
     }
     searchInput.value = "";
     drawLists();
@@ -6252,74 +6416,81 @@
     const overlay = document.getElementById("dataHealthModal");
     const content = document.getElementById("dataHealthContent");
 
-    // 1) Placas duplicadas
-    const rows = buildResumenRows();
-    const porPlaca = {};
-    rows.forEach(r=>{ const k = r.placa.toUpperCase(); (porPlaca[k] = porPlaca[k]||[]).push(r); });
-    const duplicadas = Object.values(porPlaca).filter(list => list.length > 1);
+    function computeAndRenderHealth(){
+      // 1) Placas duplicadas
+      const rows = buildResumenRows();
+      const porPlaca = {};
+      rows.forEach(r=>{ const k = r.placa.toUpperCase(); (porPlaca[k] = porPlaca[k]||[]).push(r); });
+      const duplicadas = Object.values(porPlaca).filter(list => list.length > 1);
 
-    // 2) Campos sin capacidad definida
-    const camposSinCap = [];
-    ZONES.forEach(z=>{
-      (state.zones[z.key]||[]).forEach(c=>{
-        if(!c.capacidad) camposSinCap.push({ zoneKey: z.key, zoneLabel: z.label, campo: c.campo });
-      });
-    });
-
-    // 3) Vehículos sin modelo cargado
-    const sinModelo = rows.filter(r => !r.modelo);
-
-    // 4) Vehículos sin actualizarse hace 30+ días (o sin fecha registrada)
-    const treintaDias = 30*24*60*60*1000;
-    const estancados = [];
-    ZONES.forEach(z=>{
-      (state.zones[z.key]||[]).forEach(c=>{
-        c.plates.forEach(p=>{
-          const t = p.lastUpdated ? new Date(p.lastUpdated).getTime() : NaN;
-          if(isNaN(t) || (Date.now() - t) > treintaDias){
-            estancados.push({ zoneKey: z.key, zoneLabel: z.label, campo: c.campo, placa: p.plate, lastUpdated: p.lastUpdated });
-          }
+      // 2) Campos sin capacidad definida
+      const camposSinCap = [];
+      ZONES.forEach(z=>{
+        (state.zones[z.key]||[]).forEach(c=>{
+          if(!c.capacidad) camposSinCap.push({ zoneKey: z.key, zoneLabel: z.label, campo: c.campo });
         });
       });
-    });
 
-    function section(title, count, items, renderItem){
-      if(count === 0){
-        return `<div class="historyItem"><strong>✅ ${title}</strong><div class="historyMeta">Sin hallazgos.</div></div>`;
-      }
-      const shown = items.slice(0, 10);
-      const resto = count - shown.length;
-      return `
-        <div class="historyItem">
-          <strong>⚠️ ${title} (${count})</strong>
-          <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
-            ${shown.map(renderItem).join("")}
+      // 3) Vehículos sin modelo cargado
+      const sinModelo = rows.filter(r => !r.modelo);
+
+      // 4) Vehículos sin actualizarse hace 30+ días (o sin fecha registrada)
+      const treintaDias = 30*24*60*60*1000;
+      const estancados = [];
+      ZONES.forEach(z=>{
+        (state.zones[z.key]||[]).forEach(c=>{
+          c.plates.forEach(p=>{
+            const t = p.lastUpdated ? new Date(p.lastUpdated).getTime() : NaN;
+            if(isNaN(t) || (Date.now() - t) > treintaDias){
+              estancados.push({ zoneKey: z.key, zoneLabel: z.label, campo: c.campo, placa: p.plate, lastUpdated: p.lastUpdated });
+            }
+          });
+        });
+      });
+
+      function section(title, count, items, renderItem){
+        if(count === 0){
+          return `<div class="historyItem"><strong>✅ ${title}</strong><div class="historyMeta">Sin hallazgos.</div></div>`;
+        }
+        const shown = items.slice(0, 10);
+        const resto = count - shown.length;
+        return `
+          <div class="historyItem">
+            <strong>⚠️ ${title} (${count})</strong>
+            <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
+              ${shown.map(renderItem).join("")}
+            </div>
+            ${resto > 0 ? `<div class="historyMeta" style="margin-top:4px;">y ${resto} más…</div>` : ``}
           </div>
-          ${resto > 0 ? `<div class="historyMeta" style="margin-top:4px;">y ${resto} más…</div>` : ``}
-        </div>
-      `;
+        `;
+      }
+
+      content.innerHTML =
+        section("Placas duplicadas (registradas en más de un lugar)", duplicadas.length, duplicadas, list => {
+          const primero = list[0];
+          return `<button type="button" class="dataHealthItemBtn" data-zone="${primero.zoneKey}">${escapeHtml(primero.placa)} — en ${list.map(r=>`${r.zoneLabel} campo ${r.campo}`).join(" y ")}</button>`;
+        }) +
+        section("Campos/líneas sin capacidad definida", camposSinCap.length, camposSinCap, c =>
+          `<button type="button" class="dataHealthItemBtn" data-zone="${c.zoneKey}">${escapeHtml(c.zoneLabel)} · campo ${escapeHtml(c.campo)}</button>`
+        ) +
+        section("Vehículos sin modelo cargado", sinModelo.length, sinModelo, r =>
+          `<button type="button" class="dataHealthItemBtn" data-zone="${r.zoneKey}">${escapeHtml(r.placa)} — ${escapeHtml(r.zoneLabel)} campo ${escapeHtml(r.campo)}</button>`
+        ) +
+        section("Vehículos sin actualizarse hace 30 días o más", estancados.length, estancados, r =>
+          `<button type="button" class="dataHealthItemBtn" data-zone="${r.zoneKey}">${escapeHtml(r.placa)} — ${escapeHtml(r.zoneLabel)} campo ${escapeHtml(r.campo)}</button>`
+        );
+
+      content.querySelectorAll(".dataHealthItemBtn").forEach(b=>{
+        b.addEventListener("click", ()=> goToZoneAndClose(b.getAttribute("data-zone"), overlay));
+      });
     }
 
-    content.innerHTML =
-      section("Placas duplicadas (registradas en más de un lugar)", duplicadas.length, duplicadas, list => {
-        const primero = list[0];
-        return `<button type="button" class="dataHealthItemBtn" data-zone="${primero.zoneKey}">${escapeHtml(primero.placa)} — en ${list.map(r=>`${r.zoneLabel} campo ${r.campo}`).join(" y ")}</button>`;
-      }) +
-      section("Campos/líneas sin capacidad definida", camposSinCap.length, camposSinCap, c =>
-        `<button type="button" class="dataHealthItemBtn" data-zone="${c.zoneKey}">${escapeHtml(c.zoneLabel)} · campo ${escapeHtml(c.campo)}</button>`
-      ) +
-      section("Vehículos sin modelo cargado", sinModelo.length, sinModelo, r =>
-        `<button type="button" class="dataHealthItemBtn" data-zone="${r.zoneKey}">${escapeHtml(r.placa)} — ${escapeHtml(r.zoneLabel)} campo ${escapeHtml(r.campo)}</button>`
-      ) +
-      section("Vehículos sin actualizarse hace 30 días o más", estancados.length, estancados, r =>
-        `<button type="button" class="dataHealthItemBtn" data-zone="${r.zoneKey}">${escapeHtml(r.placa)} — ${escapeHtml(r.zoneLabel)} campo ${escapeHtml(r.campo)}</button>`
-      );
-
-    content.querySelectorAll(".dataHealthItemBtn").forEach(b=>{
-      b.addEventListener("click", ()=> goToZoneAndClose(b.getAttribute("data-zone"), overlay));
-    });
-
+    computeAndRenderHealth();
     overlay.classList.add("show");
+    document.getElementById("dataHealthRefreshBtn").onclick = ()=>{
+      computeAndRenderHealth();
+      showToast("Salud de datos actualizada");
+    };
     document.getElementById("dataHealthCloseBtn").onclick = ()=> overlay.classList.remove("show");
   }
   document.getElementById("dataHealthBtn").addEventListener("click", openDataHealthModal);
@@ -6638,19 +6809,54 @@
         if(!cap){
           fillClass = "nocap";
         } else {
-          fillClass = occ >= cap ? "full" : (occ > 0 ? "partial" : "empty");
+          fillClass = occ > cap ? "overloaded" : (occ === cap ? "full" : (occ > 0 ? "partial" : "empty"));
         }
         const hechoHoy = c.plates.some(p => wasUpdatedToday(p));
         const pct = cap ? Math.min(100, Math.round((occ/cap)*100)) : 0;
         return `
           <button type="button" class="spaceGridBtn ${fillClass}${hechoHoy ? ' hechoHoy' : ''}${selectedCampo===c.campo ? ' active' : ''}" data-campo="${escapeAttrLike(c.campo)}">
             ${hechoHoy ? `<span class="spaceGridDoneTag" title="Ya trabajado hoy">✓</span>` : ``}
+            ${fillClass === "overloaded" ? `<span class="spaceGridOverloadTag" title="Tiene más vehículos que el límite definido">⚠️</span>` : ``}
             <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
-            <span class="spaceGridCount">${occ}${cap ? "/"+cap : ""}</span>
+            ${cap ? `<span class="spaceGridCount">${occ}/${cap}</span>` : `<span class="spaceGridCount spaceGridNoCapText">sin límite</span>`}
             ${cap ? `<span class="spaceGridBar"><span class="spaceGridBarFill" style="width:${pct}%"></span></span>` : ``}
           </button>
         `;
       };
+
+      // Resumen de estados + salto directo al primer espacio con lugar, para
+      // no tener que escanear cuadro por cuadro en cuadrículas grandes.
+      let contLlenos = 0, contParciales = 0, contVacios = 0, contSinLimite = 0, contSobrecargados = 0;
+      let primerLibre = null;
+      arr.forEach(c=>{
+        const cap = c.capacidad;
+        const occ = c.plates.length;
+        if(!cap){
+          contSinLimite++;
+        } else if(occ > cap){
+          contSobrecargados++;
+        } else if(occ === cap){
+          contLlenos++;
+        } else if(occ > 0){
+          contParciales++;
+          if(!primerLibre) primerLibre = c.campo;
+        } else {
+          contVacios++;
+          if(!primerLibre) primerLibre = c.campo;
+        }
+      });
+      const resumenPartes = [];
+      if(contSobrecargados) resumenPartes.push(`${contSobrecargados} sobrecargado(s)`);
+      if(contLlenos) resumenPartes.push(`${contLlenos} lleno(s)`);
+      if(contParciales) resumenPartes.push(`${contParciales} parcial(es)`);
+      if(contVacios) resumenPartes.push(`${contVacios} vacío(s)`);
+      if(contSinLimite) resumenPartes.push(`${contSinLimite} sin límite`);
+      const resumenHtml = `
+        <div class="spaceGridSummary">
+          <span class="spaceGridSummaryText">${resumenPartes.join(" · ")}</span>
+          ${primerLibre ? `<button type="button" class="linkBackBtn spaceGridGoFreeBtn" id="spaceGridGoFreeBtn" style="text-decoration:none; font-weight:700;">Ir al primer libre →</button>` : ``}
+        </div>
+      `;
 
       // "Atrás" es la fusión de 3 zonas viejas (Atrás, Atrás entregas, Atrás
       // Sólidos). Para completar más fácil, se siguen mostrando agrupadas
@@ -6669,7 +6875,7 @@
           if(!isNaN(n) && n >= 33 && n <= 36){ grupos[0].items.push(c); return; }
           grupos[1].items.push(c);
         });
-        spaceGridBox.innerHTML = grupos.filter(g=>g.items.length>0).map(g=>`
+        spaceGridBox.innerHTML = resumenHtml + grupos.filter(g=>g.items.length>0).map(g=>`
           <div class="spaceGridGroup">
             <div class="spaceGridGroupLabel">${g.label}</div>
             <div class="spaceGrid">${g.items.map(renderGridBtnHtml).join("")}</div>
@@ -6688,15 +6894,24 @@
           if(/^línea/i.test(c.campo)){ gruposMaya[1].items.push(c); return; }
           gruposMaya[0].items.push(c);
         });
-        spaceGridBox.innerHTML = gruposMaya.filter(g=>g.items.length>0).map(g=>`
+        spaceGridBox.innerHTML = resumenHtml + gruposMaya.filter(g=>g.items.length>0).map(g=>`
           <div class="spaceGridGroup">
             <div class="spaceGridGroupLabel">${g.label}</div>
             <div class="spaceGrid">${g.items.map(renderGridBtnHtml).join("")}</div>
           </div>
         `).join("");
       } else {
-        spaceGridBox.classList.remove("groupedMode");
-        spaceGridBox.innerHTML = arr.map(renderGridBtnHtml).join("");
+        spaceGridBox.classList.add("groupedMode");
+        spaceGridBox.innerHTML = resumenHtml + `<div class="spaceGrid">${arr.map(renderGridBtnHtml).join("")}</div>`;
+      }
+      const goFreeBtn = spaceGridBox.querySelector("#spaceGridGoFreeBtn");
+      if(goFreeBtn){
+        goFreeBtn.addEventListener("click", ()=>{
+          selectedCampo = primerLibre;
+          editingPlateIdx = null;
+          movingPlateIdx = null;
+          drawSpaceInfo();
+        });
       }
       spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(btn=>{
         btn.addEventListener("click", ()=>{
