@@ -1931,6 +1931,13 @@
   .spacePlateInfoWrap{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
   .spacePlateInfo{ flex:1; min-width:0; }
   .platePlateText{ font-weight:800; color:var(--ink); letter-spacing:0.01em; }
+  .platePlateTextClickable{
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-style:dotted;
+    text-decoration-color:var(--muted);
+    text-underline-offset:3px;
+  }
   .plateMuted{ color:var(--muted); font-weight:500; }
   .plateModelText{ text-transform:capitalize; }
   .lastMovedLabel{
@@ -1976,6 +1983,40 @@
     margin-top:6px;
   }
   .modeloColorRow input{ flex:1; min-width:0; }
+  .labeledFieldRow{
+    display:flex; gap:8px;
+    margin-top:8px;
+  }
+  .labeledFieldRow:first-child{ margin-top:0; }
+  .labeledFieldBox{
+    display:flex; flex-direction:column;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:6px 10px 7px;
+    min-width:0;
+    background: var(--surface);
+  }
+  .labeledFieldBox:focus-within{
+    border-color: var(--asphalt);
+  }
+  .labeledFieldLabel{
+    font-size:0.66rem;
+    font-weight:700;
+    color: var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    margin-bottom:1px;
+  }
+  .labeledFieldReq{ color:#c0524a; margin-left:2px; }
+  .labeledFieldBox input{
+    border:none;
+    padding:0;
+    background:transparent;
+    font-size:0.92rem;
+    min-width:0;
+    width:100%;
+  }
+  .labeledFieldBox input:focus{ outline:none; }
   .spaceEditQuickRow{
     display:flex; gap:6px; flex-wrap:wrap;
   }
@@ -2807,8 +2848,9 @@
   let updMovingPlateIdx = null;
   let updArmedZoneKey = null;
   let updSelectedListZone = "";
-  let lastAddAseguradora = ""; // última aseguradora usada al agregar un vehículo nuevo (rol Actualización)
-  let lastAddColor = ""; // último color usado al agregar un vehículo nuevo (rol Actualización)
+  // (antes acá se guardaba el último asesor/color usado para precompletar
+  // el siguiente formulario — se quitó porque hacía que un vehículo nuevo
+  // heredara por error el asesor del anterior en vez de quedar en blanco)
 
   // ---- Modo kiosco (pensado para el rol Actualización en una tablet fija) ----
   // Aviso honesto: esto es lo máximo que se puede lograr desde una página
@@ -3698,18 +3740,55 @@
   // Reportar con fotos: arma el mismo texto de ubicación que ya se copia en
   // Búsqueda, pero lo comparte junto con hasta 2 fotos usando el menú
   // nativo de compartir del celular (WhatsApp, etc.), en vez de solo texto.
-  function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest){
+  // Arma un collage vertical con las 2 fotos (una arriba, la otra abajo) en
+  // una sola imagen — así se comparte un solo archivo prolijo en vez de dos
+  // sueltas.
+  function loadImageFromFile(file){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("No se pudo leer la imagen"));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  async function createPhotoCollage(file1, file2){
+    const [img1, img2] = await Promise.all([loadImageFromFile(file1), loadImageFromFile(file2)]);
+    const targetWidth = Math.min(img1.width, img2.width, 1400);
+    const h1 = img1.height * (targetWidth / img1.width);
+    const h2 = img2.height * (targetWidth / img2.width);
+    const gap = 6;
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = Math.round(h1 + h2 + gap);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img1, 0, 0, targetWidth, h1);
+    ctx.drawImage(img2, 0, h1 + gap, targetWidth, h2);
+    return new Promise(resolve => canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.85));
+  }
+
+  function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest, isAutoPrompt){
     const overlay = document.getElementById("photoReportModal");
     const summaryBox = document.getElementById("photoReportSummary");
     const fecha = new Date().toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
-    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}<strong>${escapeHtml(plate)}</strong><div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}</div>`;
+    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${escapeHtml(plate)}</strong><div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}</div>`;
 
-    const slot1 = document.getElementById("photoReportSlot1");
-    const slot2 = document.getElementById("photoReportSlot2");
-    const input1 = document.getElementById("photoReportInput1");
-    const input2 = document.getElementById("photoReportInput2");
-    const shareBtn = document.getElementById("photoReportShareBtn");
-    const closeBtn = document.getElementById("photoReportCloseBtn");
+    // Si el modal se vuelve a abrir sin haberse cerrado antes (ej. compartir
+    // y enseguida tocar otra placa), esto evita que se acumulen listeners
+    // viejos encima de los nuevos — se clona cada elemento interactivo para
+    // que quede completamente limpio de eventos anteriores.
+    let slot1 = document.getElementById("photoReportSlot1");
+    let slot2 = document.getElementById("photoReportSlot2");
+    const oldInput1 = document.getElementById("photoReportInput1");
+    const oldInput2 = document.getElementById("photoReportInput2");
+    const oldShareBtn = document.getElementById("photoReportShareBtn");
+    const oldCloseBtn = document.getElementById("photoReportCloseBtn");
+    let input1 = oldInput1.cloneNode(true); oldInput1.parentNode.replaceChild(input1, oldInput1);
+    let input2 = oldInput2.cloneNode(true); oldInput2.parentNode.replaceChild(input2, oldInput2);
+    let shareBtn = oldShareBtn.cloneNode(true); oldShareBtn.parentNode.replaceChild(shareBtn, oldShareBtn);
+    let closeBtn = oldCloseBtn.cloneNode(true); oldCloseBtn.parentNode.replaceChild(closeBtn, oldCloseBtn);
+    closeBtn.textContent = isAutoPrompt ? "Omitir" : "Cerrar";
 
     let file1 = null, file2 = null;
     input1.value = ""; input2.value = "";
@@ -3738,22 +3817,45 @@
       shareBtn.disabled = !(file1 || file2);
     }
     async function onShare(){
+      if(shareBtn.disabled) return; // ya está compartiendo, evita el doble toque
+      const textoOriginalBtn = shareBtn.textContent;
+      shareBtn.disabled = true;
+      shareBtn.textContent = "Compartiendo…";
       const text = `Placa: ${plate}\nZona: ${zoneLabel}\nCampo: ${campoLabel}\nFecha: ${fecha}`;
-      const files = [file1, file2].filter(Boolean);
       if(!navigator.share){
         showToast("Tu navegador no puede compartir fotos directamente. Guardalas y compartilas manualmente junto con este texto.", 5000);
+        shareBtn.disabled = false;
+        shareBtn.textContent = textoOriginalBtn;
         return;
       }
       try{
+        let files;
+        if(file1 && file2){
+          // Dos fotos: se combinan en una sola imagen (collage), para
+          // compartir un solo archivo prolijo en vez de dos sueltas.
+          try{
+            const blob = await createPhotoCollage(file1, file2);
+            files = [new File([blob], `${plate}.jpg`, { type: "image/jpeg" })];
+          }catch(collageError){
+            console.error("No se pudo armar el collage, se comparten las 2 fotos sueltas", collageError);
+            files = [file1, file2];
+          }
+        } else {
+          files = [file1, file2].filter(Boolean);
+        }
         const shareData = { title: `Vehículo ${plate}`, text };
         if(files.length && navigator.canShare && navigator.canShare({ files })){
           shareData.files = files;
         }
         await navigator.share(shareData);
       }catch(e){
-        if(e && e.name === "AbortError") return; // cerró el menú sin elegir nada
-        console.error("Error al compartir el reporte con fotos", e);
-        showToast("No se pudo compartir.");
+        if(e && e.name !== "AbortError"){ // cerró el menú sin elegir nada: no es un error real
+          console.error("Error al compartir el reporte con fotos", e);
+          showToast("No se pudo compartir.");
+        }
+      }finally{
+        shareBtn.disabled = !(file1 || file2);
+        shareBtn.textContent = textoOriginalBtn;
       }
     }
     function onClose(){
@@ -4286,7 +4388,7 @@
               <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===c.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
             </div>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo"><span class="platePlateText">${escapeHtml(p.plate)}</span>${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${zone.key===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
+              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${zone.key===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
             </div>
             ${zone.key===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
@@ -4319,11 +4421,25 @@
         ${plateRowsHtml}
         <button type="button" class="linkBackBtn" id="zoneAddToggle_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="zoneAddBox_${abbr}" style="display:none;">
-          <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" placeholder="Placa *" autocapitalize="characters">
-          <input type="text" id="zoneNewAseguradora_${abbr}" placeholder="Asesor (opcional)" style="margin-top:6px;">
-          <div class="modeloColorRow">
-            <input type="text" id="zoneNewModelo_${abbr}" class="reqField" placeholder="Modelo *" list="modelSuggestions">
-            <input type="text" id="zoneNewColor_${abbr}" placeholder="Color" list="colorSuggestions">
+          <div class="labeledFieldRow">
+            <label class="labeledFieldBox" style="flex:1.3;">
+              <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
+              <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters">
+            </label>
+            <label class="labeledFieldBox" style="flex:1;">
+              <span class="labeledFieldLabel">Asesor</span>
+              <input type="text" id="zoneNewAseguradora_${abbr}">
+            </label>
+          </div>
+          <div class="labeledFieldRow">
+            <label class="labeledFieldBox" style="flex:1.3;">
+              <span class="labeledFieldLabel">Modelo<span class="labeledFieldReq">*</span></span>
+              <input type="text" id="zoneNewModelo_${abbr}" class="reqField" list="modelSuggestions">
+            </label>
+            <label class="labeledFieldBox" style="flex:1;">
+              <span class="labeledFieldLabel">Color</span>
+              <input type="text" id="zoneNewColor_${abbr}" list="colorSuggestions">
+            </label>
           </div>
           <div class="dupWarn" id="zoneNewDupWarn_${abbr}" style="display:none;"></div>
           <div class="similarWarn" id="zoneNewSimilarWarn_${abbr}" style="display:none;"></div>
@@ -4581,6 +4697,14 @@
           drawZoneDetail();
         });
       });
+      detailBox.querySelectorAll(".platePlateTextClickable").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const idx = parseInt(b.getAttribute("data-idx"),10);
+          const p = c.plates[idx];
+          if(!p) return;
+          openPhotoReportModal(p.plate, info.label, c.campo);
+        });
+      });
       detailBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
         b.addEventListener("click", ()=>{
           movingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
@@ -4741,6 +4865,7 @@
         const modeloInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
         const colorInput = detailBox.querySelector(`#zoneNewColor_${abbr}`);
         if(!modeloInput.value.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
+        const plateForReport = normalizePlate(plateRaw);
         const snap = snapshotZones();
         const ok = await updaterAddNew(zone.key, c.campo, plateRaw, aseguradora, modeloInput.value, "first", colorInput.value);
         if(ok){
@@ -4748,6 +4873,7 @@
           showToast("Listo — vehículo en este espacio");
           drawZoneGrid();
           drawZoneDetail();
+          openPhotoReportModal(plateForReport, info.label, c.campo, false, true);
         }
       }
       newAddBtn.addEventListener("click", confirmZoneAdd);
@@ -7233,7 +7359,11 @@
     // Cambiar de zona pide tocar dos veces (para no perder de vista el
     // espacio actual por un toque accidental cerca de otra zona).
     function drawSpaceZoneChips(){
-      const chipZones = [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO];
+      const estaRestringido = currentUser.allowedZones && currentUser.allowedZones.length;
+      // Sin ubicación es un catch-all general — para cuentas restringidas a
+      // ciertas zonas no tiene sentido mostrarla, ya que su trabajo queda
+      // acotado a esas zonas puntuales.
+      const chipZones = estaRestringido ? allowedZonesForCurrentUser() : [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO];
       spaceZoneChipsBox.innerHTML = chipZones.map(z=>`
         <button type="button" class="zoneChipBtn${updSpaceZone===z.key?' active':''}${updArmedZoneKey===z.key?' armed':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}${updArmedZoneKey===z.key ? " ¿Cambiar?" : ""}</button>
       `).join("");
@@ -7582,11 +7712,10 @@
               <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===entry.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
             </div>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo"><span class="platePlateText">${escapeHtml(p.plate)}</span>${currentUser.showMovedBy ? ` <span class="plateMuted">· ${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${updSpaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
+              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${currentUser.showMovedBy ? ` <span class="plateMuted">· ${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${updSpaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
             </div>
             ${updSpaceZone===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
-            <button type="button" class="spacePhotoReportBtn" data-idx="${idx}" title="Reportar con fotos dónde quedó">📸</button>
             <button type="button" class="spaceMoveBtn" data-idx="${idx}" title="Mover a otro espacio">🔀</button>
             <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
             <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
@@ -7619,11 +7748,27 @@
         ${plateRowsHtml}
         <button type="button" class="linkBackBtn" id="updSpaceAddToggle" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="updSpaceAddBox" style="display:none;">
-          <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" placeholder="Placa *" autocapitalize="characters">
-          ${currentUser.showMovedBy ? `` : `<input type="text" id="updSpaceNewAseguradora" placeholder="Asesor (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">`}
-          <div class="modeloColorRow">
-            <input type="text" id="updSpaceNewModelo" class="reqField" placeholder="Modelo *" list="modelSuggestions">
-            <input type="text" id="updSpaceNewColor" placeholder="Color" list="colorSuggestions" value="${escapeHtml(lastAddColor)}">
+          <div class="labeledFieldRow">
+            <label class="labeledFieldBox" style="flex:1.3;">
+              <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
+              <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" autocapitalize="characters">
+            </label>
+            ${currentUser.showMovedBy ? `` : `
+            <label class="labeledFieldBox" style="flex:1;">
+              <span class="labeledFieldLabel">Asesor</span>
+              <input type="text" id="updSpaceNewAseguradora">
+            </label>
+            `}
+          </div>
+          <div class="labeledFieldRow">
+            <label class="labeledFieldBox" style="flex:1.3;">
+              <span class="labeledFieldLabel">Modelo<span class="labeledFieldReq">*</span></span>
+              <input type="text" id="updSpaceNewModelo" class="reqField" list="modelSuggestions">
+            </label>
+            <label class="labeledFieldBox" style="flex:1;">
+              <span class="labeledFieldLabel">Color</span>
+              <input type="text" id="updSpaceNewColor" list="colorSuggestions">
+            </label>
           </div>
           <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
           <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
@@ -7729,7 +7874,11 @@
         }).catch(()=>{});
 
         const editZoneChipsBox = spaceInfoBox.querySelector("#spaceEditZoneChips");
-        editZoneChipsBox.innerHTML = [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO].map(z=>`
+        editZoneChipsBox.innerHTML = (
+          (currentUser.allowedZones && currentUser.allowedZones.length)
+            ? allowedZonesForCurrentUser()
+            : [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO]
+        ).map(z=>`
           <button type="button" class="zoneChipBtn${updSpaceZone===z.key?' active':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
         `).join("");
         const editMoveGrid = spaceInfoBox.querySelector("#spaceEditGrid");
@@ -7850,7 +7999,7 @@
           drawSpaceInfo();
         });
       });
-      spaceInfoBox.querySelectorAll(".spacePhotoReportBtn").forEach(b=>{
+      spaceInfoBox.querySelectorAll(".platePlateTextClickable").forEach(b=>{
         b.addEventListener("click", ()=>{
           const idx = parseInt(b.getAttribute("data-idx"),10);
           const p = entry.plates[idx];
@@ -7905,7 +8054,11 @@
       if(updMovingPlateIdx !== null){
         let quickMoveTargetZone = updSpaceZone;
         const quickMoveZoneChips = spaceInfoBox.querySelector("#quickMoveZoneChips");
-        quickMoveZoneChips.innerHTML = [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO].map(z=>`
+        quickMoveZoneChips.innerHTML = (
+          (currentUser.allowedZones && currentUser.allowedZones.length)
+            ? allowedZonesForCurrentUser()
+            : [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO]
+        ).map(z=>`
           <button type="button" class="zoneChipBtn${updSpaceZone===z.key?' active':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
         `).join("");
         const quickMoveCampoInput = spaceInfoBox.querySelector("#quickMoveCampo");
@@ -8036,17 +8189,20 @@
         const colorField = spaceInfoBox.querySelector("#updSpaceNewColor");
         const color = colorField ? colorField.value : "";
         if(!modelo.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
+        const plateForReport = normalizePlate(plateRaw);
+        const zoneLabelForReport = zoneInfo(updSpaceZone).label;
         await runGuarded(spaceAddBtn, "Guardando…", async ()=>{
           const ok = await updaterAddNew(updSpaceZone, campoLabel, plateRaw, aseguradora, modelo, "first", color);
           if(ok){
             lastAddZoneKey = updSpaceZone;
-            lastAddAseguradora = aseguradora.trim();
-            lastAddColor = color.trim();
             vibrateSuccess();
             showToast("Listo — vehículo en este espacio");
             refreshSpaceGrid(campoLabel);
             drawZoneFilterRow();
             drawAllList();
+            // Se ofrece de una vez reportar con fotos — "Omitir" si no
+            // hace falta ahora mismo, sin obligar a nadie a hacerlo.
+            openPhotoReportModal(plateForReport, zoneLabelForReport, campoLabel, false, true);
           }
         });
       }
@@ -8146,6 +8302,10 @@
       return false;
     }
     if(currentUser.role === "actualizacion" && newZone !== SIN_UBICACION_KEY){
+      // Sin ubicación queda afuera de esta validación a propósito: aunque
+      // una cuenta restringida no la vea para navegar, "Quitar" sigue
+      // pudiendo mandar ahí un vehículo que ya no está en su lugar — si no,
+      // esa cuenta se quedaría sin ninguna forma de sacar un vehículo.
       const permitidas = allowedZonesForCurrentUser();
       if(permitidas.length && !permitidas.some(z => z.key === newZone)){
         showToast(`Tu cuenta no tiene acceso a ${zoneInfo(newZone).label}.`);
