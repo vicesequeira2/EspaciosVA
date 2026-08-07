@@ -1366,6 +1366,21 @@
     display:flex; flex-direction:column; gap:6px;
     max-height:220px; overflow-y:auto;
   }
+  .zoneRestrictList{
+    display:flex; flex-direction:column; gap:2px;
+    max-height:320px;
+    overflow-y:auto;
+    margin-top:8px;
+  }
+  .zoneRestrictRow{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 4px;
+    border-bottom:1px solid var(--border-soft);
+    font-size:0.86rem;
+    cursor:pointer;
+  }
+  .zoneRestrictRow:last-child{ border-bottom:none; }
+  .zoneRestrictRow .dot{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
   .usersGroupHeader{
     font-size:0.68rem;
     font-weight:800;
@@ -1407,6 +1422,43 @@
     display:flex; flex-direction:column; gap:6px;
     max-height:320px; overflow-y:auto;
   }
+  .testModeBanner{
+    background:#fff6e0;
+    border:1px solid #f2c230;
+    color:#8a5a1c;
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:0.74rem;
+    font-weight:600;
+    line-height:1.4;
+    margin-bottom:8px;
+  }
+  .photoReportSlots{
+    display:flex; gap:10px;
+    margin-top:4px;
+  }
+  .photoReportSlot{
+    flex:1 1 0;
+    aspect-ratio: 1 / 1;
+    border:2px dashed var(--border);
+    border-radius: var(--radius);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px;
+    cursor:pointer;
+    background-size:cover;
+    background-position:center;
+    color: var(--muted);
+    text-align:center;
+    padding:8px;
+  }
+  .photoReportSlot.hasPhoto{
+    border-style:solid;
+    border-color:#5FB37A;
+    color:#fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  }
+  .photoReportSlotIcon{ font-size:1.6rem; }
+  .photoReportSlotText{ font-size:0.72rem; font-weight:700; }
   .historyItem{
     background:var(--surface-2); border-radius:8px; padding:8px 10px;
     font-size:0.78rem; line-height:1.4;
@@ -1919,6 +1971,11 @@
     font-size:0.85rem;
     margin-top:8px;
   }
+  .modeloColorRow{
+    display:flex; gap:6px;
+    margin-top:6px;
+  }
+  .modeloColorRow input{ flex:1; min-width:0; }
   .spaceEditQuickRow{
     display:flex; gap:6px; flex-wrap:wrap;
   }
@@ -2079,6 +2136,7 @@
 
 <div id="appRoot" style="display:none;">
 <datalist id="modelSuggestions"></datalist>
+<datalist id="colorSuggestions"></datalist>
 <button type="button" id="kioskFloatingExitBtn" class="kioskFloatingExit" title="Salir del modo kiosco">✕</button>
 
 <header>
@@ -2100,6 +2158,7 @@
           <button id="restoreBtn">📂 Restaurar</button>
           <button id="dataHealthBtn">🩺 Salud de datos</button>
           <button id="checkinItemsBtn">📋 Ítems de check-in</button>
+          <button id="testPhotoReportBtn">🧪 Probar compartir fotos</button>
         </div>
       </div>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
@@ -2144,14 +2203,14 @@
     <h3 id="editLocTitle">Editar vehículo</h3>
     <p id="editLocSub"></p>
     <label for="editLocPlaca">Placa</label>
-    <input type="text" id="editLocPlaca" class="plate">
+    <input type="text" id="editLocPlaca" class="plate plateUpperField" autocapitalize="characters">
     <label for="editLocZone">Zona</label>
     <select id="editLocZone"></select>
     <label for="editLocCampo">Campo</label>
     <input type="text" id="editLocCampo" class="plate">
     <button type="button" class="sinAsignarBtn" id="editLocSinAsignarBtn" style="margin-top:6px;">Marcar como sin asignar</button>
-    <label for="editLocAseguradora">Aseguradora</label>
-    <input type="text" id="editLocAseguradora" placeholder="Ej: INS, Mapfre…">
+    <label for="editLocAseguradora">Asesor</label>
+    <input type="text" id="editLocAseguradora" placeholder="Nombre del asesor">
     <label for="editLocModelo">Modelo</label>
     <input type="text" id="editLocModelo" placeholder="Ej: Toyota Corolla (opcional)">
     <div class="modalActions" style="margin-top:16px;">
@@ -2172,12 +2231,37 @@
   </div>
 </div>
 
+<div class="modalOverlay" id="photoReportModal">
+  <div class="modalCard">
+    <h3>📸 Reportar con fotos</h3>
+    <p>Elegí hasta 2 fotos del vehículo — se comparten juntas con la placa y dónde quedó.</p>
+    <div id="photoReportSummary" class="historyItem" style="margin-bottom:12px;"></div>
+    <div class="photoReportSlots">
+      <label class="photoReportSlot" id="photoReportSlot1">
+        <input type="file" accept="image/*" capture="environment" id="photoReportInput1" style="display:none;">
+        <span class="photoReportSlotIcon">📷</span>
+        <span class="photoReportSlotText">Foto 1</span>
+      </label>
+      <label class="photoReportSlot" id="photoReportSlot2">
+        <input type="file" accept="image/*" capture="environment" id="photoReportInput2" style="display:none;">
+        <span class="photoReportSlotIcon">📷</span>
+        <span class="photoReportSlotText">Foto 2 (opcional)</span>
+      </label>
+    </div>
+    <div class="modalActions" style="margin-top:16px;">
+      <button class="primaryBtn" id="photoReportShareBtn" disabled>Compartir</button>
+      <button class="secondaryBtn" id="photoReportCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modalOverlay" id="usersModal">
   <div class="modalCard modalCardWide">
     <h3>Usuarios con acceso</h3>
     <div id="usersList" class="usersList"></div>
     <label for="newUserName" style="margin-top:14px;">Usuario</label>
     <input type="text" id="newUserName" autocomplete="off" placeholder="Nombre de usuario">
+
     <label for="newUserPass">Contraseña</label>
     <input type="password" id="newUserPass" autocomplete="new-password">
     <label for="newUserRole">Rol</label>
@@ -2190,6 +2274,20 @@
     <div class="modalActions" style="margin-top:14px;">
       <button class="primaryBtn" id="addUserBtn">Agregar usuario</button>
       <button class="secondaryBtn" id="usersCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="zoneRestrictModal">
+  <div class="modalCard">
+    <h3>🔒 Zonas permitidas</h3>
+    <p id="zoneRestrictUserLabel"></p>
+    <p style="font-size:0.78rem; color:var(--muted);">Marcá solo las zonas donde esta cuenta puede trabajar. Si dejás todas marcadas, no hay ninguna restricción.</p>
+    <div id="zoneRestrictList" class="zoneRestrictList"></div>
+    <p class="authError" id="zoneRestrictError"></p>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="primaryBtn" id="zoneRestrictSaveBtn">Guardar</button>
+      <button class="secondaryBtn" id="zoneRestrictCloseBtn">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2525,6 +2623,28 @@
   // "Línea 1" automático). Actualización solo trabaja dentro de las que
   // ya existen, nunca crea una nueva ahí.
   const CUSTOM_NAMED_ZONES = new Set(["TallerPintura"]);
+  // Zonas que Búsqueda no debe ver en ningún lado (Dashboard, Resumen,
+  // buscador) — siguen existiendo normalmente para Admin y Actualización.
+  const HIDDEN_FROM_BUSQUEDA = new Set(["Recepcion", "TallerPintura"]);
+  function visibleZonesForCurrentUser(){
+    if(currentUser && currentUser.role === "consulta"){
+      return ZONES.filter(z => !HIDDEN_FROM_BUSQUEDA.has(z.key));
+    }
+    if(currentUser && currentUser.role === "actualizacion"){
+      return allowedZonesForCurrentUser();
+    }
+    return ZONES;
+  }
+  // Algunas cuentas de Actualización quedan restringidas a trabajar solo en
+  // ciertas zonas (configurado por Admin en Usuarios → 🔒 Zonas). Si
+  // "allowedZones" está vacío o sin definir, no hay restricción.
+  function allowedZonesForCurrentUser(){
+    if(currentUser && currentUser.role === "actualizacion" && currentUser.allowedZones && currentUser.allowedZones.length){
+      const set = new Set(currentUser.allowedZones);
+      return ZONES.filter(z => set.has(z.key));
+    }
+    return ZONES;
+  }
   function ensureSinUbicacionConsolidada(zoneKey){
     zoneKey = zoneKey || SIN_UBICACION_KEY;
     const arr = state.zones[zoneKey];
@@ -2677,7 +2797,18 @@
   let activeTab = "__dashboard__";
   let dashboardCharts = []; // instancias Chart.js activas, para destruirlas antes de re-renderizar
   let lastAddZoneKey = ZONES[0].key; // última zona usada al agregar un vehículo nuevo (rol Actualización)
+  // Estado de "dónde estás parado" en el panel de Actualización — a nivel
+  // de módulo (no dentro de renderUpdaterPanel) para que sobreviva a los
+  // refrescos: antes, cada refresco recreaba estas variables desde cero y
+  // te mandaba de vuelta a la primera zona, aunque estuvieras viendo otra.
+  let updSpaceZone = ZONES[0].key;
+  let updSelectedCampo = "";
+  let updEditingPlateIdx = null;
+  let updMovingPlateIdx = null;
+  let updArmedZoneKey = null;
+  let updSelectedListZone = "";
   let lastAddAseguradora = ""; // última aseguradora usada al agregar un vehículo nuevo (rol Actualización)
+  let lastAddColor = ""; // último color usado al agregar un vehículo nuevo (rol Actualización)
 
   // ---- Modo kiosco (pensado para el rol Actualización en una tablet fija) ----
   // Aviso honesto: esto es lo máximo que se puede lograr desde una página
@@ -2724,6 +2855,24 @@
     updateKioskButtonLabel();
   }
 
+  // Los campos de número de placa ya se ven en mayúsculas por estilo (CSS),
+  // pero lo que quedaba GUARDADO era tal cual se escribía. Esto fuerza que
+  // el valor real también sea mayúsculas mientras se escribe — no solo la
+  // apariencia — sin afectar otros campos (campo/línea, buscadores, etc.)
+  // que comparten estilos pero no deben forzarse a mayúsculas.
+  document.addEventListener("input", (e)=>{
+    const t = e.target;
+    if(t && t.matches && t.matches("input.plate.reqField")){
+      const pos = t.selectionStart;
+      const antes = t.value;
+      const nuevo = antes.toUpperCase();
+      if(nuevo !== antes){
+        t.value = nuevo;
+        if(pos !== null) t.setSelectionRange(pos, pos);
+      }
+    }
+  });
+
   document.addEventListener("fullscreenchange", ()=>{
     // En muchos celulares Android, el teclado que aparece al escribir hace
     // que el navegador salga de pantalla completa por su cuenta — sin que
@@ -2737,6 +2886,19 @@
     }
   });
   let fullscreenLostWhileKiosk = false;
+
+  // Los campos de placa (marcados con .plateUpperField) no dejan escribir en
+  // minúsculas — se convierte a mayúsculas al instante, no solo al guardar.
+  // Un solo listener delegado cubre los 5 campos, se rendericen cuando se
+  // rendericen (los formularios se reconstruyen seguido).
+  document.addEventListener("input", (e)=>{
+    if(e.target && e.target.classList && e.target.classList.contains("plateUpperField")){
+      const cursor = e.target.selectionStart;
+      e.target.value = e.target.value.toUpperCase();
+      if(cursor !== null) e.target.setSelectionRange(cursor, cursor);
+    }
+  });
+
   document.addEventListener("click", async ()=>{
     if(kioskModeActive && fullscreenLostWhileKiosk && !document.fullscreenElement){
       fullscreenLostWhileKiosk = false;
@@ -3491,7 +3653,7 @@
           <div class="vehicleDetailZone"><span class="dot" style="background:${zi.color}"></span>${zi.label} · campo ${escapeHtml(campoObj.campo)}</div>
         </div>
       </div>
-      <div class="updaterInfoRow"><span>Aseguradora</span><strong>${entry.aseguradora ? escapeHtml(entry.aseguradora) : "—"}</strong></div>
+      <div class="updaterInfoRow"><span>Asesor</span><strong>${entry.aseguradora ? escapeHtml(entry.aseguradora) : "—"}</strong></div>
       <div class="updaterInfoRow"><span>Modelo</span><strong>${entry.modelo ? escapeHtml(entry.modelo) : "—"}</strong></div>
       <div class="updaterInfoRow"><span>Última actualización</span><strong>${lastMovedLabel(entry).fecha}</strong></div>
     `;
@@ -3501,7 +3663,7 @@
     const closeBtn = document.getElementById("viewDetailCloseBtn");
     const copyBtnOriginalText = copyBtn.textContent;
     async function onCopy(){
-      const text = `Placa: ${entry.plate}\nZona: ${zi.label}\nCampo: ${campoObj.campo}\nAseguradora: ${entry.aseguradora || "—"}\nModelo: ${entry.modelo || "—"}`;
+      const text = `Placa: ${entry.plate}\nZona: ${zi.label}\nCampo: ${campoObj.campo}\nAsesor: ${entry.aseguradora || "—"}\nModelo: ${entry.modelo || "—"}`;
       try{
         if(navigator.clipboard && navigator.clipboard.writeText){
           await navigator.clipboard.writeText(text);
@@ -3531,6 +3693,81 @@
     }
     copyBtn.addEventListener("click", onCopy);
     closeBtn.addEventListener("click", onClose);
+  }
+
+  // Reportar con fotos: arma el mismo texto de ubicación que ya se copia en
+  // Búsqueda, pero lo comparte junto con hasta 2 fotos usando el menú
+  // nativo de compartir del celular (WhatsApp, etc.), en vez de solo texto.
+  function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest){
+    const overlay = document.getElementById("photoReportModal");
+    const summaryBox = document.getElementById("photoReportSummary");
+    const fecha = new Date().toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
+    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}<strong>${escapeHtml(plate)}</strong><div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}</div>`;
+
+    const slot1 = document.getElementById("photoReportSlot1");
+    const slot2 = document.getElementById("photoReportSlot2");
+    const input1 = document.getElementById("photoReportInput1");
+    const input2 = document.getElementById("photoReportInput2");
+    const shareBtn = document.getElementById("photoReportShareBtn");
+    const closeBtn = document.getElementById("photoReportCloseBtn");
+
+    let file1 = null, file2 = null;
+    input1.value = ""; input2.value = "";
+    slot1.classList.remove("hasPhoto"); slot1.style.backgroundImage = "";
+    slot1.querySelector(".photoReportSlotText").textContent = "Foto 1";
+    slot2.classList.remove("hasPhoto"); slot2.style.backgroundImage = "";
+    slot2.querySelector(".photoReportSlotText").textContent = "Foto 2 (opcional)";
+    shareBtn.disabled = true;
+
+    function onInput1Change(){
+      const f = input1.files && input1.files[0];
+      if(!f) return;
+      file1 = f;
+      slot1.style.backgroundImage = `url(${URL.createObjectURL(f)})`;
+      slot1.classList.add("hasPhoto");
+      slot1.querySelector(".photoReportSlotText").textContent = "✓ Foto 1";
+      shareBtn.disabled = !(file1 || file2);
+    }
+    function onInput2Change(){
+      const f = input2.files && input2.files[0];
+      if(!f) return;
+      file2 = f;
+      slot2.style.backgroundImage = `url(${URL.createObjectURL(f)})`;
+      slot2.classList.add("hasPhoto");
+      slot2.querySelector(".photoReportSlotText").textContent = "✓ Foto 2";
+      shareBtn.disabled = !(file1 || file2);
+    }
+    async function onShare(){
+      const text = `Placa: ${plate}\nZona: ${zoneLabel}\nCampo: ${campoLabel}\nFecha: ${fecha}`;
+      const files = [file1, file2].filter(Boolean);
+      if(!navigator.share){
+        showToast("Tu navegador no puede compartir fotos directamente. Guardalas y compartilas manualmente junto con este texto.", 5000);
+        return;
+      }
+      try{
+        const shareData = { title: `Vehículo ${plate}`, text };
+        if(files.length && navigator.canShare && navigator.canShare({ files })){
+          shareData.files = files;
+        }
+        await navigator.share(shareData);
+      }catch(e){
+        if(e && e.name === "AbortError") return; // cerró el menú sin elegir nada
+        console.error("Error al compartir el reporte con fotos", e);
+        showToast("No se pudo compartir.");
+      }
+    }
+    function onClose(){
+      overlay.classList.remove("show");
+      input1.removeEventListener("change", onInput1Change);
+      input2.removeEventListener("change", onInput2Change);
+      shareBtn.removeEventListener("click", onShare);
+      closeBtn.removeEventListener("click", onClose);
+    }
+    input1.addEventListener("change", onInput1Change);
+    input2.addEventListener("change", onInput2Change);
+    shareBtn.addEventListener("click", onShare);
+    closeBtn.addEventListener("click", onClose);
+    overlay.classList.add("show");
   }
 
   function openEditLocModal(zoneKey, ci, pi){
@@ -3725,11 +3962,12 @@
 
   // Intenta agregar `plate` al `campoLabel` de `zoneKey`. Maneja duplicados
   // preguntando si se debe mover. Devuelve true si finalmente se agregó.
-  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position){
+  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw){
     const plate = normalizePlate(plateRaw);
     if(!plate) return false;
     let aseguradora = (aseguradoraRaw || "").trim();
     let modelo = (modeloRaw || "").trim();
+    let color = (colorRaw || "").trim();
     const info = zoneInfo(zoneKey);
     const campo = campoLabel ? normalizeCampo(campoLabel)
       : (UNNUMBERED_ONLY_ZONES.has(zoneKey) ? nextLineLabel(zoneKey) : nextAutoCampo(zoneKey));
@@ -3750,22 +3988,24 @@
       const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
       if(!aseguradora) aseguradora = dupEntry.aseguradora || "";
       if(!modelo) modelo = dupEntry.modelo || "";
+      if(!color) color = dupEntry.color || "";
       removePlateAt(dup.zoneKey, dup.campoIdx, dup.plateIdx);
     }
 
-    if(!dup && (!aseguradora || !modelo)){
+    if(!dup && (!aseguradora || !modelo || !color)){
       // No está activa en ningún lado ahora mismo, pero puede que ya la
       // hayamos visto antes (se quitó del inventario en algún momento):
-      // recuperamos su aseguradora/modelo del registro, si hay.
+      // recuperamos su aseguradora/modelo/color del registro, si hay.
       const recordada = lookupPlateInfo(plate);
       if(recordada){
         if(!aseguradora) aseguradora = recordada.aseguradora || "";
         if(!modelo) modelo = recordada.modelo || "";
+        if(!color) color = recordada.color || "";
       }
     }
 
-    insertPlateAtPosition(getOrCreateCampo(zoneKey, campo), { plate, aseguradora, modelo, lastUpdated: new Date().toISOString() }, position || "last");
-    rememberPlateInfo(plate, aseguradora, modelo).catch(()=>{}); // en segundo plano, no bloquea el guardado principal
+    insertPlateAtPosition(getOrCreateCampo(zoneKey, campo), { plate, aseguradora, modelo, color, lastUpdated: new Date().toISOString() }, position || "first");
+    rememberPlateInfo(plate, aseguradora, modelo, color).catch(()=>{}); // en segundo plano, no bloquea el guardado principal
     return true;
   }
 
@@ -3807,6 +4047,7 @@
     await loadPlateRegistry();
     await loadCheckinItemsIfNeeded();
     refreshModelSuggestions();
+    refreshColorSuggestions();
 
     const abbr = info.abbr;
     const labelLower = CUSTOM_NAMED_ZONES.has(zone.key) ? "zona" : (UNNUMBERED_ONLY_ZONES.has(zone.key) ? "línea" : "campo");
@@ -4014,9 +4255,10 @@
           return `
             <div class="spaceEditForm" data-idx="${idx}">
               <div class="spaceEditQuickRow">
-                <input type="text" id="zoneEditPlaca_${abbr}" class="plate reqField" value="${escapeHtml(p.plate)}" placeholder="Placa *">
-                <input type="text" id="zoneEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" placeholder="Aseguradora">
+                <input type="text" id="zoneEditPlaca_${abbr}" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" placeholder="Placa *" autocapitalize="characters">
+                <input type="text" id="zoneEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" placeholder="Asesor">
                 <input type="text" id="zoneEditModelo_${abbr}" class="reqField" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo *" list="modelSuggestions">
+                <input type="text" id="zoneEditColor_${abbr}" value="${escapeHtml(p.color || "")}" placeholder="Color" list="colorSuggestions">
               </div>
               <div class="dupWarn" id="zoneEditDupWarn_${abbr}" style="display:none;"></div>
               <div class="historyMeta" id="zoneEditMoveCount_${abbr}" style="margin-top:4px;"></div>
@@ -4044,7 +4286,7 @@
               <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===c.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
             </div>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo"><span class="platePlateText">${escapeHtml(p.plate)}</span>${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${zone.key===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
+              <span class="spacePlateInfo"><span class="platePlateText">${escapeHtml(p.plate)}</span>${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${zone.key===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
             </div>
             ${zone.key===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
@@ -4077,9 +4319,12 @@
         ${plateRowsHtml}
         <button type="button" class="linkBackBtn" id="zoneAddToggle_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="zoneAddBox_${abbr}" style="display:none;">
-          <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField" placeholder="Placa *">
-          <input type="text" id="zoneNewAseguradora_${abbr}" placeholder="Aseguradora (opcional)" style="margin-top:6px;">
-          <input type="text" id="zoneNewModelo_${abbr}" class="reqField" placeholder="Modelo *" list="modelSuggestions" style="margin-top:6px;">
+          <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" placeholder="Placa *" autocapitalize="characters">
+          <input type="text" id="zoneNewAseguradora_${abbr}" placeholder="Asesor (opcional)" style="margin-top:6px;">
+          <div class="modeloColorRow">
+            <input type="text" id="zoneNewModelo_${abbr}" class="reqField" placeholder="Modelo *" list="modelSuggestions">
+            <input type="text" id="zoneNewColor_${abbr}" placeholder="Color" list="colorSuggestions">
+          </div>
           <div class="dupWarn" id="zoneNewDupWarn_${abbr}" style="display:none;"></div>
           <div class="similarWarn" id="zoneNewSimilarWarn_${abbr}" style="display:none;"></div>
           <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
@@ -4256,12 +4501,13 @@
           const newPlate = editPlacaInput.value;
           const newAseguradora = detailBox.querySelector(`#zoneEditAseg_${abbr}`).value.trim();
           const newModelo = detailBox.querySelector(`#zoneEditModelo_${abbr}`).value.trim();
+          const newColor = detailBox.querySelector(`#zoneEditColor_${abbr}`).value.trim();
           const newCampo = normalizeCampo(detailBox.querySelector(`#zoneEditCampo_${abbr}`).value);
           if(!newCampo){ showToast("Ingresá un campo válido"); return; }
           if(!normalizePlate(newPlate)){ showToast("Ingresá una placa válida"); return; }
           const idxToEdit = editingPlateIdx;
           const ci = state.zones[zone.key].indexOf(c);
-          const ok = await updaterConfirmMove(zone.key, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "last", newPlate);
+          const ok = await updaterConfirmMove(zone.key, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "first", newPlate, newColor);
           if(!ok) return;
           showToast("Vehículo actualizado");
           editingPlateIdx = null;
@@ -4279,7 +4525,7 @@
           drawZoneDetail();
         });
         detailBox.querySelector(`#zoneEditRemoveBtn_${abbr}`).addEventListener("click", ()=> removeZonePlate(editingPlateIdx));
-        [editPlacaInput, detailBox.querySelector(`#zoneEditAseg_${abbr}`), detailBox.querySelector(`#zoneEditModelo_${abbr}`), detailBox.querySelector(`#zoneEditCampo_${abbr}`)].forEach(inp=>{
+        [editPlacaInput, detailBox.querySelector(`#zoneEditAseg_${abbr}`), detailBox.querySelector(`#zoneEditModelo_${abbr}`), detailBox.querySelector(`#zoneEditColor_${abbr}`), detailBox.querySelector(`#zoneEditCampo_${abbr}`)].forEach(inp=>{
           inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") saveZoneEdit(); });
         });
         editPlacaInput.focus();
@@ -4375,7 +4621,7 @@
           const p = c.plates[movingPlateIdx];
           await runGuarded(quickMoveConfirmBtn, "Moviendo…", async ()=>{
             const ci = state.zones[zone.key].indexOf(c);
-            const ok = await updaterConfirmMove(zone.key, ci, movingPlateIdx, quickMoveTargetZone, newCampo, p.aseguradora, p.modelo, "last");
+            const ok = await updaterConfirmMove(zone.key, ci, movingPlateIdx, quickMoveTargetZone, newCampo, p.aseguradora, p.modelo, "first");
             if(!ok) return;
             vibrateSuccess();
             showToast("Vehículo movido");
@@ -4418,6 +4664,7 @@
           detailBox.querySelector(`#zoneNewPlaca_${abbr}`).value = "";
           detailBox.querySelector(`#zoneNewAseguradora_${abbr}`).value = "";
           detailBox.querySelector(`#zoneNewModelo_${abbr}`).value = "";
+          detailBox.querySelector(`#zoneNewColor_${abbr}`).value = "";
           detailBox.querySelector(`#zoneNewDupWarn_${abbr}`).style.display = "none";
           detailBox.querySelector(`#zoneNewSimilarWarn_${abbr}`).style.display = "none";
           addBox.style.display = "none";
@@ -4440,8 +4687,10 @@
           const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
           const asegInput = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`);
           const modInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
+          const colInput = detailBox.querySelector(`#zoneNewColor_${abbr}`);
           if(asegInput && dupEntry.aseguradora && !asegInput.value.trim()) asegInput.value = dupEntry.aseguradora;
           if(dupEntry.modelo && !modInput.value.trim()) modInput.value = dupEntry.modelo;
+          if(colInput && dupEntry.color && !colInput.value.trim()) colInput.value = dupEntry.color;
           const yaAca = dup.zoneKey === zone.key && dupCampo === c.campo;
           newDupWarn.innerHTML = yaAca
             ? `<span class="dupWarnIcon">⚠️</span> ${v} ya está en este mismo ${labelLower}.`
@@ -4453,10 +4702,12 @@
           const recordada = lookupPlateInfo(v);
           const asegInput = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`);
           const modInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
+          const colInput = detailBox.querySelector(`#zoneNewColor_${abbr}`);
           let sePreCompleto = false;
           if(recordada){
             if(asegInput && recordada.aseguradora && !asegInput.value.trim()){ asegInput.value = recordada.aseguradora; sePreCompleto = true; }
             if(recordada.modelo && !modInput.value.trim()){ modInput.value = recordada.modelo; sePreCompleto = true; }
+            if(colInput && recordada.color && !colInput.value.trim()){ colInput.value = recordada.color; sePreCompleto = true; }
           }
           if(sePreCompleto){
             newSimilarWarn.innerHTML = `<span class="dupWarnIcon">🧠</span><span class="similarList">Datos recordados de un registro anterior de esta placa — podés cambiarlos si hace falta.</span>`;
@@ -4488,9 +4739,10 @@
         if(!normalizePlate(plateRaw)){ showToast("Ingresá una placa válida"); return; }
         const aseguradora = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`).value;
         const modeloInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
+        const colorInput = detailBox.querySelector(`#zoneNewColor_${abbr}`);
         if(!modeloInput.value.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
         const snap = snapshotZones();
-        const ok = await updaterAddNew(zone.key, c.campo, plateRaw, aseguradora, modeloInput.value, "last");
+        const ok = await updaterAddNew(zone.key, c.campo, plateRaw, aseguradora, modeloInput.value, "first", colorInput.value);
         if(ok){
           pushUndo(snap, `Agregar ${normalizePlate(plateRaw)} en ${c.campo}`);
           showToast("Listo — vehículo en este espacio");
@@ -4499,7 +4751,7 @@
         }
       }
       newAddBtn.addEventListener("click", confirmZoneAdd);
-      [newPlacaInput, detailBox.querySelector(`#zoneNewAseguradora_${abbr}`), detailBox.querySelector(`#zoneNewModelo_${abbr}`)].forEach(inp=>{
+      [newPlacaInput, detailBox.querySelector(`#zoneNewAseguradora_${abbr}`), detailBox.querySelector(`#zoneNewModelo_${abbr}`), detailBox.querySelector(`#zoneNewColor_${abbr}`)].forEach(inp=>{
         inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmZoneAdd(); });
       });
     }
@@ -4614,10 +4866,10 @@
 
   function buildResumenRows(){
     const rows = [];
-    ZONES.forEach(z=>{
+    visibleZonesForCurrentUser().forEach(z=>{
       (state.zones[z.key]||[]).forEach((c, ci)=>{
         c.plates.forEach((entry, pi)=>{
-          rows.push({ zoneKey: z.key, zoneLabel: z.label, color: z.color, campo: c.campo, placa: entry.plate, aseguradora: entry.aseguradora || "", modelo: entry.modelo || "", lastUpdated: entry.lastUpdated, ci, pi });
+          rows.push({ zoneKey: z.key, zoneLabel: z.label, color: z.color, campo: c.campo, placa: entry.plate, aseguradora: entry.aseguradora || "", modelo: entry.modelo || "", vehicleColor: entry.color || "", lastUpdated: entry.lastUpdated, ci, pi });
         });
       });
     });
@@ -4628,7 +4880,7 @@
     const wrap = document.createElement("div");
     wrap.className = "zonePanel active viewFadeIn";
 
-    const chips = ZONES.map(z=>{
+    const chips = visibleZonesForCurrentUser().map(z=>{
       const vehCount = (state.zones[z.key]||[]).reduce((a,cc)=>a+cc.plates.length,0);
       return `
         <button type="button" class="resumenZoneCard" data-zone="${z.key}" style="--zone-accent:${z.color};">
@@ -4646,12 +4898,12 @@
       <div class="resumenToolbar">
         <div class="filterField">
           <svg class="filterIcon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="6"/><line x1="13.5" y1="13.5" x2="18" y2="18"/></svg>
-          <input type="text" id="resumenFilter" placeholder="Buscar por placa, campo, modelo o aseguradora…" class="plate" autocomplete="off">
+          <input type="text" id="resumenFilter" placeholder="Buscar por placa, campo, modelo, color o asesor…" class="plate" autocomplete="off">
         </div>
         <div class="filterField selectField">
           <select id="resumenZoneFilter">
             <option value="">Todas las zonas</option>
-            ${ZONES.map(z=>`<option value="${z.key}">${z.label}</option>`).join("")}
+            ${visibleZonesForCurrentUser().map(z=>`<option value="${z.key}">${z.label}</option>`).join("")}
           </select>
         </div>
         <button type="button" class="clearFilterBtn" id="resumenTodayFilter">🕐 Solo hoy</button>
@@ -4664,8 +4916,9 @@
             <th style="width:70px;" data-sort="campo">Campo</th>
             <th data-sort="zoneLabel">Zona</th>
             <th data-sort="modelo">Modelo</th>
+            <th data-sort="vehicleColor">Color</th>
             <th data-sort="placa">Placa</th>
-            <th data-sort="aseguradora">Aseguradora</th>
+            <th data-sort="aseguradora">Asesor</th>
           </tr></thead>
           <tbody id="resumenTbody"></tbody>
         </table>
@@ -4757,7 +5010,7 @@
       let rows = buildResumenRows();
       const totalCount = rows.length;
       if(filterZone) rows = rows.filter(r=>r.zoneKey===filterZone);
-      if(filterText) rows = rows.filter(r=> r.placa.toUpperCase().includes(filterText) || String(r.campo).toUpperCase().includes(filterText) || (r.aseguradora||"").toUpperCase().includes(filterText) || (r.modelo||"").toUpperCase().includes(filterText));
+      if(filterText) rows = rows.filter(r=> r.placa.toUpperCase().includes(filterText) || String(r.campo).toUpperCase().includes(filterText) || (r.aseguradora||"").toUpperCase().includes(filterText) || (r.modelo||"").toUpperCase().includes(filterText) || (r.vehicleColor||"").toUpperCase().includes(filterText));
       if(onlyToday) rows = rows.filter(r=> wasUpdatedToday(r));
 
       if(sortState.key){
@@ -4798,6 +5051,7 @@
             <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${highlightMatch(r.campo, filterText)}</span></td>
             <td>${highlightMatch(r.zoneLabel, filterText)}</td>
             <td>${r.modelo ? highlightMatch(r.modelo, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
+            <td>${r.vehicleColor ? highlightMatch(r.vehicleColor, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
             <td class="plate">${highlightMatch(r.placa, filterText)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</td>
             <td>${r.aseguradora ? highlightMatch(r.aseguradora, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
           `;
@@ -4839,19 +5093,20 @@
     const wrap = document.createElement("div");
     wrap.className = "zonePanel active viewFadeIn";
 
-    const totalVeh = ZONES.reduce((a,z)=> a + (state.zones[z.key]||[]).reduce((aa,c)=>aa+c.plates.length,0), 0);
-    const totalCampos = ZONES.reduce((a,z)=> a + occupancyCountForZone(z.key), 0);
-    const totalSinAsignar = ZONES.reduce((a,z)=>{
+    const zonasVisibles = visibleZonesForCurrentUser();
+    const totalVeh = zonasVisibles.reduce((a,z)=> a + (state.zones[z.key]||[]).reduce((aa,c)=>aa+c.plates.length,0), 0);
+    const totalCampos = zonasVisibles.reduce((a,z)=> a + occupancyCountForZone(z.key), 0);
+    const totalSinAsignar = zonasVisibles.reduce((a,z)=>{
       const c = (state.zones[z.key]||[]).find(c=>c.campo===SIN_ASIGNAR);
       return a + (c ? c.plates.length : 0);
     }, 0);
-    const zonasConCapacidad = ZONES.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0).length;
+    const zonasConCapacidad = zonasVisibles.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0).length;
 
     const viewMode = getDashboardViewMode();
     const toggleBtnHtml = `<button type="button" id="dashViewToggle" class="linkBackBtn" style="text-decoration:none; font-weight:700; margin-bottom:10px;">${viewMode === "compact" ? "📊 Ver Dashboard completo" : "🔎 Ver solo lo esencial"}</button>`;
 
     if(viewMode === "compact"){
-      const capZones = ZONES.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0);
+      const capZones = zonasVisibles.filter(z => state.capacities[z.key] && state.capacities[z.key] > 0);
       const capTotal = capZones.reduce((a,z)=> a + state.capacities[z.key], 0);
       const ocupadosEnConCap = capZones.reduce((a,z)=> a + occupancyCountForZone(z.key), 0);
       const librres = Math.max(0, capTotal - ocupadosEnConCap);
@@ -4890,12 +5145,12 @@
           <div class="dashCardLabel">Sin asignar</div>
           <svg class="dashCardSpark" id="sparkTotalSinAsignar" viewBox="0 0 100 28"></svg>
         </div>
-        <div class="dashCard"><div class="dashCardValue">${zonasConCapacidad}/${ZONES.length}</div><div class="dashCardLabel">Zonas con capacidad definida</div></div>
+        <div class="dashCard"><div class="dashCardValue">${zonasConCapacidad}/${zonasVisibles.length}</div><div class="dashCardLabel">Zonas con capacidad definida</div></div>
       </div>
       <div class="chartCard">
         <h3>🗺️ Mapa del parqueo</h3>
         <div class="mapaParqueoFlow">
-          ${["Recepcion","Avaluo","AvaluoPuff","Maya","Atras","TallerPintura"].map((zk, i, arr)=>{
+          ${["Recepcion","Avaluo","AvaluoPuff","Maya","Atras","TallerPintura"].filter(zk => !(currentUser && currentUser.role === "consulta" && HIDDEN_FROM_BUSQUEDA.has(zk))).map((zk, i, arr)=>{
             const z = zoneInfo(zk);
             const totalZona = (state.zones[zk]||[]).reduce((a,c)=>a+c.plates.length,0);
             return `
@@ -4970,11 +5225,11 @@
         <h3>🔑 Sesiones recientes</h3>
         <div id="recentActivityCard" class="dashEmptyNote">Cargando…</div>
       </div>
-      ` : ``}
       <div class="chartCard">
         <h3>📋 Actividad reciente</h3>
         <div id="liveActivityFeed" class="dashEmptyNote">Cargando…</div>
       </div>
+      ` : ``}
     `;
     document.getElementById("mainArea").appendChild(wrap);
     wrap.querySelector("#dashViewToggle").addEventListener("click", ()=>{
@@ -5048,7 +5303,7 @@
     try{
       if(typeof Chart === "undefined") throw new Error("Chart.js no está disponible");
       const ctx1 = wrap.querySelector("#chartVehiclesByZone").getContext("2d");
-      const zonasOrdenadas = ZONES.map(z=>({
+      const zonasOrdenadas = visibleZonesForCurrentUser().map(z=>({
         z, count: (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0)
       })).sort((a,b)=> b.count - a.count);
       const promedioVeh = zonasOrdenadas.length ? zonasOrdenadas.reduce((a,x)=>a+x.count,0) / zonasOrdenadas.length : 0;
@@ -5294,8 +5549,8 @@
     // suma las columnas de Check-in y Notas, ninguna otra zona las tiene.
     const esCheckinZone = z.key === CHECKIN_ZONE_KEY;
     const headerCols = esCheckinZone
-      ? ["Campo","Placa","Aseguradora","Modelo","Última actualización","Check-in","Notas del check-in"]
-      : ["Campo","Placa","Aseguradora","Modelo","Última actualización"];
+      ? ["Campo","Placa","Asesor","Modelo","Color","Última actualización","Check-in","Notas del check-in"]
+      : ["Campo","Placa","Asesor","Modelo","Color","Última actualización"];
     const lastCol = headerCols.length - 1;
 
     const data = [
@@ -5305,7 +5560,7 @@
       headerCols
     ];
     campos.forEach(c => c.plates.forEach(p => {
-      const row = [c.campo, p.plate, p.aseguradora || "", p.modelo || "", fechaCortaExcel(p)];
+      const row = [c.campo, p.plate, p.aseguradora || "", p.modelo || "", p.color || "", fechaCortaExcel(p)];
       if(esCheckinZone){
         const info = checkinExcelInfo(p);
         row.push(info.status, info.notes);
@@ -5319,8 +5574,8 @@
       { s:{r:1,c:0}, e:{r:1,c:lastCol} }
     ];
     ws["!cols"] = esCheckinZone
-      ? [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 32 }, { wch: 26 }]
-      : [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 18 }];
+      ? [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 32 }, { wch: 26 }]
+      : [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 18 }];
     if(data.length > 4){
       const lastColLetter = String.fromCharCode(65 + lastCol);
       ws["!autofilter"] = { ref: `A4:${lastColLetter}${data.length}` };
@@ -5354,37 +5609,37 @@
 
     const resumenRows = buildResumenRows();
     const resumenData = [
-      ["Resumen general — Inventario de Parqueo", "", "", "", "", ""],
-      [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", "", "", ""],
+      ["Resumen general — Inventario de Parqueo", "", "", "", "", "", ""],
+      [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", "", "", "", ""],
       [],
-      ["Campo","Placa","Zona","Aseguradora","Modelo","Última actualización"]
+      ["Campo","Placa","Zona","Asesor","Modelo","Color","Última actualización"]
     ];
-    resumenRows.forEach(r=> resumenData.push([r.campo, r.placa, r.zoneLabel, r.aseguradora || "", r.modelo || "", fechaCorta(r)]));
+    resumenRows.forEach(r=> resumenData.push([r.campo, r.placa, r.zoneLabel, r.aseguradora || "", r.modelo || "", r.vehicleColor || "", fechaCorta(r)]));
     const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
     wsResumen["!merges"] = [
-      { s:{r:0,c:0}, e:{r:0,c:5} },
-      { s:{r:1,c:0}, e:{r:1,c:5} }
+      { s:{r:0,c:0}, e:{r:0,c:6} },
+      { s:{r:1,c:0}, e:{r:1,c:6} }
     ];
-    wsResumen["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 22 }, { wch: 18 }];
+    wsResumen["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 18 }];
     if(resumenData.length > 4){
-      wsResumen["!autofilter"] = { ref: `A4:F${resumenData.length}` };
+      wsResumen["!autofilter"] = { ref: `A4:G${resumenData.length}` };
     }
     XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
 
-    // ---- Hoja: conteo por Aseguradora y por Modelo ----
+    // ---- Hoja: conteo por Asesor y por Modelo ----
     const conteoAseguradora = {};
     const conteoModelo = {};
     resumenRows.forEach(r=>{
-      const aseg = r.aseguradora || "(sin aseguradora)";
+      const aseg = r.aseguradora || "(sin asesor)";
       const mod = r.modelo || "(sin modelo)";
       conteoAseguradora[aseg] = (conteoAseguradora[aseg] || 0) + 1;
       conteoModelo[mod] = (conteoModelo[mod] || 0) + 1;
     });
     const conteoData = [
-      ["Conteo por Aseguradora y Modelo — Inventario de Parqueo", ""],
+      ["Conteo por Asesor y Modelo — Inventario de Parqueo", ""],
       [`Generado ${fechaLarga}, ${horaLarga}`, ""],
       [],
-      ["Aseguradora", "Vehículos"]
+      ["Asesor", "Vehículos"]
     ];
     Object.keys(conteoAseguradora).sort((a,b)=> conteoAseguradora[b]-conteoAseguradora[a]).forEach(k=>{
       conteoData.push([k, conteoAseguradora[k]]);
@@ -5400,7 +5655,7 @@
       { s:{r:1,c:0}, e:{r:1,c:1} }
     ];
     wsConteo["!cols"] = [{ wch: 26 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(wb, wsConteo, "Por Aseguradora y Modelo");
+    XLSX.utils.book_append_sheet(wb, wsConteo, "Por Asesor y Modelo");
 
     // ---- Hoja: alerta de placas duplicadas (si alguna aparece en más de un lugar) ----
     const porPlaca = {};
@@ -5415,7 +5670,7 @@
         ["⚠ Placas duplicadas detectadas — revisar", "", "", ""],
         [`Generado ${fechaLarga}, ${horaLarga} · ${duplicadas.length} placa(s) con más de una ubicación`, "", "", ""],
         [],
-        ["Placa","Zona","Campo","Aseguradora"]
+        ["Placa","Zona","Campo","Asesor"]
       ];
       duplicadas.forEach(list=>{
         list.forEach(r=> dupData.push([r.placa, r.zoneLabel, r.campo, r.aseguradora || ""]));
@@ -5604,14 +5859,15 @@
     if(!key || !plateRegistryCache) return null;
     return plateRegistryCache[key] || null;
   }
-  async function rememberPlateInfo(plate, aseguradora, modelo){
+  async function rememberPlateInfo(plate, aseguradora, modelo, color){
     const key = normalizePlate(plate);
-    if(!key || (!aseguradora && !modelo)) return;
+    if(!key || (!aseguradora && !modelo && !color)) return;
     try{
       const registry = await loadPlateRegistry();
-      registry[key] = { aseguradora: aseguradora || "", modelo: modelo || "" };
+      registry[key] = { aseguradora: aseguradora || "", modelo: modelo || "", color: color || "" };
       await window.storage.set(PLATE_REGISTRY_KEY, JSON.stringify(registry), true);
       refreshModelSuggestions();
+      refreshColorSuggestions();
     }catch(e){ console.error("No se pudo actualizar el registro de placas", e); }
   }
 
@@ -5634,6 +5890,25 @@
     const dl = document.getElementById("modelSuggestions");
     if(!dl) return;
     dl.innerHTML = getKnownModels().map(m=>`<option value="${escapeAttrLike(m)}">`).join("");
+  }
+  // Mismo criterio que los modelos: junta todos los colores ya escritos
+  // (vehículos activos + registro de placas quitadas) para sugerirlos.
+  function getKnownColors(){
+    const set = new Set();
+    ZONES.forEach(z=>{
+      (state.zones[z.key] || []).forEach(c=>{
+        c.plates.forEach(p=>{ if(p.color && p.color.trim()) set.add(p.color.trim()); });
+      });
+    });
+    if(plateRegistryCache){
+      Object.values(plateRegistryCache).forEach(r=>{ if(r.color && r.color.trim()) set.add(r.color.trim()); });
+    }
+    return [...set].sort((a,b)=> a.localeCompare(b, "es"));
+  }
+  function refreshColorSuggestions(){
+    const dl = document.getElementById("colorSuggestions");
+    if(!dl) return;
+    dl.innerHTML = getKnownColors().map(m=>`<option value="${escapeAttrLike(m)}">`).join("");
   }
 
   async function appendLog(key, entry, limit){
@@ -6137,7 +6412,7 @@
     if(sessionData){
       const found = users.find(u => u.username.toLowerCase() === sessionData.username.toLowerCase() && u.active !== false);
       if(found && (found.sessionVersion || 0) === sessionData.v){
-        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy };
+        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [] };
         revealApp();
         return;
       } else if(found){
@@ -6157,7 +6432,7 @@
         if(storageAvailable) await logAccess(found.username, "login_failed");
         return false;
       }
-      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy };
+      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [] };
       if(storageAvailable){
         await setSessionUsername(found.username, found.sessionVersion || 0);
         await logAccess(found.username, "login");
@@ -6199,6 +6474,54 @@
   }
 
   // ---- Gestión de usuarios (solo Admin) ----
+  // Restringe a qué zonas puede entrar una cuenta de Actualización — si
+  // "allowedZones" queda vacío o sin definir, no hay ninguna restricción
+  // (se ve todo, como siempre funcionó).
+  function openZoneRestrictModal(user, onSave){
+    const overlay = document.getElementById("zoneRestrictModal");
+    const listEl = document.getElementById("zoneRestrictList");
+    const errorP = document.getElementById("zoneRestrictError");
+    const saveBtn = document.getElementById("zoneRestrictSaveBtn");
+    const closeBtn = document.getElementById("zoneRestrictCloseBtn");
+    document.getElementById("zoneRestrictUserLabel").textContent = `Cuenta: ${user.username}`;
+    errorP.textContent = "";
+
+    const actuales = (user.allowedZones && user.allowedZones.length) ? new Set(user.allowedZones) : null; // null = todas
+    listEl.innerHTML = ZONES.map(z=>`
+      <label class="zoneRestrictRow">
+        <input type="checkbox" value="${z.key}" ${(!actuales || actuales.has(z.key)) ? "checked" : ""}>
+        <span class="dot" style="background:${z.color}"></span>
+        <span>${z.label}</span>
+      </label>
+    `).join("");
+
+    function onSaveClick(){
+      const checks = [...listEl.querySelectorAll('input[type="checkbox"]')];
+      const marcadas = checks.filter(c=>c.checked).map(c=>c.value);
+      if(marcadas.length === 0){
+        errorP.textContent = "Marcá al menos una zona.";
+        return;
+      }
+      // Si quedaron todas marcadas, guardamos "sin restricción" (arreglo
+      // vacío) en vez de una lista larga idéntica a ZONES completo.
+      const paraGuardar = marcadas.length === ZONES.length ? [] : marcadas;
+      Promise.resolve(onSave(paraGuardar)).then(ok=>{
+        if(ok === false){ errorP.textContent = "No se pudo guardar, intentá de nuevo."; return; }
+        const cantidad = paraGuardar.length || ZONES.length;
+        showToast(paraGuardar.length ? `Zonas actualizadas (${cantidad} permitida(s))` : "Sin restricción — ve todas las zonas");
+        onClose();
+      });
+    }
+    function onClose(){
+      overlay.classList.remove("show");
+      saveBtn.removeEventListener("click", onSaveClick);
+      closeBtn.removeEventListener("click", onClose);
+    }
+    saveBtn.addEventListener("click", onSaveClick);
+    closeBtn.addEventListener("click", onClose);
+    overlay.classList.add("show");
+  }
+
   async function openUsersModal(){
     if(!guardEdit()) return;
     const overlay = document.getElementById("usersModal");
@@ -6236,7 +6559,8 @@
             <button class="featureUserBtn" data-i="${i}">${u.featured ? "Quitar logo" : "Dar logo propio"}</button>
             ${u.role!=="admin" ? `<button class="exportPermBtn" data-i="${i}">${u.canExport ? "Quitar Excel" : "Dar acceso a Excel"}</button>` : ``}
             ${u.role==="actualizacion" ? `<button class="searchFocusBtn" data-i="${i}" title="Al entrar, prioriza el buscador de placas y deja la edición en segundo plano (colapsada, pero disponible)">${u.searchFocused ? "Quitar enfoque en buscar" : "Enfocar en buscar ubicación"}</button>` : ``}
-            ${u.role==="actualizacion" ? `<button class="movedByBtn" data-i="${i}" title="Reemplaza el campo Aseguradora por quién hizo el último movimiento del vehículo — ya no se pide ni se muestra aseguradora para esta cuenta">${u.showMovedBy ? "Quitar \"quién movió\"" : "Mostrar quién movió (en vez de aseguradora)"}</button>` : ``}
+            ${u.role==="actualizacion" ? `<button class="movedByBtn" data-i="${i}" title="Reemplaza el campo Asesor por quién hizo el último movimiento del vehículo — ya no se pide ni se muestra asesor para esta cuenta">${u.showMovedBy ? "Quitar \"quién movió\"" : "Mostrar quién movió (en vez de asesor)"}</button>` : ``}
+            ${u.role==="actualizacion" ? `<button class="zoneRestrictBtn" data-i="${i}" title="Elegir en qué zonas puede trabajar esta cuenta">🔒 ${u.allowedZones && u.allowedZones.length ? `Zonas (${u.allowedZones.length})` : "Zonas (todas)"}</button>` : ``}
             <button class="revokeSessionBtn" data-i="${i}" title="Fuerza a que esta cuenta tenga que volver a iniciar sesión en cualquier dispositivo donde haya quedado recordada">Cerrar sesión en otros dispositivos</button>
             <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "Activar" : "Desactivar"}</button>
             <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
@@ -6318,9 +6642,20 @@
           users[i].showMovedBy = !users[i].showMovedBy;
           await saveUsers(users);
           showToast(users[i].showMovedBy
-            ? `"${users[i].username}" ahora ve quién movió cada vehículo en vez de la aseguradora`
-            : `"${users[i].username}" vuelve a ver la aseguradora normalmente`);
+            ? `"${users[i].username}" ahora ve quién movió cada vehículo en vez del asesor`
+            : `"${users[i].username}" vuelve a ver el asesor normalmente`);
           draw();
+        });
+      });
+      listEl.querySelectorAll(".zoneRestrictBtn").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          openZoneRestrictModal(users[i], async (nuevasZonas)=>{
+            users[i].allowedZones = nuevasZonas;
+            const ok = await saveUsers(users);
+            if(ok) draw();
+            return ok;
+          });
         });
       });
       listEl.querySelectorAll(".revokeSessionBtn").forEach(b=>{
@@ -6630,6 +6965,12 @@
     document.getElementById("dataHealthCloseBtn").onclick = ()=> overlay.classList.remove("show");
   }
   document.getElementById("dataHealthBtn").addEventListener("click", openDataHealthModal);
+  document.getElementById("testPhotoReportBtn").addEventListener("click", ()=>{
+    // Modo prueba: usa datos claramente ficticios y nunca toca el
+    // inventario real ni queda ningún registro — solo sirve para
+    // comprobar que el compartir con fotos funcione en este celular.
+    openPhotoReportModal("PRUEBA-123", "Zona de prueba", "Espacio de prueba", true);
+  });
 
   // ---- Administrar los ítems del check-in (solo Admin) ----
   async function openCheckinItemsModal(){
@@ -6724,9 +7065,18 @@
     if(!(currentUser && currentUser.role === "actualizacion")) return;
     await loadState();
     if(!state.zones[SIN_UBICACION_KEY]) state.zones[SIN_UBICACION_KEY] = [];
+    // Si esta cuenta quedó restringida a ciertas zonas y la zona que
+    // tenía seleccionada (o la de siempre por defecto) ya no está
+    // permitida, se cae a la primera zona que sí puede ver.
+    const zonasPermitidas = allowedZonesForCurrentUser();
+    if(zonasPermitidas.length && !zonasPermitidas.some(z => z.key === updSpaceZone)){
+      updSpaceZone = zonasPermitidas[0].key;
+      updSelectedCampo = "";
+    }
     await loadPlateRegistry();
     await loadCheckinItemsIfNeeded();
     refreshModelSuggestions();
+    refreshColorSuggestions();
 
     // Para cuentas con "mostrar quién movió" activo, se arma un mapa
     // placa → usuario del último movimiento (a partir del Historial), para
@@ -6753,7 +7103,7 @@
           <button type="button" id="kioskToggleBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🖥️ Modo kiosco</button>
         </div>
         <div id="updBrowseSection">
-          <input type="text" id="updSearchInput" class="plate" placeholder="Buscar por placa, aseguradora o modelo…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
+          <input type="text" id="updSearchInput" class="plate" placeholder="Buscar por placa, asesor o modelo…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
           <div id="updSearchResults"></div>
           <details class="bulk" id="updGridDetails" ${currentUser.searchFocused ? "" : "open"} style="margin-top:14px;">
             <summary>${currentUser.searchFocused ? "Ver espacios y actualizar (opcional)" : "Zona y espacios"}</summary>
@@ -6762,7 +7112,10 @@
             <label id="updSpaceCampoLabel">Campos</label>
             <div class="spaceGrid" id="updSpaceGrid"></div>
           </details>
-          <div class="updaterZoneFilterRow" id="updZoneFilterRow"></div>
+          <details class="bulk" id="updZoneFilterDetails" style="margin-top:12px;">
+            <summary>Filtrar por zona</summary>
+            <div class="updaterZoneFilterRow" id="updZoneFilterRow" style="margin-top:8px;"></div>
+          </details>
           <div id="updAllList"></div>
         </div>
         <div id="updSpaceInfo"></div>
@@ -6773,7 +7126,6 @@
     const listFilterInput = searchInput; // un solo buscador para todo: salta a la placa y también filtra el listado de abajo
     const zoneFilterRow = holder.querySelector("#updZoneFilterRow");
     const allListBox = holder.querySelector("#updAllList");
-    let selectedListZone = ""; // "" = todas las zonas
 
     function drawZoneFilterRow(){
       const allRows = buildResumenRows();
@@ -6781,16 +7133,25 @@
       const countsByZone = {};
       allRows.forEach(r=>{ countsByZone[r.zoneKey] = (countsByZone[r.zoneKey]||0) + 1; });
       zoneFilterRow.innerHTML = `
-        <button type="button" class="updaterZoneChip${selectedListZone==="" ? " active" : ""}" data-zone="">Todas <span class="count">${totalCount}</span></button>
-        ${ZONES.map(z=>`
-          <button type="button" class="updaterZoneChip${selectedListZone===z.key ? " active" : ""}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label} <span class="count">${countsByZone[z.key]||0}</span></button>
+        <button type="button" class="updaterZoneChip${updSelectedListZone==="" ? " active" : ""}" data-zone="">Todas <span class="count">${totalCount}</span></button>
+        ${allowedZonesForCurrentUser().map(z=>`
+          <button type="button" class="updaterZoneChip${updSelectedListZone===z.key ? " active" : ""}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label} <span class="count">${countsByZone[z.key]||0}</span></button>
         `).join("")}
       `;
+      // El resumen muestra la zona activa aunque el desplegable esté
+      // cerrado, para no olvidar que el filtro sigue puesto.
+      const zoneFilterSummary = holder.querySelector("#updZoneFilterDetails summary");
+      if(zoneFilterSummary){
+        zoneFilterSummary.textContent = updSelectedListZone ? `Filtrar por zona (${zoneInfo(updSelectedListZone).label})` : "Filtrar por zona";
+      }
       zoneFilterRow.querySelectorAll(".updaterZoneChip").forEach(btn=>{
         btn.addEventListener("click", ()=>{
-          selectedListZone = btn.getAttribute("data-zone");
+          updSelectedListZone = btn.getAttribute("data-zone");
           zoneFilterRow.querySelectorAll(".updaterZoneChip").forEach(b=>b.classList.remove("active"));
           btn.classList.add("active");
+          if(zoneFilterSummary){
+            zoneFilterSummary.textContent = updSelectedListZone ? `Filtrar por zona (${zoneInfo(updSelectedListZone).label})` : "Filtrar por zona";
+          }
           drawAllList();
         });
       });
@@ -6800,7 +7161,7 @@
       const q = listFilterInput.value.trim().toUpperCase();
       let rows = buildResumenRows();
       const totalCount = rows.length;
-      if(selectedListZone) rows = rows.filter(r => r.zoneKey === selectedListZone);
+      if(updSelectedListZone) rows = rows.filter(r => r.zoneKey === updSelectedListZone);
       const countAfterZone = rows.length;
       if(q){
         rows = rows.filter(r =>
@@ -6815,8 +7176,8 @@
         allListBox.innerHTML = `<div class="dashEmptyNote">Todavía no hay vehículos registrados.</div>`;
         return;
       }
-      const zoneLabel = selectedListZone ? zoneInfo(selectedListZone).label : null;
-      const title = (q || selectedListZone)
+      const zoneLabel = updSelectedListZone ? zoneInfo(updSelectedListZone).label : null;
+      const title = (q || updSelectedListZone)
         ? `${rows.length} de ${zoneLabel ? countAfterZone : totalCount} vehículo(s)${zoneLabel ? ` en ${zoneLabel}` : ""}`
         : `Todos los vehículos (${totalCount}) — tocá uno para ir a su espacio`;
 
@@ -6832,8 +7193,8 @@
       let listHtml;
       if(rows.length === 0){
         listHtml = `<div class="dashEmptyNote">Sin resultados para ese filtro.</div>`;
-      } else if(!selectedListZone){
-        listHtml = ZONES.map(z=>{
+      } else if(!updSelectedListZone){
+        listHtml = visibleZonesForCurrentUser().map(z=>{
           const zoneRows = rows.filter(r => r.zoneKey === z.key);
           if(zoneRows.length === 0) return "";
           return `
@@ -6864,35 +7225,30 @@
     const spaceGridBox = holder.querySelector("#updSpaceGrid");
     const spaceInfoBox = holder.querySelector("#updSpaceInfo");
     const zoneConfirmHint = holder.querySelector("#zoneConfirmHint");
-    let spaceZone = ZONES[0].key;
-    let selectedCampo = ""; // campo/línea elegido dentro de la zona actual
-    let editingPlateIdx = null; // índice (dentro del campo) de la placa en edición, o null
-    let movingPlateIdx = null; // índice de la placa en el atajo rápido de "solo mover", o null
-    let armedZoneKey = null; // zona "armada" esperando el segundo toque para confirmar el cambio
 
     // Cambiar de zona pide tocar dos veces (para no perder de vista el
     // espacio actual por un toque accidental cerca de otra zona).
     function drawSpaceZoneChips(){
-      const chipZones = [...ZONES, SIN_UBICACION_INFO];
+      const chipZones = [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO];
       spaceZoneChipsBox.innerHTML = chipZones.map(z=>`
-        <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}${armedZoneKey===z.key?' armed':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}${armedZoneKey===z.key ? " ¿Cambiar?" : ""}</button>
+        <button type="button" class="zoneChipBtn${updSpaceZone===z.key?' active':''}${updArmedZoneKey===z.key?' armed':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}${updArmedZoneKey===z.key ? " ¿Cambiar?" : ""}</button>
       `).join("");
-      zoneConfirmHint.style.display = armedZoneKey ? "inline" : "none";
-      if(armedZoneKey) zoneConfirmHint.textContent = "Tocá de nuevo para confirmar";
+      zoneConfirmHint.style.display = updArmedZoneKey ? "inline" : "none";
+      if(updArmedZoneKey) zoneConfirmHint.textContent = "Tocá de nuevo para confirmar";
       spaceZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(btn=>{
         btn.addEventListener("click", ()=>{
           const zoneKey = btn.getAttribute("data-zone");
-          if(zoneKey === spaceZone){
-            armedZoneKey = null;
+          if(zoneKey === updSpaceZone){
+            updArmedZoneKey = null;
             drawSpaceZoneChips();
             return;
           }
-          if(armedZoneKey === zoneKey){
+          if(updArmedZoneKey === zoneKey){
             // segundo toque sobre la misma zona: confirma el cambio
-            spaceZone = zoneKey;
-            armedZoneKey = null;
-            editingPlateIdx = null;
-            movingPlateIdx = null;
+            updSpaceZone = zoneKey;
+            updArmedZoneKey = null;
+            updEditingPlateIdx = null;
+            updMovingPlateIdx = null;
             drawSpaceZoneChips();
             if(SINGLE_BUCKET_ZONES.has(zoneKey)){
               // No hay cuadrícula de espacios acá — es una sola lista, así
@@ -6902,12 +7258,12 @@
               saveState();
               refreshSpaceGrid(SIN_UBICACION_CAMPO);
             } else {
-              selectedCampo = "";
+              updSelectedCampo = "";
               refreshSpaceGrid();
             }
           } else {
             // primer toque: solo "arma" la zona, todavía no cambia
-            armedZoneKey = zoneKey;
+            updArmedZoneKey = zoneKey;
             drawSpaceZoneChips();
           }
         });
@@ -6915,19 +7271,19 @@
     }
 
     function refreshSpaceGrid(preselect){
-      const label = CUSTOM_NAMED_ZONES.has(spaceZone) ? "Zonas" : (UNNUMBERED_ONLY_ZONES.has(spaceZone) ? "Líneas" : "Campos");
+      const label = CUSTOM_NAMED_ZONES.has(updSpaceZone) ? "Zonas" : (UNNUMBERED_ONLY_ZONES.has(updSpaceZone) ? "Líneas" : "Campos");
       spaceCampoLabel.textContent = label;
-      if(preselect !== undefined) selectedCampo = preselect;
-      const arr = state.zones[spaceZone] || [];
+      if(preselect !== undefined) updSelectedCampo = preselect;
+      const arr = state.zones[updSpaceZone] || [];
       const labelLower = label === "Zonas" ? "zona" : (label === "Líneas" ? "línea" : "campo");
       if(arr.length === 0){
         spaceGridBox.classList.remove("groupedMode");
-        if(CUSTOM_NAMED_ZONES.has(spaceZone)){
+        if(CUSTOM_NAMED_ZONES.has(updSpaceZone)){
           // Solo Admin crea y nombra las zonas acá — Actualización no tiene
           // este botón, para no terminar con nombres improvisados.
-          spaceGridBox.innerHTML = `<div class="dashEmptyNote">Todavía no hay zonas creadas en ${zoneInfo(spaceZone).label}. Pedile a un Admin que cree la primera.</div>`;
-          editingPlateIdx = null;
-          movingPlateIdx = null;
+          spaceGridBox.innerHTML = `<div class="dashEmptyNote">Todavía no hay zonas creadas en ${zoneInfo(updSpaceZone).label}. Pedile a un Admin que cree la primera.</div>`;
+          updEditingPlateIdx = null;
+          updMovingPlateIdx = null;
           drawSpaceInfo();
           return;
         }
@@ -6936,14 +7292,14 @@
         const createBtn = spaceGridBox.querySelector("#spaceCreateFirstBtn");
         if(createBtn){
           createBtn.addEventListener("click", ()=>{
-            const nuevo = UNNUMBERED_ONLY_ZONES.has(spaceZone) ? nextLineLabel(spaceZone) : nextAutoCampo(spaceZone);
-            getOrCreateCampo(spaceZone, nuevo);
+            const nuevo = UNNUMBERED_ONLY_ZONES.has(updSpaceZone) ? nextLineLabel(updSpaceZone) : nextAutoCampo(updSpaceZone);
+            getOrCreateCampo(updSpaceZone, nuevo);
             saveState();
             refreshSpaceGrid(nuevo);
           });
         }
-        editingPlateIdx = null;
-        movingPlateIdx = null;
+        updEditingPlateIdx = null;
+        updMovingPlateIdx = null;
         drawSpaceInfo();
         return;
       }
@@ -6959,7 +7315,7 @@
         const hechoHoy = c.plates.some(p => wasUpdatedToday(p));
         const pct = cap ? Math.min(100, Math.round((occ/cap)*100)) : 0;
         return `
-          <button type="button" class="spaceGridBtn ${fillClass}${hechoHoy ? ' hechoHoy' : ''}${selectedCampo===c.campo ? ' active' : ''}" data-campo="${escapeAttrLike(c.campo)}">
+          <button type="button" class="spaceGridBtn ${fillClass}${hechoHoy ? ' hechoHoy' : ''}${updSelectedCampo===c.campo ? ' active' : ''}" data-campo="${escapeAttrLike(c.campo)}">
             ${hechoHoy ? `<span class="spaceGridDoneTag" title="Ya trabajado hoy">✓</span>` : ``}
             ${fillClass === "overloaded" ? `<span class="spaceGridOverloadTag" title="Tiene más vehículos que el límite definido">⚠️</span>` : ``}
             <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
@@ -7007,7 +7363,7 @@
       // Sólidos). Para completar más fácil, se siguen mostrando agrupadas
       // por su origen en vez de una sola lista mezclada — usando los mismos
       // rangos que tenían antes de fusionarse.
-      if(spaceZone === "Atras"){
+      if(updSpaceZone === "Atras"){
         spaceGridBox.classList.add("groupedMode");
         const grupos = [
           { label: "Atrás entregas", items: [] },
@@ -7026,7 +7382,7 @@
             <div class="spaceGrid">${g.items.map(renderGridBtnHtml).join("")}</div>
           </div>
         `).join("");
-      } else if(spaceZone === "Maya"){
+      } else if(updSpaceZone === "Maya"){
         // "Maya" es la fusión de 2 zonas viejas (Maya numerada, Maya Sin
         // numeración). Mismo criterio que Atrás: se agrupan por su origen
         // para completar más fácil, en vez de una sola lista mezclada.
@@ -7052,28 +7408,28 @@
       const goFreeBtn = spaceGridBox.querySelector("#spaceGridGoFreeBtn");
       if(goFreeBtn){
         goFreeBtn.addEventListener("click", ()=>{
-          selectedCampo = primerLibre;
-          editingPlateIdx = null;
-          movingPlateIdx = null;
+          updSelectedCampo = primerLibre;
+          updEditingPlateIdx = null;
+          updMovingPlateIdx = null;
           drawSpaceInfo();
         });
       }
       spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(btn=>{
         btn.addEventListener("click", ()=>{
-          selectedCampo = btn.getAttribute("data-campo");
-          editingPlateIdx = null;
-          movingPlateIdx = null;
+          updSelectedCampo = btn.getAttribute("data-campo");
+          updEditingPlateIdx = null;
+          updMovingPlateIdx = null;
           spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
           btn.classList.add("active");
           drawSpaceInfo();
         });
         attachLongPressPreview(btn, ()=>{
-          const found = (state.zones[spaceZone] || []).find(x => x.campo === btn.getAttribute("data-campo"));
+          const found = (state.zones[updSpaceZone] || []).find(x => x.campo === btn.getAttribute("data-campo"));
           return found ? found.plates : [];
         });
       });
-      editingPlateIdx = null;
-      movingPlateIdx = null;
+      updEditingPlateIdx = null;
+      updMovingPlateIdx = null;
       drawSpaceInfo();
     }
 
@@ -7087,8 +7443,8 @@
         showToast(`${q} no se encontró. Elegí zona y espacio para registrarla ahí.`);
         return;
       }
-      spaceZone = found.zoneKey;
-      armedZoneKey = null;
+      updSpaceZone = found.zoneKey;
+      updArmedZoneKey = null;
       drawSpaceZoneChips();
       const campoLabel = state.zones[found.zoneKey][found.campoIdx].campo;
       refreshSpaceGrid(campoLabel);
@@ -7144,7 +7500,7 @@
     });
 
     function drawSpaceInfo(){
-      const campoLabel = selectedCampo;
+      const campoLabel = updSelectedCampo;
       if(!campoLabel){
         browseSection.classList.remove("slideInLeft");
         void browseSection.offsetWidth;
@@ -7153,7 +7509,7 @@
         spaceInfoBox.innerHTML = "";
         return;
       }
-      const entry = (state.zones[spaceZone] || []).find(c => c.campo === campoLabel);
+      const entry = (state.zones[updSpaceZone] || []).find(c => c.campo === campoLabel);
       if(!entry){
         browseSection.classList.remove("slideInLeft");
         void browseSection.offsetWidth;
@@ -7166,10 +7522,10 @@
       const cap = entry.capacidad;
       const occ = entry.plates.length;
       const full = cap && occ >= cap;
-      const labelLower = CUSTOM_NAMED_ZONES.has(spaceZone) ? "zona" : (UNNUMBERED_ONLY_ZONES.has(spaceZone) ? "línea" : "campo");
+      const labelLower = CUSTOM_NAMED_ZONES.has(updSpaceZone) ? "zona" : (UNNUMBERED_ONLY_ZONES.has(updSpaceZone) ? "línea" : "campo");
 
       const plateRowsHtml = entry.plates.length ? entry.plates.map((p,idx)=>{
-        if(idx === movingPlateIdx){
+        if(idx === updMovingPlateIdx){
           return `
             <div class="quickMoveForm" data-idx="${idx}">
               <div class="quickMoveTitle">🔀 Mover <strong>${escapeHtml(p.plate)}</strong> a:</div>
@@ -7184,16 +7540,17 @@
             </div>
           `;
         }
-        if(idx === editingPlateIdx){
+        if(idx === updEditingPlateIdx){
           return `
             <div class="spaceEditForm" data-idx="${idx}">
               <div class="spaceEditQuickRow">
-                <input type="text" id="spaceEditPlaca" class="plate reqField" value="${escapeHtml(p.plate)}" placeholder="Placa *">
+                <input type="text" id="spaceEditPlaca" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" placeholder="Placa *" autocapitalize="characters">
                 ${currentUser.showMovedBy
                   ? `<div class="movedByDisplay">${escapeHtml(movedByText(p.plate))}</div>`
-                  : `<input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" placeholder="Aseguradora">`
+                  : `<input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" placeholder="Asesor">`
                 }
                 <input type="text" id="spaceEditModelo" class="reqField" value="${escapeHtml(p.modelo || "")}" placeholder="Modelo *" list="modelSuggestions">
+                <input type="text" id="spaceEditColor" value="${escapeHtml(p.color || "")}" placeholder="Color" list="colorSuggestions">
               </div>
               <div class="dupWarn" id="spaceEditDupWarn" style="display:none;"></div>
               <div class="historyMeta" id="spaceEditMoveCount" style="margin-top:4px;"></div>
@@ -7221,10 +7578,11 @@
               <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===entry.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
             </div>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo"><span class="platePlateText">${escapeHtml(p.plate)}</span>${currentUser.showMovedBy ? ` <span class="plateMuted">· ${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${spaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
+              <span class="spacePlateInfo"><span class="platePlateText">${escapeHtml(p.plate)}</span>${currentUser.showMovedBy ? ` <span class="plateMuted">· ${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${updSpaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
             </div>
-            ${spaceZone===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
+            ${updSpaceZone===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
+            <button type="button" class="spacePhotoReportBtn" data-idx="${idx}" title="Reportar con fotos dónde quedó">📸</button>
             <button type="button" class="spaceMoveBtn" data-idx="${idx}" title="Mover a otro espacio">🔀</button>
             <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
             <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
@@ -7232,7 +7590,7 @@
         `;
       }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
 
-      const camposArr = state.zones[spaceZone] || [];
+      const camposArr = state.zones[updSpaceZone] || [];
       const idxActual = camposArr.indexOf(entry);
       const anterior = idxActual > 0 ? camposArr[idxActual-1] : null;
       const siguiente = idxActual < camposArr.length-1 ? camposArr[idxActual+1] : null;
@@ -7240,7 +7598,7 @@
       spaceInfoBox.classList.remove("slideInRight");
       void spaceInfoBox.offsetWidth; // fuerza el reflujo para poder repetir la animación
       spaceInfoBox.classList.add("slideInRight");
-      const esSinUbicacion = SINGLE_BUCKET_ZONES.has(spaceZone);
+      const esSinUbicacion = SINGLE_BUCKET_ZONES.has(updSpaceZone);
       spaceInfoBox.innerHTML = `
         <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">${esSinUbicacion ? "← Volver / cambiar de zona" : "← Volver a la lista de espacios"}</button>
         ${esSinUbicacion ? "" : `<div class="spaceNavRow">
@@ -7248,7 +7606,7 @@
           <button type="button" id="spaceNextBtn" ${siguiente ? "" : "disabled"}>${siguiente ? escapeHtml(siguiente.campo) : "—"} →</button>
         </div>`}
         <div class="spaceInfoHeader">
-          <strong>${zoneInfo(spaceZone).label} · ${escapeHtml(campoLabel)}</strong>
+          <strong>${zoneInfo(updSpaceZone).label} · ${escapeHtml(campoLabel)}</strong>
           ${cap ? `<span class="spaceCapBadge${full ? " full" : ""}">${occ}/${cap}</span>` : ``}
         </div>
         ${full ? `<div class="similarWarn spaceFullWarn"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
@@ -7257,9 +7615,12 @@
         ${plateRowsHtml}
         <button type="button" class="linkBackBtn" id="updSpaceAddToggle" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="updSpaceAddBox" style="display:none;">
-          <input type="text" id="updSpaceNewPlaca" class="plate reqField" placeholder="Placa *">
-          ${currentUser.showMovedBy ? `` : `<input type="text" id="updSpaceNewAseguradora" placeholder="Aseguradora (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">`}
-          <input type="text" id="updSpaceNewModelo" class="reqField" placeholder="Modelo *" list="modelSuggestions" style="margin-top:6px;">
+          <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" placeholder="Placa *" autocapitalize="characters">
+          ${currentUser.showMovedBy ? `` : `<input type="text" id="updSpaceNewAseguradora" placeholder="Asesor (opcional)" value="${escapeHtml(lastAddAseguradora)}" style="margin-top:6px;">`}
+          <div class="modeloColorRow">
+            <input type="text" id="updSpaceNewModelo" class="reqField" placeholder="Modelo *" list="modelSuggestions">
+            <input type="text" id="updSpaceNewColor" placeholder="Color" list="colorSuggestions" value="${escapeHtml(lastAddColor)}">
+          </div>
           <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
           <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
           <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
@@ -7291,6 +7652,8 @@
           const asegField = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
           if(asegField) asegField.value = "";
           spaceInfoBox.querySelector("#updSpaceNewModelo").value = "";
+          const colorField = spaceInfoBox.querySelector("#updSpaceNewColor");
+          if(colorField) colorField.value = "";
           spaceInfoBox.querySelector("#updSpaceDupWarn").style.display = "none";
           spaceInfoBox.querySelector("#updSpaceSimilarWarn").style.display = "none";
           addBox.style.display = "none";
@@ -7304,7 +7667,7 @@
       // ubicación", ahí sí se elimina de verdad (no hay a dónde más moverla).
       async function removePlateFromSpace(idx, btn){
         const plateToRemove = entry.plates[idx];
-        const yaEnSinUbicacion = spaceZone === SIN_UBICACION_KEY;
+        const yaEnSinUbicacion = updSpaceZone === SIN_UBICACION_KEY;
         const mensajeConfirmar = yaEnSinUbicacion
           ? `¿Eliminar ${plateToRemove.plate} del inventario? No se puede deshacer desde acá.`
           : `¿Quitar ${plateToRemove.plate} de este ${labelLower}? Se va a mover a "Sin ubicación" en vez de borrarse.`;
@@ -7312,27 +7675,27 @@
         const doRemove = async ()=>{
           if(yaEnSinUbicacion){
             rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
-            removePlateEntryByRef(spaceZone, entry, plateToRemove);
+            removePlateEntryByRef(updSpaceZone, entry, plateToRemove);
             await saveState(true);
             await appendLog(HISTORY_KEY, {
               ts: nowStamp(),
               username: currentUser.username,
               placa: plateToRemove.plate,
-              desde: `${zoneInfo(spaceZone).label}`,
+              desde: `${zoneInfo(updSpaceZone).label}`,
               hasta: "Eliminado del inventario"
             }, 300);
             showToast("Vehículo eliminado del inventario");
           } else {
             ensureSinUbicacionConsolidada();
-            const ci = state.zones[spaceZone].indexOf(entry);
-            const ok = await updaterConfirmMove(spaceZone, ci, idx, SIN_UBICACION_KEY, SIN_UBICACION_CAMPO, plateToRemove.aseguradora || "", plateToRemove.modelo || "", "last");
+            const ci = state.zones[updSpaceZone].indexOf(entry);
+            const ok = await updaterConfirmMove(updSpaceZone, ci, idx, SIN_UBICACION_KEY, SIN_UBICACION_CAMPO, plateToRemove.aseguradora || "", plateToRemove.modelo || "", "last");
             if(!ok) return;
             showToast(`${plateToRemove.plate} se movió a Sin ubicación`);
           }
           vibrateSuccess();
-          editingPlateIdx = null;
-          movingPlateIdx = null;
-          const stillExists = (state.zones[spaceZone] || []).some(c => c.campo === campoLabel);
+          updEditingPlateIdx = null;
+          updMovingPlateIdx = null;
+          const stillExists = (state.zones[updSpaceZone] || []).some(c => c.campo === campoLabel);
           refreshSpaceGrid(stillExists ? campoLabel : "");
           drawZoneFilterRow();
           drawAllList();
@@ -7342,8 +7705,8 @@
       }
 
       // --- edición inline de una placa ya existente ---
-      if(editingPlateIdx !== null){
-        let editTargetZone = spaceZone;
+      if(updEditingPlateIdx !== null){
+        let editTargetZone = updSpaceZone;
         const editPlacaInput = spaceInfoBox.querySelector("#spaceEditPlaca");
         const editDupWarn = spaceInfoBox.querySelector("#spaceEditDupWarn");
         const editAsegInput = spaceInfoBox.querySelector("#spaceEditAseg");
@@ -7351,7 +7714,7 @@
         const editCampoInput = spaceInfoBox.querySelector("#spaceEditCampo");
         const moveToggleBtn = spaceInfoBox.querySelector("#spaceEditMoveToggle");
         const moveBox = spaceInfoBox.querySelector("#spaceEditMoveBox");
-        const originalPlate = entry.plates[editingPlateIdx].plate;
+        const originalPlate = entry.plates[updEditingPlateIdx].plate;
 
         countMovementsThisMonth(originalPlate).then(count=>{
           const noteEl = spaceInfoBox.querySelector("#spaceEditMoveCount");
@@ -7362,8 +7725,8 @@
         }).catch(()=>{});
 
         const editZoneChipsBox = spaceInfoBox.querySelector("#spaceEditZoneChips");
-        editZoneChipsBox.innerHTML = [...ZONES, SIN_UBICACION_INFO].map(z=>`
-          <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
+        editZoneChipsBox.innerHTML = [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO].map(z=>`
+          <button type="button" class="zoneChipBtn${updSpaceZone===z.key?' active':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
         `).join("");
         const editMoveGrid = spaceInfoBox.querySelector("#spaceEditGrid");
         drawMiniSpaceGrid(editMoveGrid, editTargetZone, editCampoInput);
@@ -7377,7 +7740,7 @@
               ? "Elegí una zona existente arriba ↑"
               : `Nuevo ${UNNUMBERED_ONLY_ZONES.has(editTargetZone) ? "línea" : "campo"}`;
             editCampoInput.readOnly = esNombrePersonalizado;
-            if(editTargetZone === spaceZone){
+            if(editTargetZone === updSpaceZone){
               editCampoInput.value = campoLabel;
             } else if(SINGLE_BUCKET_ZONES.has(editTargetZone)){
               // Las zonas de lista plana (Sin ubicación, Recepción/Salida)
@@ -7405,7 +7768,7 @@
         function checkEditPlateDup(){
           const v = normalizePlate(editPlacaInput.value);
           if(!v || v === originalPlate){ editDupWarn.style.display = "none"; return; }
-          const dup = findPlate(v, spaceZone, state.zones[spaceZone].indexOf(entry), editingPlateIdx);
+          const dup = findPlate(v, updSpaceZone, state.zones[updSpaceZone].indexOf(entry), updEditingPlateIdx);
           if(dup){
             const dupInfo = zoneInfo(dup.zoneKey);
             const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
@@ -7420,21 +7783,23 @@
 
         async function saveEdit(){
           const newPlate = editPlacaInput.value;
-          const newAseguradora = editAsegInput ? editAsegInput.value.trim() : (entry.plates[editingPlateIdx].aseguradora || "");
+          const newAseguradora = editAsegInput ? editAsegInput.value.trim() : (entry.plates[updEditingPlateIdx].aseguradora || "");
           const newModelo = editModeloInput.value.trim();
+          const editColorInput = spaceInfoBox.querySelector("#spaceEditColor");
+          const newColor = editColorInput ? editColorInput.value.trim() : (entry.plates[updEditingPlateIdx].color || "");
           const newCampo = normalizeCampo(editCampoInput.value);
           if(!newCampo){ showToast("Ingresá un campo válido"); return; }
           if(!normalizePlate(newPlate)){ showToast("Ingresá una placa válida"); return; }
           await runGuarded(saveBtn, "Guardando…", async ()=>{
-            const idxToEdit = editingPlateIdx;
-            const currentEntry = (state.zones[spaceZone] || []).find(c => c.campo === campoLabel);
-            const ci = state.zones[spaceZone].indexOf(currentEntry);
-            const ok = await updaterConfirmMove(spaceZone, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "last", newPlate);
+            const idxToEdit = updEditingPlateIdx;
+            const currentEntry = (state.zones[updSpaceZone] || []).find(c => c.campo === campoLabel);
+            const ci = state.zones[updSpaceZone].indexOf(currentEntry);
+            const ok = await updaterConfirmMove(updSpaceZone, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "first", newPlate, newColor);
             if(!ok) return; // canceló el diálogo de mover, o no había nada que cambiar: seguimos en edición
             vibrateSuccess();
             showToast("Vehículo actualizado");
-            editingPlateIdx = null;
-            movingPlateIdx = null;
+            updEditingPlateIdx = null;
+            updMovingPlateIdx = null;
             // Nos quedamos viendo el mismo espacio de siempre (sin saltar a
             // la zona/campo nuevo), para poder seguir trabajando ahí mismo
             // sin tener que volver a entrar cada vez que se mueve algo.
@@ -7446,12 +7811,12 @@
         const saveBtn = spaceInfoBox.querySelector("#spaceEditSaveBtn");
         saveBtn.addEventListener("click", saveEdit);
         spaceInfoBox.querySelector("#spaceEditCancelBtn").addEventListener("click", ()=>{
-          editingPlateIdx = null;
-          movingPlateIdx = null;
+          updEditingPlateIdx = null;
+          updMovingPlateIdx = null;
           drawSpaceInfo();
         });
-        spaceInfoBox.querySelector("#spaceEditRemoveBtn").addEventListener("click", (e)=> removePlateFromSpace(editingPlateIdx, e.currentTarget));
-        [editPlacaInput, editAsegInput, editModeloInput, editCampoInput].filter(Boolean).forEach(inp=>{
+        spaceInfoBox.querySelector("#spaceEditRemoveBtn").addEventListener("click", (e)=> removePlateFromSpace(updEditingPlateIdx, e.currentTarget));
+        [editPlacaInput, editAsegInput, editModeloInput, spaceInfoBox.querySelector("#spaceEditColor"), editCampoInput].filter(Boolean).forEach(inp=>{
           inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") saveEdit(); });
         });
         editPlacaInput.focus();
@@ -7460,8 +7825,8 @@
 
       spaceInfoBox.querySelectorAll(".spaceEditBtn").forEach(b=>{
         b.addEventListener("click", ()=>{
-          editingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
-          movingPlateIdx = null;
+          updEditingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
+          updMovingPlateIdx = null;
           drawSpaceInfo();
         });
       });
@@ -7476,15 +7841,23 @@
           if(otro < 0 || otro >= entry.plates.length) return;
           const snap = snapshotZones();
           [entry.plates[idx], entry.plates[otro]] = [entry.plates[otro], entry.plates[idx]];
-          pushUndo(snap, `Reordenar ${entry.plates[dir===-1?idx:otro].plate} en ${zoneInfo(spaceZone).label} · ${campoLabel}`);
+          pushUndo(snap, `Reordenar ${entry.plates[dir===-1?idx:otro].plate} en ${zoneInfo(updSpaceZone).label} · ${campoLabel}`);
           await saveState(true);
           drawSpaceInfo();
         });
       });
+      spaceInfoBox.querySelectorAll(".spacePhotoReportBtn").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const idx = parseInt(b.getAttribute("data-idx"),10);
+          const p = entry.plates[idx];
+          if(!p) return;
+          openPhotoReportModal(p.plate, zoneInfo(updSpaceZone).label, campoLabel);
+        });
+      });
       spaceInfoBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
         b.addEventListener("click", ()=>{
-          movingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
-          editingPlateIdx = null;
+          updMovingPlateIdx = parseInt(b.getAttribute("data-idx"),10);
+          updEditingPlateIdx = null;
           drawSpaceInfo();
         });
       });
@@ -7525,11 +7898,11 @@
       }
 
       // --- atajo: mover una placa a otro espacio, sin pasar por el resto del formulario ---
-      if(movingPlateIdx !== null){
-        let quickMoveTargetZone = spaceZone;
+      if(updMovingPlateIdx !== null){
+        let quickMoveTargetZone = updSpaceZone;
         const quickMoveZoneChips = spaceInfoBox.querySelector("#quickMoveZoneChips");
-        quickMoveZoneChips.innerHTML = [...ZONES, SIN_UBICACION_INFO].map(z=>`
-          <button type="button" class="zoneChipBtn${spaceZone===z.key?' active':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
+        quickMoveZoneChips.innerHTML = [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO].map(z=>`
+          <button type="button" class="zoneChipBtn${updSpaceZone===z.key?' active':''}${z.key===SIN_UBICACION_KEY?' sinUbicacionChip':''}" data-zone="${z.key}" style="--chip-color:#${z.hex}">${z.label}</button>
         `).join("");
         const quickMoveCampoInput = spaceInfoBox.querySelector("#quickMoveCampo");
         const quickMoveGrid = spaceInfoBox.querySelector("#quickMoveGrid");
@@ -7542,7 +7915,7 @@
             const esNombrePersonalizado = CUSTOM_NAMED_ZONES.has(quickMoveTargetZone);
             quickMoveCampoInput.readOnly = esNombrePersonalizado;
             quickMoveCampoInput.placeholder = esNombrePersonalizado ? "Elegí una zona existente arriba ↑" : "Campo/línea destino";
-            if(quickMoveTargetZone === spaceZone){
+            if(quickMoveTargetZone === updSpaceZone){
               quickMoveCampoInput.value = campoLabel;
             } else if(SINGLE_BUCKET_ZONES.has(quickMoveTargetZone)){
               quickMoveCampoInput.value = SIN_UBICACION_CAMPO;
@@ -7556,14 +7929,14 @@
         async function doQuickMove(){
           const newCampo = normalizeCampo(quickMoveCampoInput.value);
           if(!newCampo){ showToast("Ingresá un campo/línea válido"); return; }
-          const p = entry.plates[movingPlateIdx];
+          const p = entry.plates[updMovingPlateIdx];
           await runGuarded(confirmBtn, "Moviendo…", async ()=>{
-            const ci = state.zones[spaceZone].indexOf(entry);
-            const ok = await updaterConfirmMove(spaceZone, ci, movingPlateIdx, quickMoveTargetZone, newCampo, p.aseguradora, p.modelo, "last");
+            const ci = state.zones[updSpaceZone].indexOf(entry);
+            const ok = await updaterConfirmMove(updSpaceZone, ci, updMovingPlateIdx, quickMoveTargetZone, newCampo, p.aseguradora, p.modelo, "first");
             if(!ok) return;
             vibrateSuccess();
             showToast("Vehículo movido");
-            movingPlateIdx = null;
+            updMovingPlateIdx = null;
             // Igual que al editar: nos quedamos en el mismo espacio, sin
             // seguir a la placa hasta su nuevo lugar.
             refreshSpaceGrid(campoLabel);
@@ -7574,7 +7947,7 @@
         confirmBtn.addEventListener("click", doQuickMove);
         quickMoveCampoInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") doQuickMove(); });
         spaceInfoBox.querySelector("#quickMoveCancelBtn").addEventListener("click", ()=>{
-          movingPlateIdx = null;
+          updMovingPlateIdx = null;
           drawSpaceInfo();
         });
         quickMoveCampoInput.focus();
@@ -7597,9 +7970,11 @@
           const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
           const asegInput = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
           const modInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
+          const colInput = spaceInfoBox.querySelector("#updSpaceNewColor");
           if(asegInput && dupEntry.aseguradora && !asegInput.value.trim()) asegInput.value = dupEntry.aseguradora;
           if(dupEntry.modelo && !modInput.value.trim()) modInput.value = dupEntry.modelo;
-          const yaAca = dup.zoneKey === spaceZone && dupCampo === campoLabel;
+          if(colInput && dupEntry.color && !colInput.value.trim()) colInput.value = dupEntry.color;
+          const yaAca = dup.zoneKey === updSpaceZone && dupCampo === campoLabel;
           if(yaAca){
             spaceDupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya está en este mismo ${labelLower}.`;
           } else {
@@ -7612,10 +7987,12 @@
           const recordada = lookupPlateInfo(v);
           const asegInput = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
           const modInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
+          const colInput = spaceInfoBox.querySelector("#updSpaceNewColor");
           let sePreCompleto = false;
           if(recordada){
             if(asegInput && recordada.aseguradora && !asegInput.value.trim()){ asegInput.value = recordada.aseguradora; sePreCompleto = true; }
             if(recordada.modelo && !modInput.value.trim()){ modInput.value = recordada.modelo; sePreCompleto = true; }
+            if(colInput && recordada.color && !colInput.value.trim()){ colInput.value = recordada.color; sePreCompleto = true; }
           }
           if(sePreCompleto){
             spaceSimilarWarn.innerHTML = `<span class="dupWarnIcon">🧠</span><span class="similarList">Datos recordados de un registro anterior de esta placa — podés cambiarlos si hace falta.</span>`;
@@ -7652,12 +8029,15 @@
         const aseguradora = asegField ? asegField.value : "";
         const modeloInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
         const modelo = modeloInput.value;
+        const colorField = spaceInfoBox.querySelector("#updSpaceNewColor");
+        const color = colorField ? colorField.value : "";
         if(!modelo.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
         await runGuarded(spaceAddBtn, "Guardando…", async ()=>{
-          const ok = await updaterAddNew(spaceZone, campoLabel, plateRaw, aseguradora, modelo, "last");
+          const ok = await updaterAddNew(updSpaceZone, campoLabel, plateRaw, aseguradora, modelo, "first", color);
           if(ok){
-            lastAddZoneKey = spaceZone;
+            lastAddZoneKey = updSpaceZone;
             lastAddAseguradora = aseguradora.trim();
+            lastAddColor = color.trim();
             vibrateSuccess();
             showToast("Listo — vehículo en este espacio");
             refreshSpaceGrid(campoLabel);
@@ -7667,16 +8047,16 @@
         });
       }
       spaceAddBtn.addEventListener("click", confirmSpaceAdd);
-      [spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewAseguradora"), spaceInfoBox.querySelector("#updSpaceNewModelo")].filter(Boolean).forEach(inp=>{
+      [spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewAseguradora"), spaceInfoBox.querySelector("#updSpaceNewModelo"), spaceInfoBox.querySelector("#updSpaceNewColor")].filter(Boolean).forEach(inp=>{
         inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmSpaceAdd(); });
       });
 
       const backBtn = spaceInfoBox.querySelector("#spaceBackBtn");
       if(backBtn){
         backBtn.addEventListener("click", ()=>{
-          selectedCampo = "";
-          editingPlateIdx = null;
-          movingPlateIdx = null;
+          updSelectedCampo = "";
+          updEditingPlateIdx = null;
+          updMovingPlateIdx = null;
           spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
           drawSpaceInfo();
         });
@@ -7692,8 +8072,8 @@
     // si la zona por defecto es de lista plana (ej. Recepción/Salida, ahora
     // primera en la lista), hay que consolidarla y entrar directo a verla,
     // en vez de mostrar una cuadrícula vacía.
-    if(SINGLE_BUCKET_ZONES.has(spaceZone)){
-      ensureSinUbicacionConsolidada(spaceZone);
+    if(SINGLE_BUCKET_ZONES.has(updSpaceZone)){
+      ensureSinUbicacionConsolidada(updSpaceZone);
       saveState();
       refreshSpaceGrid(SIN_UBICACION_CAMPO);
     } else {
@@ -7756,10 +8136,17 @@
     btn.addEventListener("mouseleave", cancelTimer);
   }
 
-  async function updaterConfirmMove(zoneKey, ci, pi, newZone, newCampo, newAseguradora, newModelo, position, newPlateRaw){
+  async function updaterConfirmMove(zoneKey, ci, pi, newZone, newCampo, newAseguradora, newModelo, position, newPlateRaw, newColor){
     if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
+    }
+    if(currentUser.role === "actualizacion" && newZone !== SIN_UBICACION_KEY){
+      const permitidas = allowedZonesForCurrentUser();
+      if(permitidas.length && !permitidas.some(z => z.key === newZone)){
+        showToast(`Tu cuenta no tiene acceso a ${zoneInfo(newZone).label}.`);
+        return false;
+      }
     }
     if(currentUser.role === "actualizacion" && !SINGLE_BUCKET_ZONES.has(newZone)){
       // Actualización nunca crea un campo/zona nuevo al mover un vehículo —
@@ -7796,16 +8183,18 @@
     const locationChanged = !(newZone === zoneKey && newCampo === fromCampo);
     const aseguradoraChanged = newAseguradora !== (entry.aseguradora || "");
     const modeloChanged = newModelo !== (entry.modelo || "");
-    if(!locationChanged && !aseguradoraChanged && !modeloChanged && !plateChanged) return false;
+    const colorChanged = newColor !== undefined && newColor !== (entry.color || "");
+    if(!locationChanged && !aseguradoraChanged && !modeloChanged && !colorChanged && !plateChanged) return false;
 
     entry.plate = newPlate;
     entry.aseguradora = newAseguradora;
     entry.modelo = newModelo;
+    if(newColor !== undefined) entry.color = newColor;
     entry.lastUpdated = new Date().toISOString();
 
     if(locationChanged){
       removePlateEntryByRef(zoneKey, campoObj, entry);
-      insertPlateAtPosition(getOrCreateCampo(newZone, newCampo), entry, position || "last");
+      insertPlateAtPosition(getOrCreateCampo(newZone, newCampo), entry, position || "first");
     }
     const descripcion = locationChanged
       ? `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`
@@ -7815,17 +8204,17 @@
     if(locationChanged){
       await logUpdate(entry.plate, zoneKey, fromCampo, newZone, newCampo);
     }
-    rememberPlateInfo(entry.plate, entry.aseguradora, entry.modelo).catch(()=>{});
+    rememberPlateInfo(entry.plate, entry.aseguradora, entry.modelo, entry.color).catch(()=>{});
     return true;
   }
 
-  async function updaterAddNew(zoneKey, campoRaw, plateRaw, aseguradoraRaw, modeloRaw, position){
+  async function updaterAddNew(zoneKey, campoRaw, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw){
     if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
     }
     const campo = campoRaw ? normalizeCampo(campoRaw) : nextAutoCampo(zoneKey);
-    const ok = await addPlateToZone(zoneKey, campo, plateRaw, aseguradoraRaw, modeloRaw, position);
+    const ok = await addPlateToZone(zoneKey, campo, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw);
     if(ok){
       await saveState(true);
       await logUpdate(normalizePlate(plateRaw), null, null, zoneKey, campo);
