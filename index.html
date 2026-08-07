@@ -7112,11 +7112,13 @@
             <label id="updSpaceCampoLabel">Campos</label>
             <div class="spaceGrid" id="updSpaceGrid"></div>
           </details>
+          ${(currentUser.allowedZones && currentUser.allowedZones.length) ? `` : `
           <details class="bulk" id="updZoneFilterDetails" style="margin-top:12px;">
             <summary>Filtrar por zona</summary>
             <div class="updaterZoneFilterRow" id="updZoneFilterRow" style="margin-top:8px;"></div>
           </details>
           <div id="updAllList"></div>
+          `}
         </div>
         <div id="updSpaceInfo"></div>
       </div>
@@ -7128,6 +7130,7 @@
     const allListBox = holder.querySelector("#updAllList");
 
     function drawZoneFilterRow(){
+      if(!zoneFilterRow) return; // cuenta con zonas restringidas: esta sección ni se muestra
       const allRows = buildResumenRows();
       const totalCount = allRows.length;
       const countsByZone = {};
@@ -7158,6 +7161,7 @@
     }
 
     function drawAllList(){
+      if(!allListBox) return; // cuenta con zonas restringidas: esta sección ni se muestra
       const q = listFilterInput.value.trim().toUpperCase();
       let rows = buildResumenRows();
       const totalCount = rows.length;
