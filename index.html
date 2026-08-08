@@ -3136,6 +3136,7 @@
   let storageAvailable = true;
   let storageWarned = false;
   let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
+  let pendingUpdaterSearch = ""; // texto del buscador de Actualización a restaurar después de un refresco, para no perder el filtro que ya tenías escrito
   let pendingResumenState = null; // { zoneKey, onlyToday, sortKey, sortDir } — se usa junto con pendingResumenFilter al refrescar en segundo plano
   const undoStack = []; // { snapshot, description, ts }, máx 10
   const UNDO_LIMIT = 10;
@@ -6884,6 +6885,11 @@
           sortDir: activeSortTh && activeSortTh.classList.contains("sortDesc") ? -1 : 1
         };
       }
+      // El buscador de Actualización filtra "Todos los vehículos" — se
+      // guarda su texto para no perderlo cuando el panel se reconstruye
+      // entero al refrescar.
+      const updSearch = document.getElementById("updSearchInput");
+      if(updSearch && updSearch.value) pendingUpdaterSearch = updSearch.value;
       await loadState();
       if(currentUser.role === "actualizacion"){
         renderUpdaterPanel();
@@ -7955,6 +7961,14 @@
     }
     listFilterInput.addEventListener("input", drawAllList);
     listFilterInput.addEventListener("keyup", drawAllList);
+    // Si veníamos de un refresco con texto ya escrito en el buscador, se
+    // restaura acá — si no, el filtro se perdía cada vez que la pantalla
+    // se reconstruía entera al actualizar.
+    if(pendingUpdaterSearch){
+      listFilterInput.value = pendingUpdaterSearch;
+      pendingUpdaterSearch = "";
+      drawAllList();
+    }
 
     // ---- Zona + espacio: ver quién ya está ahí, editar/quitar, agregar o mover ----
     const spaceZoneChipsBox = holder.querySelector("#updSpaceZoneChips");
