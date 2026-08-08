@@ -5632,16 +5632,6 @@
       ${toggleBtnHtml}
       <div class="dashboardGrid">
         <div class="dashCard" id="dashCardTotalVeh" data-metric="totalVeh" data-value="${totalVeh}"><div class="dashCardValue">${totalVeh}</div><div class="dashCardLabel">Vehículos totales</div><svg class="dashCardSpark" id="sparkTotalVeh" viewBox="0 0 100 28"></svg></div>
-        <div class="dashCard" id="dashCardCampos" data-metric="totalCampos" data-value="${totalCampos}"><div class="dashCardValue">${totalCampos}</div><div class="dashCardLabel">Campos numerados en uso</div><svg class="dashCardSpark" id="sparkTotalCampos" viewBox="0 0 100 28"></svg></div>
-        <div class="dashCard${totalSinAsignar === 0 ? ' dashCardGood' : ''}" id="dashCardSinAsignar" data-metric="totalSinAsignar" data-value="${totalSinAsignar}">
-          ${totalSinAsignar === 0
-            ? `<div class="dashCardGoodMark">✓</div>`
-            : `<div class="dashCardValue">${totalSinAsignar}</div>`
-          }
-          <div class="dashCardLabel">Sin asignar</div>
-          <svg class="dashCardSpark" id="sparkTotalSinAsignar" viewBox="0 0 100 28"></svg>
-        </div>
-        <div class="dashCard"><div class="dashCardValue">${zonasConCapacidad}/${zonasVisibles.length}</div><div class="dashCardLabel">Zonas con capacidad definida</div></div>
       </div>
       <div class="chartCard">
         <h3>🗺️ Mapa del parqueo</h3>
@@ -5762,8 +5752,6 @@
       const ultimos = history.slice(-7);
       if(ultimos.length < 2) return; // recién empieza a juntar datos, todavía no hay tendencia que mostrar
       drawSparkline(document.getElementById("sparkTotalVeh"), ultimos.map(h=>h.totalVeh));
-      drawSparkline(document.getElementById("sparkTotalCampos"), ultimos.map(h=>h.totalCampos));
-      drawSparkline(document.getElementById("sparkTotalSinAsignar"), ultimos.map(h=>h.totalSinAsignar));
     }).catch(()=>{});
 
     if(canEdit()){
