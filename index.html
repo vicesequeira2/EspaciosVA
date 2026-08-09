@@ -2430,6 +2430,7 @@
           <button id="dataHealthBtn">🩺 Salud de datos</button>
           <button id="checkinItemsBtn">📋 Ítems de check-in</button>
           <button id="importExcelBtn">📥 Importar Excel</button>
+          <button id="unifyAsesoresBtn">🧹 Unificar nombres de asesor</button>
           <button id="testPhotoReportBtn">🧪 Probar compartir fotos</button>
         </div>
       </div>
@@ -2593,6 +2594,19 @@
     <div class="modalActions" style="margin-top:14px;">
       <button class="primaryBtn" id="importExcelConfirmBtn" disabled>Importar</button>
       <button class="secondaryBtn" id="importExcelCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="unifyAsesoresModal">
+  <div class="modalCard modalCardWide">
+    <h3>🧹 Unificar nombres de asesor</h3>
+    <p style="font-size:0.78rem; color:var(--muted);">
+      Busca casos como "Dani" y "Daniel" guardados como si fueran personas distintas, y cambia la versión corta por la versión larga en todos los vehículos donde aparezca. No toca nada hasta que confirmes cada caso.
+    </p>
+    <div id="unifyAsesoresBody" style="margin-top:10px;"></div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="secondaryBtn" id="unifyAsesoresCloseBtn">Cerrar</button>
     </div>
   </div>
 </div>
@@ -4838,6 +4852,7 @@
                 </label>
               </div>
               <div class="dupWarn" id="zoneEditDupWarn_${abbr}" style="display:none;"></div>
+              <div class="similarWarn" id="zoneEditAsesorWarn_${abbr}" style="display:none;"></div>
               <div class="reqFieldHint"><span class="labeledFieldReq">*</span> obligatorio</div>
               <div class="editMoveSection">
                 <div class="historyMeta" id="zoneEditMoveCount_${abbr}"></div>
@@ -4933,6 +4948,7 @@
           <div class="dupWarn" id="zoneNewDupWarn_${abbr}" style="display:none;"></div>
           <div class="similarWarn" id="zoneNewSimilarWarn_${abbr}" style="display:none;"></div>
           <div class="similarWarn" id="zoneNewModelWarn_${abbr}" style="display:none;"></div>
+          <div class="similarWarn" id="zoneNewAsesorWarn_${abbr}" style="display:none;"></div>
           <div class="reqFieldHint"><span class="labeledFieldReq">*</span> obligatorio</div>
           <div class="circulacionField">
             <span class="labeledFieldLabel">¿Puede circular?</span>
@@ -5074,7 +5090,11 @@
         wireColorDot(detailBox.querySelector(`#zoneEditColor_${abbr}`), detailBox.querySelector(`#zoneEditColorDot_${abbr}`));
         wireCirculacionToggle(detailBox.querySelector(`#zoneEditCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneEditCirculacion_${abbr}`));
         const zoneAsegInputEdit = detailBox.querySelector(`#zoneEditAseg_${abbr}`);
-        if(zoneAsegInputEdit) zoneAsegInputEdit.addEventListener("blur", ()=> completeAsesorAbbreviation(zoneAsegInputEdit));
+        const zoneAsegWarnEdit = detailBox.querySelector(`#zoneEditAsesorWarn_${abbr}`);
+        if(zoneAsegInputEdit){
+          zoneAsegInputEdit.addEventListener("blur", ()=> completeAsesorAbbreviation(zoneAsegInputEdit, zoneAsegWarnEdit));
+          zoneAsegInputEdit.addEventListener("input", ()=>{ if(zoneAsegWarnEdit) zoneAsegWarnEdit.style.display = "none"; });
+        }
         const editMoveGridAdmin = detailBox.querySelector(`#zoneEditGrid_${abbr}`);
         drawMiniSpaceGrid(editMoveGridAdmin, editTargetZone, editCampoInputAdmin);
         editZoneChipsBox.querySelectorAll(".zoneChipBtn").forEach(btn=>{
@@ -5291,7 +5311,11 @@
       wireColorDot(detailBox.querySelector(`#zoneNewColor_${abbr}`), detailBox.querySelector(`#zoneNewColorDot_${abbr}`));
       wireCirculacionToggle(detailBox.querySelector(`#zoneNewCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneNewCirculacion_${abbr}`));
       const zoneAsegInputNew = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`);
-      if(zoneAsegInputNew) zoneAsegInputNew.addEventListener("blur", ()=> completeAsesorAbbreviation(zoneAsegInputNew));
+      const zoneAsegWarnNew = detailBox.querySelector(`#zoneNewAsesorWarn_${abbr}`);
+      if(zoneAsegInputNew){
+        zoneAsegInputNew.addEventListener("blur", ()=> completeAsesorAbbreviation(zoneAsegInputNew, zoneAsegWarnNew));
+        zoneAsegInputNew.addEventListener("input", ()=>{ if(zoneAsegWarnNew) zoneAsegWarnNew.style.display = "none"; });
+      }
       addToggleBtn.addEventListener("click", ()=>{
         addBox.style.display = "block";
         addToggleBtn.style.display = "none";
@@ -6572,12 +6596,41 @@
     if(plateRegistryCache){
       Object.values(plateRegistryCache).forEach(r=>{ if(r.aseguradora && r.aseguradora.trim()) set.add(r.aseguradora.trim()); });
     }
-    return [...set].sort((a,b)=> a.localeCompare(b, "es"));
+    // Si "Dani" y "Daniel" quedaron guardados los dos (de antes de que
+    // existiera el autocompletado, o porque nunca se le sacó el foco al
+    // campo), no tiene sentido sugerir ambos como si fueran personas
+    // distintas — se oculta la versión corta de la lista de sugerencias
+    // cuando hay EXACTAMENTE una versión más larga que empieza igual.
+    const todos = [...set];
+    const filtrados = todos.filter(nombre=>{
+      const nombreNorm = nombre.toLowerCase();
+      const masLargos = todos.filter(otro => otro.length > nombre.length && otro.toLowerCase().startsWith(nombreNorm));
+      return masLargos.length !== 1; // se oculta solo si hay UNA sola opción más larga (sin ambigüedad)
+    });
+    return filtrados.sort((a,b)=> a.localeCompare(b, "es"));
   }
   function refreshAsesorSuggestions(){
     const dl = document.getElementById("asesorSuggestions");
     if(!dl) return;
     dl.innerHTML = getKnownAsesores().map(m=>`<option value="${escapeAttrLike(m)}">`).join("");
+  }
+  // Distancia de edición simple (cuántas letras hay que cambiar/agregar/
+  // quitar para pasar de una palabra a la otra) — sirve para detectar
+  // errores de tipeo sin tener que armar una lista de "nombres parecidos"
+  // a mano.
+  function distanciaEdicion(a, b){
+    const m = a.length, n = b.length;
+    const fila = Array.from({length: n+1}, (_,j)=>j);
+    for(let i=1;i<=m;i++){
+      let anterior = fila[0];
+      fila[0] = i;
+      for(let j=1;j<=n;j++){
+        const temp = fila[j];
+        fila[j] = a[i-1] === b[j-1] ? anterior : 1 + Math.min(anterior, fila[j], fila[j-1]);
+        anterior = temp;
+      }
+    }
+    return fila[n];
   }
   // Si lo que se escribió es el comienzo exacto de un nombre más largo que
   // YA existe (ej. "Jeff" vs "Jeffrey"), se completa solo, para que todos
@@ -6587,7 +6640,13 @@
   // ningún otro, se deja como está (podría ser un nombre corto real).
   // Cuando el prefijo calza con MÁS DE UN nombre distinto (ambiguo, ej.
   // "Jeff" podría ser "Jeffrey" o "Jefferson"), tampoco se completa solo.
-  function completeAsesorAbbreviation(input){
+  // Si no hay ni coincidencia exacta ni prefijo sin ambigüedad, pero el
+  // nombre escrito se parece MUCHO a uno ya guardado (probable error de
+  // tipeo, ej. "Danniel" en vez de "Daniel"), se avisa sin bloquear nada
+  // — así alguien nuevo que no conoce cómo se escriben los nombres del
+  // equipo no termina creando una variante más por accidente.
+  function completeAsesorAbbreviation(input, warnDiv){
+    if(warnDiv) warnDiv.style.display = "none";
     if(!input) return;
     const escrito = input.value.trim();
     if(!escrito) return;
@@ -6598,6 +6657,22 @@
     if(candidatos.length === 1){
       input.value = candidatos[0];
       showToast(`Se completó a "${candidatos[0]}"`);
+      return;
+    }
+    if(!warnDiv || conocidos.length === 0) return;
+    let mejor = null, mejorDistancia = Infinity;
+    conocidos.forEach(n=>{
+      if(n.toLowerCase() === escritoNorm) return;
+      const d = distanciaEdicion(escritoNorm, n.toLowerCase());
+      if(d < mejorDistancia){ mejorDistancia = d; mejor = n; }
+    });
+    // Umbral chico a propósito — nombres cortos difieren en pocas letras
+    // fácilmente (ej. "Ana" y "Eva"), así que solo se avisa cuando la
+    // diferencia es realmente mínima en relación al largo del nombre.
+    const umbral = escrito.length <= 4 ? 1 : 2;
+    if(mejor && mejorDistancia > 0 && mejorDistancia <= umbral){
+      warnDiv.innerHTML = `<span class="dupWarnIcon">💭</span> ¿Quisiste decir "${escapeHtml(mejor)}"? Ya está guardado así.`;
+      warnDiv.style.display = "flex";
     }
   }
 
@@ -7351,6 +7426,78 @@
     pushUndo(snap, `Importar Excel: ${agregados} nuevo(s), ${actualizados} actualizado(s)`);
     return { agregados, actualizados, sinCambios };
   }
+
+  // Busca pares "Dani" / "Daniel" ya guardados en los datos reales (no solo
+  // en la lista de sugerencias) — mismo criterio sin ambigüedad: solo se
+  // ofrece unificar si hay EXACTAMENTE una versión más larga que empieza
+  // igual que la corta.
+  function findAsesorPairsToUnify(){
+    const set = new Set();
+    ZONES.forEach(z=>{
+      (state.zones[z.key] || []).forEach(c=>{
+        c.plates.forEach(p=>{ if(p.aseguradora && p.aseguradora.trim()) set.add(p.aseguradora.trim()); });
+      });
+    });
+    const todos = [...set];
+    const pares = [];
+    todos.forEach(corto=>{
+      const cortoNorm = corto.toLowerCase();
+      const masLargos = todos.filter(otro => otro.length > corto.length && otro.toLowerCase().startsWith(cortoNorm));
+      if(masLargos.length === 1) pares.push({ corto, largo: masLargos[0] });
+    });
+    return pares;
+  }
+  function openUnifyAsesoresModal(){
+    if(!guardEdit()) return;
+    const overlay = document.getElementById("unifyAsesoresModal");
+    const body = document.getElementById("unifyAsesoresBody");
+    function draw(){
+      const pares = findAsesorPairsToUnify();
+      if(pares.length === 0){
+        body.innerHTML = `<div class="dashCardGood" style="padding:14px; text-align:center; border-radius:10px;">✓ No se encontró ningún caso para unificar.</div>`;
+        return;
+      }
+      body.innerHTML = pares.map((par,i)=>{
+        const cantidad = buildResumenRows().filter(r=>r.aseguradora === par.corto).length;
+        return `
+          <div class="historyItem" style="margin-bottom:8px;">
+            <strong>"${escapeHtml(par.corto)}"</strong> → <strong>"${escapeHtml(par.largo)}"</strong>
+            <div class="historyMeta">${cantidad} vehículo(s) con "${escapeHtml(par.corto)}"</div>
+            <button type="button" class="secondaryBtn unifyPairBtn" data-idx="${i}" style="margin-top:6px; width:100%;">Unificar a "${escapeHtml(par.largo)}"</button>
+          </div>
+        `;
+      }).join("");
+      body.querySelectorAll(".unifyPairBtn").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          const par = pares[parseInt(btn.getAttribute("data-idx"),10)];
+          if(!confirm(`¿Cambiar "${par.corto}" por "${par.largo}" en todos los vehículos donde aparezca?`)) return;
+          const snap = snapshotZones();
+          let cambiados = 0;
+          ZONES.forEach(z=>{
+            (state.zones[z.key] || []).forEach(c=>{
+              c.plates.forEach(p=>{
+                if(p.aseguradora && p.aseguradora.trim() === par.corto){
+                  p.aseguradora = par.largo;
+                  p.lastUpdated = new Date().toISOString();
+                  cambiados++;
+                }
+              });
+            });
+          });
+          pushUndo(snap, `Unificar asesor "${par.corto}" → "${par.largo}" (${cambiados} vehículo(s))`);
+          await saveState(true);
+          showToast(`"${par.corto}" → "${par.largo}" en ${cambiados} vehículo(s)`);
+          draw();
+        });
+      });
+    }
+    draw();
+    overlay.classList.add("show");
+  }
+  document.getElementById("unifyAsesoresBtn").addEventListener("click", openUnifyAsesoresModal);
+  document.getElementById("unifyAsesoresCloseBtn").addEventListener("click", ()=>{
+    document.getElementById("unifyAsesoresModal").classList.remove("show");
+  });
 
   function openImportExcelModal(){
     if(!guardEdit()) return;
@@ -8575,6 +8722,7 @@
                 </label>
               </div>
               <div class="dupWarn" id="spaceEditDupWarn" style="display:none;"></div>
+              <div class="similarWarn" id="spaceEditAsesorWarn" style="display:none;"></div>
               <div class="reqFieldHint"><span class="labeledFieldReq">*</span> obligatorio</div>
               <div class="editMoveSection">
                 <div class="historyMeta" id="spaceEditMoveCount"></div>
@@ -8676,6 +8824,7 @@
           <div class="dupWarn" id="updSpaceDupWarn" style="display:none;"></div>
           <div class="similarWarn" id="updSpaceSimilarWarn" style="display:none;"></div>
           <div class="similarWarn" id="updSpaceModelWarn" style="display:none;"></div>
+          <div class="similarWarn" id="updSpaceAsesorWarn" style="display:none;"></div>
           <div class="reqFieldHint"><span class="labeledFieldReq">*</span> obligatorio</div>
           <div class="circulacionField">
             <span class="labeledFieldLabel">¿Puede circular?</span>
@@ -8711,7 +8860,11 @@
       wireColorDot(spaceInfoBox.querySelector("#updSpaceNewColor"), spaceInfoBox.querySelector("#updSpaceNewColorDot"));
       wireCirculacionToggle(spaceInfoBox.querySelector("#updSpaceNewCirculacionToggle"), spaceInfoBox.querySelector("#updSpaceNewCirculacion"));
       const updAsegInputNew = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
-      if(updAsegInputNew) updAsegInputNew.addEventListener("blur", ()=> completeAsesorAbbreviation(updAsegInputNew));
+      const updAsegWarnNew = spaceInfoBox.querySelector("#updSpaceAsesorWarn");
+      if(updAsegInputNew){
+        updAsegInputNew.addEventListener("blur", ()=> completeAsesorAbbreviation(updAsegInputNew, updAsegWarnNew));
+        updAsegInputNew.addEventListener("input", ()=>{ if(updAsegWarnNew) updAsegWarnNew.style.display = "none"; });
+      }
       addToggleBtn.addEventListener("click", ()=>{
         addBox.style.display = "block";
         addToggleBtn.style.display = "none";
@@ -8799,7 +8952,11 @@
         const editCampoInput = spaceInfoBox.querySelector("#spaceEditCampo");
         wireColorDot(spaceInfoBox.querySelector("#spaceEditColor"), spaceInfoBox.querySelector("#spaceEditColorDot"));
         wireCirculacionToggle(spaceInfoBox.querySelector("#spaceEditCirculacionToggle"), spaceInfoBox.querySelector("#spaceEditCirculacion"));
-        if(editAsegInput) editAsegInput.addEventListener("blur", ()=> completeAsesorAbbreviation(editAsegInput));
+        const editAsegWarn = spaceInfoBox.querySelector("#spaceEditAsesorWarn");
+        if(editAsegInput){
+          editAsegInput.addEventListener("blur", ()=> completeAsesorAbbreviation(editAsegInput, editAsegWarn));
+          editAsegInput.addEventListener("input", ()=>{ if(editAsegWarn) editAsegWarn.style.display = "none"; });
+        }
         const moveToggleBtn = spaceInfoBox.querySelector("#spaceEditMoveToggle");
         const moveBox = spaceInfoBox.querySelector("#spaceEditMoveBox");
         const originalPlate = entry.plates[updEditingPlateIdx].plate;
