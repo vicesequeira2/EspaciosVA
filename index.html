@@ -6211,6 +6211,13 @@
     return { status, notes: p.checkin.notes || "" };
   }
 
+  // Excel no permite : \ / ? * [ ] en el nombre de una hoja (por ejemplo,
+  // "Recepción / Salida" rompía la exportación completa por la barra) —
+  // se reemplazan esos caracteres y se recorta a los 31 que Excel permite.
+  function sanitizeSheetName(nombre){
+    const limpio = String(nombre || "Hoja").replace(/[:\\/?*[\]]/g, "-").trim();
+    return (limpio || "Hoja").substring(0, 31);
+  }
   function addZoneSheet(wb, z, fechaLarga, horaLarga){
     const campos = state.zones[z.key] || [];
     const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
@@ -6251,7 +6258,7 @@
       const lastColLetter = String.fromCharCode(65 + lastCol);
       ws["!autofilter"] = { ref: `A4:${lastColLetter}${data.length}` };
     }
-    XLSX.utils.book_append_sheet(wb, ws, z.label.substring(0,31));
+    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(z.label));
   }
 
   // Libro de Excel con una sola zona — para compartir un pedazo puntual del
@@ -6377,9 +6384,18 @@
 
   document.getElementById("exportBtn").addEventListener("click", ()=>{
     if(!guardExport()) return;
-    const { wb, duplicadasCount, fileName } = buildInventoryWorkbook();
-    XLSX.writeFile(wb, fileName);
-    showToast(duplicadasCount > 0 ? `Excel generado — se detectaron ${duplicadasCount} placa(s) duplicada(s)` : "Excel generado");
+    if(typeof XLSX === "undefined"){
+      showToast("No se pudo cargar la herramienta de Excel — revisá tu conexión a internet y volvé a intentar.", 6000);
+      return;
+    }
+    try{
+      const { wb, duplicadasCount, fileName } = buildInventoryWorkbook();
+      XLSX.writeFile(wb, fileName);
+      showToast(duplicadasCount > 0 ? `Excel generado — se detectaron ${duplicadasCount} placa(s) duplicada(s)` : "Excel generado");
+    }catch(e){
+      console.error("Error al generar el Excel", e);
+      showToast("No se pudo generar el Excel. Intentá de nuevo.", 5000);
+    }
   });
 
   const exportZoneBtn = document.getElementById("exportZoneBtn");
@@ -6390,10 +6406,19 @@
         showToast("Elegí una zona primero para exportarla sola");
         return;
       }
-      const result = buildSingleZoneWorkbook(activeTab);
-      if(!result) return;
-      XLSX.writeFile(result.wb, result.fileName);
-      showToast(`Excel de ${zoneInfo(activeTab).label} generado`);
+      if(typeof XLSX === "undefined"){
+        showToast("No se pudo cargar la herramienta de Excel — revisá tu conexión a internet y volvé a intentar.", 6000);
+        return;
+      }
+      try{
+        const result = buildSingleZoneWorkbook(activeTab);
+        if(!result) return;
+        XLSX.writeFile(result.wb, result.fileName);
+        showToast(`Excel de ${zoneInfo(activeTab).label} generado`);
+      }catch(e){
+        console.error("Error al generar el Excel de la zona", e);
+        showToast("No se pudo generar el Excel. Intentá de nuevo.", 5000);
+      }
     });
   }
 
