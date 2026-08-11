@@ -1072,6 +1072,11 @@
     padding:11px 14px; font-weight:700; font-size:0.88rem; cursor:pointer;
   }
   .modalCard .primaryBtn{background: var(--ink); color:white;}
+  #photoReportShareBtn:disabled{
+    background: var(--surface-2);
+    color: var(--muted);
+    cursor:default;
+  }
   .modalCard .secondaryBtn{background:var(--surface-3); color:var(--ink);}
   .modalCard .dangerBtn{background:none; color:var(--danger); text-decoration:underline; padding:8px 0;}
   .modalCard label{
@@ -1422,6 +1427,17 @@
     margin-bottom:18px;
   }
   .allAreasZoneBlock:last-child{ margin-bottom:0; }
+  .nestedBreadcrumbLink{
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-style:dotted;
+    color: var(--muted);
+  }
+  .nestedBreadcrumbLink:last-child{
+    color: var(--ink);
+    font-weight:700;
+    text-decoration:none;
+  }
   .allAreasZoneHeader{
     display:flex; align-items:center; gap:7px;
     font-weight:800;
@@ -1509,17 +1525,17 @@
   }
   .photoReportSlot{
     flex:1 1 0;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 4 / 3;
     border:2px dashed var(--border);
     border-radius: var(--radius);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:6px;
+    gap:3px;
     cursor:pointer;
     background-size:cover;
     background-position:center;
     color: var(--muted);
     text-align:center;
-    padding:8px;
+    padding:6px;
   }
   .photoReportSlot.hasPhoto{
     border-style:solid;
@@ -1527,8 +1543,10 @@
     color:#fff;
     text-shadow: 0 1px 3px rgba(0,0,0,0.6);
   }
-  .photoReportSlotIcon{ font-size:1.6rem; }
+  .photoReportSlotIcon{ font-size:1.3rem; }
   .photoReportSlotText{ font-size:0.72rem; font-weight:700; }
+  .photoReportSlotHint{ font-size:0.62rem; font-weight:500; opacity:0.75; }
+  .photoReportSlot.hasPhoto .photoReportSlotHint{ display:none; }
   .historyItem{
     background:var(--surface-2); border-radius:8px; padding:8px 10px;
     font-size:0.78rem; line-height:1.4;
@@ -2431,6 +2449,7 @@
           <button id="checkinItemsBtn">📋 Ítems de check-in</button>
           <button id="importExcelBtn">📥 Importar Excel</button>
           <button id="unifyAsesoresBtn">🧹 Unificar nombres de asesor</button>
+          <button id="unifyModelosBtn">🧹 Unificar nombres de modelo</button>
           <button id="testPhotoReportBtn">🧪 Probar compartir fotos</button>
         </div>
       </div>
@@ -2515,17 +2534,20 @@
         <input type="file" accept="image/*" capture="environment" id="photoReportInput1" style="display:none;">
         <span class="photoReportSlotIcon">📷</span>
         <span class="photoReportSlotText">Foto 1</span>
+        <span class="photoReportSlotHint">Tocá para tomar foto</span>
       </label>
       <label class="photoReportSlot" id="photoReportSlot2">
         <input type="file" accept="image/*" capture="environment" id="photoReportInput2" style="display:none;">
         <span class="photoReportSlotIcon">📷</span>
         <span class="photoReportSlotText">Foto 2 (opcional)</span>
+        <span class="photoReportSlotHint">Tocá para tomar foto</span>
       </label>
     </div>
     <div class="modalActions" style="margin-top:16px;">
       <button class="primaryBtn" id="photoReportShareBtn" disabled>Compartir</button>
       <button class="secondaryBtn" id="photoReportCloseBtn">Cerrar</button>
     </div>
+    <p class="reqFieldHint" id="photoReportShareHint" style="text-align:center; margin-top:6px;">Elegí al menos una foto para poder compartir</p>
   </div>
 </div>
 
@@ -2607,6 +2629,19 @@
     <div id="unifyAsesoresBody" style="margin-top:10px;"></div>
     <div class="modalActions" style="margin-top:14px;">
       <button class="secondaryBtn" id="unifyAsesoresCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="unifyModelosModal">
+  <div class="modalCard modalCardWide">
+    <h3>🧹 Unificar nombres de modelo</h3>
+    <p style="font-size:0.78rem; color:var(--muted);">
+      Busca el mismo modelo escrito con distinta mayúscula/minúscula (ej. "Corolla Cross" y "COROLLA CROSS"), y te deja elegir a cuál forma unificarlos. No toca nada hasta que confirmes cada caso.
+    </p>
+    <div id="unifyModelosBody" style="margin-top:10px;"></div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="secondaryBtn" id="unifyModelosCloseBtn">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2972,6 +3007,13 @@
   // Zonas que Búsqueda no debe ver en ningún lado (Dashboard, Resumen,
   // buscador) — siguen existiendo normalmente para Admin y Actualización.
   const HIDDEN_FROM_BUSQUEDA = new Set(["Recepcion", "TallerPintura"]);
+  // Zonas con 3 niveles en vez del campo plano de siempre: campo → área →
+  // fila. Los vehículos pueden vivir en CUALQUIER nivel (un campo puede
+  // tener vehículos propios además de áreas adentro; una área puede tener
+  // vehículos propios además de filas). Cada campo/área que use esto
+  // agrega un arreglo "areas"/"filas" opcional, sin tocar el modelo de
+  // datos de las demás zonas (que siguen exactamente igual que siempre).
+  const NESTED_ZONES = new Set(["Recepcion", "TallerPintura"]);
   function visibleZonesForCurrentUser(){
     if(currentUser && currentUser.role === "consulta"){
       return ZONES.filter(z => !HIDDEN_FROM_BUSQUEDA.has(z.key));
@@ -3158,6 +3200,15 @@
   let adminEditingPlateIdx = null;
   let adminMovingPlateIdx = null;
   let adminReorderCamposMode = false;
+  // Navegación campo → área → fila, solo para NESTED_ZONES (Taller y
+  // Recepción). Se reinicia cada vez que cambiás de campo (ver
+  // renderZonePanel), igual que adminSelectedCi se reinicia al cambiar de
+  // zona.
+  let adminSelectedAreaIdx = null;
+  let adminSelectedFilaIdx = null;
+  let adminNestedEditingIdx = null; // índice de vehículo en edición, dentro del nivel (campo/área/fila) que se esté viendo
+  let adminNestedMovingIdx = null;
+  let adminNestedCampoKeyTracked = null; // a qué campo corresponde adminSelectedAreaIdx/FilaIdx
   let updSelectedCampo = "";
   let updEditingPlateIdx = null;
   let updMovingPlateIdx = null;
@@ -4176,7 +4227,7 @@
     const fecha = new Date().toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
     const detalles = [
       modelo ? `Modelo: ${escapeHtml(modelo)}` : "",
-      color ? `Color: ${escapeHtml(color)}` : "",
+      color ? `Color: ${escapeHtml(color)}${guessColorHex(color) ? ` <span class="plateColorDot" style="background:${guessColorHex(color)}"></span>` : ""}` : "",
       aseguradora ? `Asesor: ${escapeHtml(aseguradora)}` : ""
     ].filter(Boolean).join(" · ");
     const circulacionTag = circulacion === "puede"
@@ -4203,6 +4254,12 @@
     closeBtn.textContent = isAutoPrompt ? "Omitir" : "Cerrar";
 
     let file1 = null, file2 = null;
+    const shareHint = document.getElementById("photoReportShareHint");
+    function updateShareState(){
+      const hayFoto = !!(file1 || file2);
+      shareBtn.disabled = !hayFoto;
+      if(shareHint) shareHint.style.display = hayFoto ? "none" : "block";
+    }
     function resetSlots(){
       file1 = null; file2 = null;
       input1.value = ""; input2.value = "";
@@ -4210,7 +4267,7 @@
       slot1.querySelector(".photoReportSlotText").textContent = "Foto 1";
       slot2.classList.remove("hasPhoto"); slot2.style.backgroundImage = "";
       slot2.querySelector(".photoReportSlotText").textContent = "Foto 2 (opcional)";
-      shareBtn.disabled = true;
+      updateShareState();
     }
     resetSlots();
 
@@ -4221,7 +4278,7 @@
       slot1.style.backgroundImage = `url(${URL.createObjectURL(f)})`;
       slot1.classList.add("hasPhoto");
       slot1.querySelector(".photoReportSlotText").textContent = "✓ Foto 1";
-      shareBtn.disabled = !(file1 || file2);
+      updateShareState();
     }
     function onInput2Change(){
       const f = input2.files && input2.files[0];
@@ -4230,7 +4287,7 @@
       slot2.style.backgroundImage = `url(${URL.createObjectURL(f)})`;
       slot2.classList.add("hasPhoto");
       slot2.querySelector(".photoReportSlotText").textContent = "✓ Foto 2";
-      shareBtn.disabled = !(file1 || file2);
+      updateShareState();
     }
     async function onShare(){
       if(shareBtn.disabled) return; // ya está compartiendo, evita el doble toque
@@ -4276,7 +4333,7 @@
           showToast("No se pudo compartir.");
         }
       }finally{
-        shareBtn.disabled = !(file1 || file2);
+        updateShareState();
         shareBtn.textContent = textoOriginalBtn;
       }
     }
@@ -4825,6 +4882,294 @@
       });
     }
 
+    // ---- Vista anidada campo → área → fila (solo Taller y Recepción) ----
+    // Reutiliza el mismo contenedor visual (detailBox) que la vista de
+    // campo normal, pero navega un nivel más adentro: el campo puede tener
+    // vehículos propios Y una lista de áreas; cada área puede tener
+    // vehículos propios Y una lista de filas; la fila es el nivel más
+    // profundo, con su propia lista de vehículos.
+    function drawNestedZoneDetail(campoObj){
+      // Si el campo seleccionado cambió desde la última vez, no tiene
+      // sentido arrastrar qué área/fila estabas viendo de otro campo.
+      if(adminNestedCampoKeyTracked !== campoObj.campo){
+        adminSelectedAreaIdx = null;
+        adminSelectedFilaIdx = null;
+        adminNestedEditingIdx = null;
+        adminNestedMovingIdx = null;
+      }
+      adminNestedCampoKeyTracked = campoObj.campo;
+
+      if(!campoObj.areas) campoObj.areas = [];
+      let areaObj = null, filaObj = null;
+      if(adminSelectedAreaIdx !== null && campoObj.areas[adminSelectedAreaIdx]){
+        areaObj = campoObj.areas[adminSelectedAreaIdx];
+        if(!areaObj.filas) areaObj.filas = [];
+        if(adminSelectedFilaIdx !== null && areaObj.filas[adminSelectedFilaIdx]){
+          filaObj = areaObj.filas[adminSelectedFilaIdx];
+        }
+      } else {
+        adminSelectedAreaIdx = null;
+        adminSelectedFilaIdx = null;
+      }
+
+      // El "contenedor actual" es lo más profundo que esté seleccionado:
+      // la fila si hay una elegida, si no el área, si no el campo mismo.
+      const contenedor = filaObj || areaObj || campoObj;
+      if(!contenedor.plates) contenedor.plates = [];
+      const nivelActual = filaObj ? "fila" : (areaObj ? "área" : "campo");
+      const hijos = filaObj ? null : (areaObj ? areaObj.filas : campoObj.areas);
+      const nombreHijo = areaObj ? "fila" : "área";
+
+      const migaHtml = `
+        <span class="nestedBreadcrumbLink" data-nivel="campo">${escapeHtml(campoObj.campo)}</span>
+        ${areaObj ? ` › <span class="nestedBreadcrumbLink" data-nivel="area">${escapeHtml(areaObj.area)}</span>` : ``}
+        ${filaObj ? ` › <span class="nestedBreadcrumbLink" data-nivel="fila">${escapeHtml(filaObj.fila)}</span>` : ``}
+      `;
+
+      const plateRowsHtml = contenedor.plates.length ? contenedor.plates.map((p, idx)=>{
+        if(idx === adminNestedEditingIdx){
+          return `
+            <div class="spaceEditForm" data-idx="${idx}">
+              <div class="labeledFieldRow">
+                <label class="labeledFieldBox" style="flex:1.3;">
+                  <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
+                  <input type="text" id="nestedEditPlaca_${abbr}" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" autocapitalize="characters">
+                </label>
+                <label class="labeledFieldBox" style="flex:1;">
+                  <span class="labeledFieldLabel">Asesor</span>
+                  <input type="text" id="nestedEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" list="asesorSuggestions">
+                </label>
+              </div>
+              <div class="labeledFieldRow">
+                <label class="labeledFieldBox" style="flex:1.3;">
+                  <span class="labeledFieldLabel">Modelo<span class="labeledFieldReq">*</span></span>
+                  <input type="text" id="nestedEditModelo_${abbr}" class="reqField" value="${escapeHtml(p.modelo || "")}" list="modelSuggestions">
+                </label>
+                <label class="labeledFieldBox" style="flex:1;">
+                  <span class="labeledFieldLabel">Color</span>
+                  <div class="colorFieldWithDot">
+                    <input type="text" id="nestedEditColor_${abbr}" value="${escapeHtml(p.color || "")}" list="colorSuggestions">
+                    <span class="colorPreviewDot" id="nestedEditColorDot_${abbr}"></span>
+                  </div>
+                </label>
+              </div>
+              <div class="modalActions" style="margin-top:10px; flex-direction:row; gap:8px;">
+                <button type="button" class="primaryBtn" id="nestedEditSaveBtn_${abbr}" style="flex:1;">Guardar</button>
+                <button type="button" class="secondaryBtn" id="nestedEditCancelBtn_${abbr}" style="flex:1;">Cancelar</button>
+                <button type="button" class="dangerBtn" id="nestedEditRemoveBtn_${abbr}" style="flex:0 0 auto;" title="Quitar">✕</button>
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="spacePlateRow" data-search="${escapeAttrLike((p.plate+" "+(p.aseguradora||"")+" "+(p.modelo||"")+" "+(p.color||"")).toUpperCase())}">
+            <div class="spacePlateInfo">
+              <span class="platePlateText">${escapeHtml(p.plate)}</span>${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}
+            </div>
+            <div class="spacePlateActions">
+              <button type="button" class="spaceEditBtn nestedEditBtn_${abbr}" data-idx="${idx}" title="Editar">✏️</button>
+              <button type="button" class="spaceRemoveBtn nestedRemoveBtn_${abbr}" data-idx="${idx}" title="Quitar">✕</button>
+            </div>
+          </div>
+        `;
+      }).join("") : `<div class="dashEmptyNote">Sin vehículos acá todavía.</div>`;
+
+      const hijosGridHtml = hijos !== null ? `
+        <div class="editMoveSection">
+          <div class="allAreasZoneHeader" style="margin-bottom:6px;">${nombreHijo === "área" ? "Áreas" : "Filas"} dentro de ${nivelActual === "campo" ? "este campo" : "esta área"}</div>
+          ${hijos.length ? `<div class="spaceGrid">${hijos.map((h,hi)=>{
+            const nombre = nombreHijo === "área" ? h.area : h.fila;
+            const cantidadProp = (h.plates||[]).length;
+            const cantidadHijos = nombreHijo === "área" ? (h.filas||[]).reduce((a,f)=>a+(f.plates||[]).length,0) : 0;
+            const total = cantidadProp + cantidadHijos;
+            return `<button type="button" class="spaceGridBtn ${total>0 ? "partial" : "empty"}" data-hidx="${hi}"><span class="spaceGridLabel">${escapeHtml(nombre)}</span><span class="spaceGridCount">${total}</span></button>`;
+          }).join("")}</div>` : `<div class="dashEmptyNote">Sin ${nombreHijo === "área" ? "áreas" : "filas"} todavía.</div>`}
+          <button type="button" class="linkBackBtn" id="nestedAddChildBtn_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar ${nombreHijo}</button>
+        </div>
+      ` : ``;
+
+      detailBox.innerHTML = `
+        <button type="button" class="linkBackBtn" id="nestedBackBtn_${abbr}" style="margin-bottom:8px; text-decoration:none; font-weight:700;">← Volver</button>
+        <div class="chartCard" style="border-left:4px solid ${info.color};">
+          <div class="historyMeta" style="font-size:0.8rem; margin-bottom:4px;">${migaHtml}</div>
+          <h3 style="margin:0;">${escapeHtml(filaObj ? filaObj.fila : (areaObj ? areaObj.area : campoObj.campo))}</h3>
+          <div class="historyMeta">${contenedor.plates.length} vehículo(s) acá directamente</div>
+        </div>
+        <div style="margin-top:12px;">${plateRowsHtml}</div>
+        <button type="button" class="linkBackBtn" id="nestedAddVehBtn_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar vehículo acá</button>
+        <div id="nestedAddVehBox_${abbr}" style="display:none; margin-top:8px;">
+          <div class="labeledFieldRow">
+            <label class="labeledFieldBox" style="flex:1.3;">
+              <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
+              <input type="text" id="nestedNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters">
+            </label>
+            <label class="labeledFieldBox" style="flex:1;">
+              <span class="labeledFieldLabel">Asesor</span>
+              <input type="text" id="nestedNewAseg_${abbr}" list="asesorSuggestions">
+            </label>
+          </div>
+          <div class="labeledFieldRow">
+            <label class="labeledFieldBox" style="flex:1.3;">
+              <span class="labeledFieldLabel">Modelo<span class="labeledFieldReq">*</span></span>
+              <input type="text" id="nestedNewModelo_${abbr}" class="reqField" list="modelSuggestions">
+            </label>
+            <label class="labeledFieldBox" style="flex:1;">
+              <span class="labeledFieldLabel">Color</span>
+              <div class="colorFieldWithDot">
+                <input type="text" id="nestedNewColor_${abbr}" list="colorSuggestions">
+                <span class="colorPreviewDot" id="nestedNewColorDot_${abbr}"></span>
+              </div>
+            </label>
+          </div>
+          <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
+            <button type="button" class="primaryBtn" id="nestedAddConfirmBtn_${abbr}" style="flex:1;">Agregar acá</button>
+            <button type="button" class="secondaryBtn" id="nestedAddCancelBtn_${abbr}">Cancelar</button>
+          </div>
+        </div>
+        ${hijosGridHtml}
+      `;
+
+      // ---- Navegación: volver y migas de pan ----
+      detailBox.querySelector(`#nestedBackBtn_${abbr}`).addEventListener("click", ()=>{
+        if(filaObj){ adminSelectedFilaIdx = null; }
+        else if(areaObj){ adminSelectedAreaIdx = null; }
+        else { adminSelectedCi = null; }
+        drawZoneDetail();
+      });
+      detailBox.querySelectorAll(".nestedBreadcrumbLink").forEach(el=>{
+        el.addEventListener("click", ()=>{
+          const nivel = el.getAttribute("data-nivel");
+          if(nivel === "campo"){ adminSelectedAreaIdx = null; adminSelectedFilaIdx = null; }
+          else if(nivel === "area"){ adminSelectedFilaIdx = null; }
+          drawZoneDetail();
+        });
+      });
+
+      // ---- Bajar de nivel: tocar una área/fila hija ----
+      if(hijos !== null){
+        detailBox.querySelectorAll(".spaceGrid .spaceGridBtn").forEach(btn=>{
+          btn.addEventListener("click", ()=>{
+            const hi = parseInt(btn.getAttribute("data-hidx"),10);
+            if(nombreHijo === "área") adminSelectedAreaIdx = hi;
+            else adminSelectedFilaIdx = hi;
+            drawZoneDetail();
+          });
+        });
+        detailBox.querySelector(`#nestedAddChildBtn_${abbr}`).addEventListener("click", ()=>{
+          const nombre = prompt(`Nombre de ${nombreHijo === "área" ? "la nueva área" : "la nueva fila"}:`, "");
+          if(!nombre || !nombre.trim()) return;
+          const limpio = normalizeCampo(nombre);
+          if(nombreHijo === "área"){
+            if(campoObj.areas.some(a=>a.area===limpio)){ showToast(`Ya existe "${limpio}" acá`); return; }
+            campoObj.areas.push({ area: limpio, plates: [], filas: [] });
+          } else {
+            if(areaObj.filas.some(f=>f.fila===limpio)){ showToast(`Ya existe "${limpio}" acá`); return; }
+            areaObj.filas.push({ fila: limpio, plates: [] });
+          }
+          saveState(true);
+          drawZoneDetail();
+        });
+      }
+
+      // ---- Agregar vehículo en este nivel ----
+      const addVehBtn = detailBox.querySelector(`#nestedAddVehBtn_${abbr}`);
+      const addVehBox = detailBox.querySelector(`#nestedAddVehBox_${abbr}`);
+      addVehBtn.addEventListener("click", ()=>{
+        addVehBox.style.display = addVehBox.style.display === "none" ? "block" : "none";
+        if(addVehBox.style.display !== "none") detailBox.querySelector(`#nestedNewPlaca_${abbr}`).focus();
+      });
+      wireColorDot(detailBox.querySelector(`#nestedNewColor_${abbr}`), detailBox.querySelector(`#nestedNewColorDot_${abbr}`));
+      const nestedAsegNew = detailBox.querySelector(`#nestedNewAseg_${abbr}`);
+      if(nestedAsegNew) nestedAsegNew.addEventListener("blur", ()=> completeAsesorAbbreviation(nestedAsegNew));
+      detailBox.querySelector(`#nestedAddCancelBtn_${abbr}`).addEventListener("click", ()=>{
+        addVehBox.style.display = "none";
+      });
+      detailBox.querySelector(`#nestedAddConfirmBtn_${abbr}`).addEventListener("click", async ()=>{
+        const plateRaw = detailBox.querySelector(`#nestedNewPlaca_${abbr}`).value;
+        const plate = normalizePlate(plateRaw);
+        if(!plate){ showToast("Ingresá una placa válida"); return; }
+        const modeloInput = detailBox.querySelector(`#nestedNewModelo_${abbr}`);
+        if(!modeloInput.value.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
+        const dup = findPlate(plate);
+        if(dup){ showToast(`${plate} ya está ubicada en otro lugar — quitala de ahí primero`); return; }
+        const snap = snapshotZones();
+        contenedor.plates.unshift({
+          plate,
+          aseguradora: detailBox.querySelector(`#nestedNewAseg_${abbr}`).value.trim(),
+          modelo: modeloInput.value.trim(),
+          color: detailBox.querySelector(`#nestedNewColor_${abbr}`).value.trim(),
+          lastUpdated: new Date().toISOString()
+        });
+        pushUndo(snap, `Agregar ${plate} en ${info.label} · ${campoObj.campo}${areaObj ? " · "+areaObj.area : ""}${filaObj ? " · "+filaObj.fila : ""}`);
+        await saveState(true);
+        showToast("Listo — vehículo agregado");
+        drawZoneDetail();
+      });
+
+      // ---- Editar / Quitar vehículos de este nivel ----
+      detailBox.querySelectorAll(`.nestedEditBtn_${abbr}`).forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          adminNestedEditingIdx = parseInt(btn.getAttribute("data-idx"),10);
+          drawZoneDetail();
+        });
+      });
+      detailBox.querySelectorAll(`.nestedRemoveBtn_${abbr}`).forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          const idx = parseInt(btn.getAttribute("data-idx"),10);
+          const p = contenedor.plates[idx];
+          if(!confirm(`¿Quitar ${p.plate} de acá?`)) return;
+          const snap = snapshotZones();
+          contenedor.plates.splice(idx,1);
+          pushUndo(snap, `Quitar ${p.plate} de ${info.label} · ${campoObj.campo}`);
+          await saveState(true);
+          showToast("Vehículo quitado");
+          drawZoneDetail();
+        });
+      });
+      const editSaveBtn = detailBox.querySelector(`#nestedEditSaveBtn_${abbr}`);
+      if(editSaveBtn){
+        wireColorDot(detailBox.querySelector(`#nestedEditColor_${abbr}`), detailBox.querySelector(`#nestedEditColorDot_${abbr}`));
+        const editAsegEl = detailBox.querySelector(`#nestedEditAseg_${abbr}`);
+        if(editAsegEl) editAsegEl.addEventListener("blur", ()=> completeAsesorAbbreviation(editAsegEl));
+        editSaveBtn.addEventListener("click", async ()=>{
+          const idx = adminNestedEditingIdx;
+          const p = contenedor.plates[idx];
+          const newPlate = normalizePlate(detailBox.querySelector(`#nestedEditPlaca_${abbr}`).value);
+          if(!newPlate){ showToast("Ingresá una placa válida"); return; }
+          const newModelo = detailBox.querySelector(`#nestedEditModelo_${abbr}`).value.trim();
+          if(!newModelo){ showToast("Ingresá el modelo del vehículo"); return; }
+          if(newPlate !== p.plate && findPlate(newPlate)){ showToast(`${newPlate} ya está ubicada en otro lugar`); return; }
+          const snap = snapshotZones();
+          p.plate = newPlate;
+          p.aseguradora = detailBox.querySelector(`#nestedEditAseg_${abbr}`).value.trim();
+          p.modelo = newModelo;
+          p.color = detailBox.querySelector(`#nestedEditColor_${abbr}`).value.trim();
+          p.lastUpdated = new Date().toISOString();
+          pushUndo(snap, `Editar ${newPlate} en ${info.label} · ${campoObj.campo}`);
+          await saveState(true);
+          showToast("Vehículo actualizado");
+          adminNestedEditingIdx = null;
+          drawZoneDetail();
+        });
+        detailBox.querySelector(`#nestedEditCancelBtn_${abbr}`).addEventListener("click", ()=>{
+          adminNestedEditingIdx = null;
+          drawZoneDetail();
+        });
+        detailBox.querySelector(`#nestedEditRemoveBtn_${abbr}`).addEventListener("click", async ()=>{
+          const idx = adminNestedEditingIdx;
+          const p = contenedor.plates[idx];
+          if(!confirm(`¿Quitar ${p.plate} de acá?`)) return;
+          const snap = snapshotZones();
+          contenedor.plates.splice(idx,1);
+          pushUndo(snap, `Quitar ${p.plate} de ${info.label} · ${campoObj.campo}`);
+          await saveState(true);
+          showToast("Vehículo quitado");
+          adminNestedEditingIdx = null;
+          drawZoneDetail();
+        });
+      }
+    }
+
     function drawZoneDetail(){
       const arr = state.zones[zone.key] || [];
       if(adminSelectedCi === null || !arr[adminSelectedCi]){
@@ -4840,6 +5185,10 @@
       browseBox.style.display = "none";
       detailBox.classList.remove("formOnlyMode"); // cada render fresco arranca mostrando todo, no solo el formulario
       const c = arr[adminSelectedCi];
+      if(NESTED_ZONES.has(zone.key)){
+        drawNestedZoneDetail(c);
+        return;
+      }
       const cap = c.capacidad;
       const occ = c.plates.length;
       const full = cap && occ >= cap;
@@ -7555,6 +7904,96 @@
   // en la lista de sugerencias) — mismo criterio sin ambigüedad: solo se
   // ofrece unificar si hay EXACTAMENTE una versión más larga que empieza
   // igual que la corta.
+  // A diferencia de los asesores (donde "Dani"/"Daniel" es una version
+  // corta de la larga), en modelos NO tiene sentido comparar por prefijo:
+  // "Corolla" y "Corolla Cross" son vehículos distintos de verdad, no una
+  // abreviación el uno del otro. Acá el problema es otro: el MISMO modelo
+  // escrito con distintas mayúsculas ("Corolla Cross" / "COROLLA CROSS" /
+  // "corolla cross") — se agrupan por texto normalizado y se ofrece
+  // unificar a una sola forma.
+  function findModeloCaseGroups(){
+    const conteoPorVariante = new Map(); // texto exacto -> cantidad de vehículos
+    ZONES.forEach(z=>{
+      (state.zones[z.key] || []).forEach(c=>{
+        c.plates.forEach(p=>{
+          const m = p.modelo && p.modelo.trim();
+          if(!m) return;
+          conteoPorVariante.set(m, (conteoPorVariante.get(m) || 0) + 1);
+        });
+      });
+    });
+    const porNormalizado = new Map(); // texto en minúsculas -> [{variante, cantidad}]
+    conteoPorVariante.forEach((cantidad, variante)=>{
+      const key = variante.toLowerCase();
+      if(!porNormalizado.has(key)) porNormalizado.set(key, []);
+      porNormalizado.get(key).push({ variante, cantidad });
+    });
+    const grupos = [];
+    porNormalizado.forEach(variantes=>{
+      if(variantes.length > 1){
+        variantes.sort((a,b)=> b.cantidad - a.cantidad); // la más usada primero, como sugerencia
+        grupos.push(variantes);
+      }
+    });
+    return grupos;
+  }
+  function openUnifyModelosModal(){
+    if(!guardEdit()) return;
+    const overlay = document.getElementById("unifyModelosModal");
+    const body = document.getElementById("unifyModelosBody");
+    function draw(){
+      const grupos = findModeloCaseGroups();
+      if(grupos.length === 0){
+        body.innerHTML = `<div class="dashCardGood" style="padding:14px; text-align:center; border-radius:10px;">✓ No se encontró ningún caso para unificar.</div>`;
+        return;
+      }
+      body.innerHTML = grupos.map((variantes,gi)=>`
+        <div class="historyItem" style="margin-bottom:8px;">
+          <strong>${variantes.length} formas distintas del mismo modelo:</strong>
+          <div class="historyMeta">${variantes.map(v=>`"${escapeHtml(v.variante)}" (${v.cantidad})`).join(" · ")}</div>
+          <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
+            ${variantes.map((v,vi)=>`
+              <button type="button" class="secondaryBtn unifyModeloBtn" data-gi="${gi}" data-vi="${vi}" style="width:100%;">Unificar todo a "${escapeHtml(v.variante)}"</button>
+            `).join("")}
+          </div>
+        </div>
+      `).join("");
+      body.querySelectorAll(".unifyModeloBtn").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          const gi = parseInt(btn.getAttribute("data-gi"),10);
+          const vi = parseInt(btn.getAttribute("data-vi"),10);
+          const variantes = grupos[gi];
+          const elegido = variantes[vi].variante;
+          const otrasFormas = variantes.filter((v,i)=>i!==vi).map(v=>v.variante);
+          if(!confirm(`¿Cambiar ${otrasFormas.map(f=>`"${f}"`).join(", ")} por "${elegido}" en todos los vehículos donde aparezcan?`)) return;
+          const snap = snapshotZones();
+          let cambiados = 0;
+          ZONES.forEach(z=>{
+            (state.zones[z.key] || []).forEach(c=>{
+              c.plates.forEach(p=>{
+                if(p.modelo && otrasFormas.includes(p.modelo.trim())){
+                  p.modelo = elegido;
+                  p.lastUpdated = new Date().toISOString();
+                  cambiados++;
+                }
+              });
+            });
+          });
+          pushUndo(snap, `Unificar modelo a "${elegido}" (${cambiados} vehículo(s))`);
+          await saveState(true);
+          showToast(`Unificado a "${elegido}" en ${cambiados} vehículo(s)`);
+          draw();
+        });
+      });
+    }
+    draw();
+    overlay.classList.add("show");
+  }
+  document.getElementById("unifyModelosBtn").addEventListener("click", openUnifyModelosModal);
+  document.getElementById("unifyModelosCloseBtn").addEventListener("click", ()=>{
+    document.getElementById("unifyModelosModal").classList.remove("show");
+  });
+
   function findAsesorPairsToUnify(){
     const set = new Set();
     ZONES.forEach(z=>{
