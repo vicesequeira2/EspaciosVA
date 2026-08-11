@@ -2611,6 +2611,23 @@
   </div>
 </div>
 
+<div class="modalOverlay" id="exportZonesModal">
+  <div class="modalCard modalCardWide">
+    <h3>⬇️ Elegir zonas a exportar</h3>
+    <p style="font-size:0.78rem; color:var(--muted);">Marcá qué zonas incluir en el Excel. Las hojas de Resumen y de conteo se arman solo con lo que hayas marcado.</p>
+    <div style="display:flex; gap:10px; margin-top:8px;">
+      <button type="button" class="linkBackBtn" id="exportZonesAllBtn" style="text-decoration:none; font-weight:700;">Marcar todas</button>
+      <button type="button" class="linkBackBtn" id="exportZonesNoneBtn" style="text-decoration:none; font-weight:700;">Ninguna</button>
+    </div>
+    <div id="exportZonesList" class="zoneRestrictList"></div>
+    <p class="authError" id="exportZonesError"></p>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="primaryBtn" id="exportZonesConfirmBtn">Exportar</button>
+      <button class="secondaryBtn" id="exportZonesCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modalOverlay" id="allAreasModal">
   <div class="modalCard modalCardWide">
     <h3>🗂️ Todas las áreas</h3>
@@ -3868,7 +3885,16 @@
   }
 
   // Busca una placa en todas las zonas/campos. Devuelve {zoneKey, campoIdx, plateIdx} o null.
+  // Para COMPARAR si dos placas son la misma, se ignoran espacios, guiones
+  // y cualquier otro signo — así "PE6-1392" y "PE6 1392" (o "PE61392") se
+  // reconocen como la misma placa, aunque estén escritas distinto. Esto
+  // NO cambia cómo se guarda o se muestra la placa, solo cómo se compara.
+  function plateMatchKey(v){
+    return String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  }
   function findPlate(plateUpper, excludeZone, excludeCampoIdx, excludePlateIdx){
+    const buscado = plateMatchKey(plateUpper);
+    if(!buscado) return null;
     // Se busca en ZONES + Sin ubicación (aunque esta última quede afuera de
     // Excel/Resumen/pestañas a propósito) — si no se buscara ahí también,
     // una placa que ya está en Sin ubicación no se detectaría como
@@ -3880,7 +3906,7 @@
         const plates = arr[ci].plates;
         for(let pi=0; pi<plates.length; pi++){
           if(z.key===excludeZone && ci===excludeCampoIdx && pi===excludePlateIdx) continue;
-          if((plates[pi].plate||"").toUpperCase() === plateUpper){
+          if(plateMatchKey(plates[pi].plate) === buscado){
             return { zoneKey: z.key, campoIdx: ci, plateIdx: pi };
           }
         }
@@ -4177,12 +4203,16 @@
     closeBtn.textContent = isAutoPrompt ? "Omitir" : "Cerrar";
 
     let file1 = null, file2 = null;
-    input1.value = ""; input2.value = "";
-    slot1.classList.remove("hasPhoto"); slot1.style.backgroundImage = "";
-    slot1.querySelector(".photoReportSlotText").textContent = "Foto 1";
-    slot2.classList.remove("hasPhoto"); slot2.style.backgroundImage = "";
-    slot2.querySelector(".photoReportSlotText").textContent = "Foto 2 (opcional)";
-    shareBtn.disabled = true;
+    function resetSlots(){
+      file1 = null; file2 = null;
+      input1.value = ""; input2.value = "";
+      slot1.classList.remove("hasPhoto"); slot1.style.backgroundImage = "";
+      slot1.querySelector(".photoReportSlotText").textContent = "Foto 1";
+      slot2.classList.remove("hasPhoto"); slot2.style.backgroundImage = "";
+      slot2.querySelector(".photoReportSlotText").textContent = "Foto 2 (opcional)";
+      shareBtn.disabled = true;
+    }
+    resetSlots();
 
     function onInput1Change(){
       const f = input1.files && input1.files[0];
@@ -4235,6 +4265,11 @@
           shareData.files = files;
         }
         await navigator.share(shareData);
+        // Se comparte con éxito: se limpian las casillas de foto para
+        // dejar todo listo por si hace falta reportar de nuevo — sin
+        // cerrar el modal, para no perder el lugar donde estabas.
+        resetSlots();
+        showToast("Compartido");
       }catch(e){
         if(e && e.name !== "AbortError"){ // cerró el menú sin elegir nada: no es un error real
           console.error("Error al compartir el reporte con fotos", e);
@@ -5217,6 +5252,15 @@
           if(otro < 0 || otro >= c.plates.length) return;
           const snap = snapshotZones();
           [c.plates[idx], c.plates[otro]] = [c.plates[otro], c.plates[idx]];
+          // Si había un formulario de Editar (o el atajo de mover) abierto
+          // para alguno de los 2 vehículos que se acaban de intercambiar,
+          // el índice se actualiza para que siga apuntando al mismo
+          // vehículo — si no, el formulario terminaba mostrando los datos
+          // del vehículo vecino sin ningún aviso.
+          if(adminEditingPlateIdx === idx) adminEditingPlateIdx = otro;
+          else if(adminEditingPlateIdx === otro) adminEditingPlateIdx = idx;
+          if(adminMovingPlateIdx === idx) adminMovingPlateIdx = otro;
+          else if(adminMovingPlateIdx === otro) adminMovingPlateIdx = idx;
           pushUndo(snap, `Reordenar ${c.plates[dir===-1?idx:otro].plate} en ${info.label} · ${c.campo}`);
           await saveState(true);
           drawZoneDetail();
@@ -6276,16 +6320,17 @@
     return { wb, fileName: `Inventario_${nombreArchivo}_${fecha}.xlsx` };
   }
 
-  function buildInventoryWorkbook(){
+  function buildInventoryWorkbook(zoneKeysFilter){
     const wb = XLSX.utils.book_new();
     const now = new Date();
     const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
     const horaLarga = now.toLocaleTimeString("es-CR", {hour:"2-digit", minute:"2-digit"});
     const fechaCorta = fechaCortaExcel;
+    const zonasAExportar = zoneKeysFilter ? ZONES.filter(z => zoneKeysFilter.includes(z.key)) : ZONES;
 
-    ZONES.forEach(z=> addZoneSheet(wb, z, fechaLarga, horaLarga));
+    zonasAExportar.forEach(z=> addZoneSheet(wb, z, fechaLarga, horaLarga));
 
-    const resumenRows = buildResumenRows();
+    const resumenRows = buildResumenRows().filter(r => !zoneKeysFilter || zoneKeysFilter.includes(r.zoneKey));
     const resumenData = [
       ["Resumen general — Inventario de Parqueo", "", "", "", "", "", ""],
       [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", "", "", "", ""],
@@ -6384,19 +6429,73 @@
 
   document.getElementById("exportBtn").addEventListener("click", ()=>{
     if(!guardExport()) return;
-    if(typeof XLSX === "undefined"){
-      showToast("No se pudo cargar la herramienta de Excel — revisá tu conexión a internet y volvé a intentar.", 6000);
-      return;
-    }
-    try{
-      const { wb, duplicadasCount, fileName } = buildInventoryWorkbook();
-      XLSX.writeFile(wb, fileName);
-      showToast(duplicadasCount > 0 ? `Excel generado — se detectaron ${duplicadasCount} placa(s) duplicada(s)` : "Excel generado");
-    }catch(e){
-      console.error("Error al generar el Excel", e);
-      showToast("No se pudo generar el Excel. Intentá de nuevo.", 5000);
-    }
+    openExportZonesModal();
   });
+
+  // Modal para elegir qué zonas incluir en el Excel — se recuerda la
+  // última selección mientras la pestaña siga abierta, para no tener que
+  // volver a marcar todo cada vez.
+  let lastExportZoneSelection = null;
+  function openExportZonesModal(){
+    const overlay = document.getElementById("exportZonesModal");
+    const listEl = document.getElementById("exportZonesList");
+    const errorEl = document.getElementById("exportZonesError");
+    const confirmBtn = document.getElementById("exportZonesConfirmBtn");
+    const closeBtn = document.getElementById("exportZonesCloseBtn");
+    const allBtn = document.getElementById("exportZonesAllBtn");
+    const noneBtn = document.getElementById("exportZonesNoneBtn");
+    errorEl.textContent = "";
+
+    const zonasVisibles = visibleZonesForCurrentUser();
+    listEl.innerHTML = zonasVisibles.map(z=>{
+      const marcado = lastExportZoneSelection ? lastExportZoneSelection.has(z.key) : true;
+      const cantidad = (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0);
+      return `
+        <label class="zoneRestrictRow">
+          <input type="checkbox" value="${z.key}" ${marcado ? "checked" : ""}>
+          <span class="dot" style="background:${z.color}"></span>
+          <span>${z.label} <span style="color:var(--muted); font-weight:600;">(${cantidad})</span></span>
+        </label>
+      `;
+    }).join("");
+
+    function checks(){ return [...listEl.querySelectorAll('input[type="checkbox"]')]; }
+    function onAll(){ checks().forEach(c=>c.checked = true); }
+    function onNone(){ checks().forEach(c=>c.checked = false); }
+    function onExport(){
+      const seleccionadas = checks().filter(c=>c.checked).map(c=>c.value);
+      if(seleccionadas.length === 0){
+        errorEl.textContent = "Marcá al menos una zona.";
+        return;
+      }
+      lastExportZoneSelection = new Set(seleccionadas);
+      if(typeof XLSX === "undefined"){
+        errorEl.textContent = "No se pudo cargar la herramienta de Excel — revisá tu conexión a internet.";
+        return;
+      }
+      try{
+        const { wb, duplicadasCount, fileName } = buildInventoryWorkbook(seleccionadas);
+        XLSX.writeFile(wb, fileName);
+        showToast(duplicadasCount > 0 ? `Excel generado — se detectaron ${duplicadasCount} placa(s) duplicada(s)` : "Excel generado");
+        onClose();
+      }catch(e){
+        console.error("Error al generar el Excel", e);
+        errorEl.textContent = "No se pudo generar el Excel. Intentá de nuevo.";
+      }
+    }
+    function onClose(){
+      overlay.classList.remove("show");
+      allBtn.removeEventListener("click", onAll);
+      noneBtn.removeEventListener("click", onNone);
+      confirmBtn.removeEventListener("click", onExport);
+      closeBtn.removeEventListener("click", onClose);
+    }
+    allBtn.addEventListener("click", onAll);
+    noneBtn.addEventListener("click", onNone);
+    confirmBtn.addEventListener("click", onExport);
+    closeBtn.addEventListener("click", onClose);
+    overlay.classList.add("show");
+  }
 
   const exportZoneBtn = document.getElementById("exportZoneBtn");
   if(exportZoneBtn){
@@ -9118,6 +9217,14 @@
           if(otro < 0 || otro >= entry.plates.length) return;
           const snap = snapshotZones();
           [entry.plates[idx], entry.plates[otro]] = [entry.plates[otro], entry.plates[idx]];
+          // Mismo cuidado que en Admin: si había un formulario de Editar
+          // (o el atajo de mover) abierto para alguno de los 2 vehículos
+          // que se acaban de intercambiar, el índice se actualiza para
+          // que siga al vehículo correcto.
+          if(updEditingPlateIdx === idx) updEditingPlateIdx = otro;
+          else if(updEditingPlateIdx === otro) updEditingPlateIdx = idx;
+          if(updMovingPlateIdx === idx) updMovingPlateIdx = otro;
+          else if(updMovingPlateIdx === otro) updMovingPlateIdx = idx;
           pushUndo(snap, `Reordenar ${entry.plates[dir===-1?idx:otro].plate} en ${zoneInfo(updSpaceZone).label} · ${campoLabel}`);
           await saveState(true);
           drawSpaceInfo();
