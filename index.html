@@ -370,6 +370,12 @@
   }
   .similarWarn .dupWarnIcon{flex:0 0 auto; font-size:0.9rem;}
   .similarWarn .similarList{ font-weight:500; }
+  .asesorSuggestionLink{
+    text-decoration:underline;
+    cursor:pointer;
+    font-weight:800;
+  }
+  .asesorSuggestionLink:active{ opacity:0.6; }
   .spaceFullWarn{
     background:#fff6e0;
     color:#8a5a1c;
@@ -1039,6 +1045,19 @@
     opacity:1;
     transform:translateX(-50%) translateY(0);
   }
+  .toastUndoBtn{
+    pointer-events:auto;
+    background:rgba(255,255,255,0.18);
+    border:1px solid rgba(255,255,255,0.4);
+    color:#fff;
+    font-weight:800;
+    font-size:0.76rem;
+    padding:3px 10px;
+    border-radius:999px;
+    margin-left:4px;
+    cursor:pointer;
+  }
+  .toastUndoBtn:active{ background:rgba(255,255,255,0.32); }
   .toast-success{ background:#1f6b45; }
   .toast-success::before{ content:"✓  "; }
   .toast-error{ background:#a13d33; }
@@ -2095,6 +2114,18 @@
   .lastMovedLabel.recency-recent{ color:#8b9198; }
   .lastMovedLabel.recency-stale{ color:#b0b5ba; }
   .lastMovedLabel.recency-none{ color:#b0b5ba; font-style:italic; }
+  .lastMovedBanner{
+    font-size:0.76rem;
+    font-weight:700;
+    padding:7px 10px;
+    border-radius:8px;
+    margin-bottom:10px;
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+  .lastMovedBanner.recency-fresh{ background:#eaf5ee; color:#2e7d4f; }
+  .lastMovedBanner.recency-recent{ background:#fff6e0; color:#8a6a1c; }
+  .lastMovedBanner.recency-stale{ background:#fbeae8; color:#a13d33; }
   .spaceEditForm{
     background:#f7f7f5;
     border-radius:8px;
@@ -2139,10 +2170,31 @@
     padding:6px 10px 7px;
     min-width:0;
     background: var(--surface);
+    position:relative;
   }
   .labeledFieldBox:focus-within{
     border-color: var(--asphalt);
   }
+  .customSuggestList{
+    position:absolute;
+    left:0; right:0; top:100%;
+    margin-top:4px;
+    background: var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.12);
+    max-height:180px;
+    overflow-y:auto;
+    z-index:40;
+  }
+  .customSuggestItem{
+    padding:9px 12px;
+    font-size:0.86rem;
+    cursor:pointer;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .customSuggestItem:last-child{ border-bottom:none; }
+  .customSuggestItem:active{ background: var(--surface-2); }
   .labeledFieldLabel{
     font-size:0.66rem;
     font-weight:700;
@@ -2221,6 +2273,17 @@
   }
   .circulacionSummaryTagOk{ background:#eaf5ee; color:#2e7d4f; }
   .circulacionSummaryTagNo{ background:#fbeae8; color:#a13d33; }
+  .tiempoAquiTag{
+    display:inline-block;
+    margin-top:6px;
+    padding:3px 9px;
+    border-radius:999px;
+    font-size:0.72rem;
+    font-weight:700;
+  }
+  .tiempoAquiTag-fresh{ background:#eaf5ee; color:#2e7d4f; }
+  .tiempoAquiTag-recent{ background:#fff6e0; color:#8a5a1c; }
+  .tiempoAquiTag-stale{ background:#fbeae8; color:#a13d33; }
   .colorPreviewDot{
     display:inline-block;
     width:18px; height:18px;
@@ -2449,6 +2512,7 @@
           <button id="checkinItemsBtn">📋 Ítems de check-in</button>
           <button id="importExcelBtn">📥 Importar Excel</button>
           <button id="unifyAsesoresBtn">🧹 Unificar nombres de asesor</button>
+          <button id="cleanPlatesBtn">🧹 Limpiar formato de placas</button>
           <button id="unifyModelosBtn">🧹 Unificar nombres de modelo</button>
           <button id="testPhotoReportBtn">🧪 Probar compartir fotos</button>
         </div>
@@ -2496,7 +2560,7 @@
     <h3 id="editLocTitle">Editar vehículo</h3>
     <p id="editLocSub"></p>
     <label for="editLocPlaca">Placa</label>
-    <input type="text" id="editLocPlaca" class="plate plateUpperField" autocapitalize="characters">
+    <input type="text" id="editLocPlaca" class="plate plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
     <label for="editLocZone">Zona</label>
     <select id="editLocZone"></select>
     <label for="editLocCampo">Campo</label>
@@ -2629,6 +2693,19 @@
     <div id="unifyAsesoresBody" style="margin-top:10px;"></div>
     <div class="modalActions" style="margin-top:14px;">
       <button class="secondaryBtn" id="unifyAsesoresCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="cleanPlatesModal">
+  <div class="modalCard modalCardWide">
+    <h3>🧹 Limpiar formato de placas</h3>
+    <p style="font-size:0.78rem; color:var(--muted);">
+      Busca placas guardadas con espacios, guiones u otros signos (de antes de que la app las limpiara solas), y las deja en el mismo formato parejo que las demás — solo letras y números. No toca nada hasta que confirmes cada caso.
+    </p>
+    <div id="cleanPlatesBody" style="margin-top:10px;"></div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="secondaryBtn" id="cleanPlatesCloseBtn">Cerrar</button>
     </div>
   </div>
 </div>
@@ -3458,7 +3535,13 @@
     return ZONES.find(z => z.key === key);
   }
 
-  function normalizePlate(v){ return String(v).trim().toUpperCase(); }
+  // Guarda y compara las placas siempre en el mismo formato: solo letras y
+  // números, en mayúsculas — sin espacios, guiones, asteriscos ni ningún
+  // otro signo. Así, sin importar cómo lo escriba cada quien ("PE6-1392",
+  // "pe6 1392", "PE6*1392"), todas las placas terminan guardadas de forma
+  // pareja, y no aparecen como si fueran vehículos distintos por un simple
+  // guión de más o de menos.
+  function normalizePlate(v){ return String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
 
   // ¿Se actualizó (movió, editó o registró) este vehículo hoy? Sirve para
   // resaltar en la interfaz "ya pasé por esta placa" durante una ronda.
@@ -3473,17 +3556,39 @@
   // Texto relativo de "cuándo se movió por última vez" (hoy/ayer/antier/hace
   // X días...), pensado para detectar de un vistazo, durante un recorrido,
   // si una placa lleva mucho tiempo sin actualizarse en el mismo lugar.
+  // Solo para el aviso de "esta placa ya existe" al agregar — si la
+  // encontró hace muy poquito (segundos o pocos minutos), es más probable
+  // que sea un toque doble por accidente que un vehículo que de verdad
+  // volvió. Devuelve null si ya pasó demasiado tiempo como para que valga
+  // la pena remarcarlo.
+  function minutesAgoText(isoDate){
+    if(!isoDate) return null;
+    const ms = Date.now() - new Date(isoDate).getTime();
+    if(isNaN(ms) || ms < 0) return null;
+    const seg = Math.floor(ms/1000);
+    if(seg < 60) return "hace unos segundos";
+    const min = Math.floor(seg/60);
+    if(min < 10) return `hace ${min} minuto${min===1?"":"s"}`;
+    return null;
+  }
   function lastMovedLabel(entry){
-    if(!entry || !entry.lastUpdated) return { fecha: "sin registro", recency: "none" };
+    if(!entry || !entry.lastUpdated) return { fecha: "sin registro", recency: "none", diasTexto: "" };
     const d = new Date(entry.lastUpdated);
-    if(isNaN(d.getTime())) return { fecha: "sin registro", recency: "none" };
+    if(isNaN(d.getTime())) return { fecha: "sin registro", recency: "none", diasTexto: "" };
     const fecha = d.toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
     const dias = Math.floor((Date.now() - d.getTime()) / (24*60*60*1000));
     let recency;
     if(dias <= 3) recency = "fresh";
     else if(dias <= 14) recency = "recent";
     else recency = "stale";
-    return { fecha, recency };
+    // Texto legible de "hace cuánto está en este mismo espacio" — pensado
+    // para verlo al tocar la placa, y notar de un vistazo si lleva mucho
+    // tiempo parada sin que nadie la mueva.
+    let diasTexto;
+    if(dias <= 0) diasTexto = "Llegó hoy";
+    else if(dias === 1) diasTexto = "Lleva 1 día acá";
+    else diasTexto = `Lleva ${dias} días acá`;
+    return { fecha, recency, diasTexto };
   }
   function normalizeCampo(v){ return String(v).trim(); }
 
@@ -3587,6 +3692,49 @@
     t.classList.add("show");
     clearTimeout(showToast._t);
     showToast._t = setTimeout(()=> t.classList.remove("show"), duration || 1600);
+  }
+
+  // Toast con un "Deshacer" tocable ahí mismo (como Gmail/WhatsApp) — se
+  // usa justo después de agregar un vehículo, para corregir un toque por
+  // error sin tener que ir a buscar el botón de deshacer general. Se
+  // guarda cuántas cosas había en la pila de deshacer en el momento exacto
+  // de agregar; si para cuando tocás "Deshacer" ya se hizo algo más
+  // encima, no deshace lo nuevo por error — avisa en cambio.
+  function showToastWithUndo(msg, duration){
+    const stackLenAlMostrar = undoStack.length;
+    const t = document.getElementById("toast");
+    t.innerHTML = `<span>${escapeHtml(msg)}</span> <button type="button" id="toastUndoBtn" class="toastUndoBtn">Deshacer</button>`;
+    t.classList.remove("toast-success","toast-error","toast-warn","toast-info");
+    t.classList.add("toast-" + detectToastType(msg));
+    t.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=> t.classList.remove("show"), duration || 4500);
+    const btn = document.getElementById("toastUndoBtn");
+    if(btn){
+      btn.addEventListener("click", async (e)=>{
+        e.stopPropagation();
+        clearTimeout(showToast._t);
+        t.classList.remove("show");
+        await quickUndoLastAdd(stackLenAlMostrar);
+      });
+    }
+  }
+  async function quickUndoLastAdd(stackLenEsperado){
+    if(!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion"))) return;
+    if(undoStack.length !== stackLenEsperado || undoStack.length === 0){
+      showToast("Ya no se puede deshacer solo — se hicieron más cambios después. Usá el botón de deshacer general.", 4000);
+      return;
+    }
+    const entry = undoStack.pop();
+    state.zones = entry.snapshot;
+    updateUndoBtn();
+    await saveState(true);
+    if(currentUser && currentUser.role === "actualizacion"){
+      renderUpdaterPanel();
+    } else {
+      renderAll();
+    }
+    showToast("Se deshizo: " + entry.description);
   }
 
   function showStorageBanner(){
@@ -3891,25 +4039,33 @@
     dashBtn.style.setProperty("--zone-color", "var(--line-dim)");
     dashBtn.innerHTML = `Dashboard`;
     dashBtn.onclick = ()=>{ activeTab = "__dashboard__"; renderAll(); };
-    nav.appendChild(dashBtn);
-    if(!(currentUser && currentUser.role === "consulta")){
-      ZONES.forEach(z=>{
-        const btn = document.createElement("button");
-        btn.className = "tabBtn" + (activeTab===z.key ? " active" : "");
-        btn.style.setProperty("--zone-color", z.color);
-        const count = (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0);
-        btn.innerHTML = `<span class="dot" style="background:${z.color}"></span> ${z.label} <span class="count">${count}</span>`;
-        btn.onclick = ()=>{ activeTab = z.key; renderAll(); };
-        nav.appendChild(btn);
-      });
-    }
-    const btn = document.createElement("button");
-    btn.className = "tabBtn" + (activeTab==="__resumen__" ? " active" : "");
-    btn.style.setProperty("--zone-color", "var(--line-dim)");
+
+    const resumenBtn = document.createElement("button");
+    resumenBtn.className = "tabBtn" + (activeTab==="__resumen__" ? " active" : "");
+    resumenBtn.style.setProperty("--zone-color", "var(--line-dim)");
     const totalCount = ZONES.reduce((a,z)=>a + (state.zones[z.key]||[]).reduce((aa,c)=>aa+c.plates.length,0), 0);
-    btn.innerHTML = `Resumen general <span class="count">${totalCount}</span>`;
-    btn.onclick = ()=>{ activeTab = "__resumen__"; renderAll(); };
-    nav.appendChild(btn);
+    resumenBtn.innerHTML = `Resumen general <span class="count">${totalCount}</span>`;
+    resumenBtn.onclick = ()=>{ activeTab = "__resumen__"; renderAll(); };
+
+    if(currentUser && currentUser.role === "consulta"){
+      // Para Búsqueda, lo primero que se ve al entrar son los vehículos
+      // (Resumen), no el Dashboard — por eso van en este orden acá.
+      nav.appendChild(resumenBtn);
+      nav.appendChild(dashBtn);
+      return;
+    }
+
+    nav.appendChild(dashBtn);
+    ZONES.forEach(z=>{
+      const btn = document.createElement("button");
+      btn.className = "tabBtn" + (activeTab===z.key ? " active" : "");
+      btn.style.setProperty("--zone-color", z.color);
+      const count = (state.zones[z.key]||[]).reduce((a,c)=>a+c.plates.length,0);
+      btn.innerHTML = `<span class="dot" style="background:${z.color}"></span> ${z.label} <span class="count">${count}</span>`;
+      btn.onclick = ()=>{ activeTab = z.key; renderAll(); };
+      nav.appendChild(btn);
+    });
+    nav.appendChild(resumenBtn);
   }
 
   // Solo para MOSTRAR nombres de cuenta con letra pareja (ej. "AVALUO" ->
@@ -3936,12 +4092,12 @@
   }
 
   // Busca una placa en todas las zonas/campos. Devuelve {zoneKey, campoIdx, plateIdx} o null.
-  // Para COMPARAR si dos placas son la misma, se ignoran espacios, guiones
-  // y cualquier otro signo — así "PE6-1392" y "PE6 1392" (o "PE61392") se
-  // reconocen como la misma placa, aunque estén escritas distinto. Esto
-  // NO cambia cómo se guarda o se muestra la placa, solo cómo se compara.
+  // Para comparar si dos placas son la misma. Ahora que normalizePlate ya
+  // limpia espacios/guiones/signos al guardar, esto queda igual que esa
+  // función — se mantiene aparte solo para dejar claro en el código dónde
+  // se usa para COMPARAR (findPlate) vs. dónde se usa para GUARDAR.
   function plateMatchKey(v){
-    return String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    return normalizePlate(v);
   }
   function findPlate(plateUpper, excludeZone, excludeCampoIdx, excludePlateIdx){
     const buscado = plateMatchKey(plateUpper);
@@ -4221,10 +4377,11 @@
     return new Promise(resolve => canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.85));
   }
 
-  function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion){
+  function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, lastUpdated){
     const overlay = document.getElementById("photoReportModal");
     const summaryBox = document.getElementById("photoReportSummary");
     const fecha = new Date().toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
+    const tiempoAqui = lastUpdated ? lastMovedLabel({ lastUpdated }) : null;
     const detalles = [
       modelo ? `Modelo: ${escapeHtml(modelo)}` : "",
       color ? `Color: ${escapeHtml(color)}${guessColorHex(color) ? ` <span class="plateColorDot" style="background:${guessColorHex(color)}"></span>` : ""}` : "",
@@ -4235,7 +4392,8 @@
       : circulacion === "no"
         ? `<span class="circulacionSummaryTag circulacionSummaryTagNo">🚫 No circula</span>`
         : "";
-    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${escapeHtml(plate)}</strong>${circulacionTag}<div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>`;
+    const tiempoAquiTag = tiempoAqui ? `<div class="tiempoAquiTag tiempoAquiTag-${tiempoAqui.recency}">🕒 ${tiempoAqui.diasTexto}</div>` : "";
+    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${escapeHtml(plate)}</strong>${circulacionTag}<div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${tiempoAquiTag}`;
 
     // Si el modal se vuelve a abrir sin haberse cerrado antes (ej. compartir
     // y enseguida tocar otra placa), esto evita que se acumulen listeners
@@ -4928,16 +5086,18 @@
 
       const plateRowsHtml = contenedor.plates.length ? contenedor.plates.map((p, idx)=>{
         if(idx === adminNestedEditingIdx){
+          const tiempoAca = lastMovedLabel(p);
           return `
             <div class="spaceEditForm" data-idx="${idx}">
+              <div class="lastMovedBanner recency-${tiempoAca.recency}">🕒 ${escapeHtml(tiempoAca.diasTexto)} · desde el ${escapeHtml(tiempoAca.fecha)}</div>
               <div class="labeledFieldRow">
                 <label class="labeledFieldBox" style="flex:1.3;">
                   <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-                  <input type="text" id="nestedEditPlaca_${abbr}" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" autocapitalize="characters">
+                  <input type="text" id="nestedEditPlaca_${abbr}" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
                 </label>
                 <label class="labeledFieldBox" style="flex:1;">
                   <span class="labeledFieldLabel">Asesor</span>
-                  <input type="text" id="nestedEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" list="asesorSuggestions">
+                  <input type="text" id="nestedEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" autocomplete="off"><div class="customSuggestList" id="nestedEditAsegSuggest_${abbr}" style="display:none;"></div>
                 </label>
               </div>
               <div class="labeledFieldRow">
@@ -5001,11 +5161,11 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <input type="text" id="nestedNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters">
+              <input type="text" id="nestedNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
             </label>
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">Asesor</span>
-              <input type="text" id="nestedNewAseg_${abbr}" list="asesorSuggestions">
+              <input type="text" id="nestedNewAseg_${abbr}" autocomplete="off"><div class="customSuggestList" id="nestedNewAsegSuggest_${abbr}" style="display:none;"></div>
             </label>
           </div>
           <div class="labeledFieldRow">
@@ -5029,8 +5189,25 @@
         ${hijosGridHtml}
       `;
 
+      // Se reutiliza en Cancelar, Volver y las migas de pan — cualquier
+      // forma de salir de acá sin guardar debería avisar si hay algo
+      // escrito en el formulario de agregar.
+      function hayDatosSinGuardarEnNested(){
+        const placaVal = detailBox.querySelector(`#nestedNewPlaca_${abbr}`).value.trim();
+        const asegVal = detailBox.querySelector(`#nestedNewAseg_${abbr}`).value.trim();
+        const modeloVal = detailBox.querySelector(`#nestedNewModelo_${abbr}`).value.trim();
+        const colorVal = detailBox.querySelector(`#nestedNewColor_${abbr}`).value.trim();
+        return !!(placaVal || asegVal || modeloVal || colorVal);
+      }
+      function confirmarSalirSinGuardar(){
+        if(addVehBox.style.display === "none") return true; // el formulario ni está abierto
+        if(!hayDatosSinGuardarEnNested()) return true;
+        return confirm("¿Salir? Se va a perder lo que escribiste.");
+      }
+
       // ---- Navegación: volver y migas de pan ----
       detailBox.querySelector(`#nestedBackBtn_${abbr}`).addEventListener("click", ()=>{
+        if(!confirmarSalirSinGuardar()) return;
         if(filaObj){ adminSelectedFilaIdx = null; }
         else if(areaObj){ adminSelectedAreaIdx = null; }
         else { adminSelectedCi = null; }
@@ -5038,6 +5215,7 @@
       });
       detailBox.querySelectorAll(".nestedBreadcrumbLink").forEach(el=>{
         el.addEventListener("click", ()=>{
+          if(!confirmarSalirSinGuardar()) return;
           const nivel = el.getAttribute("data-nivel");
           if(nivel === "campo"){ adminSelectedAreaIdx = null; adminSelectedFilaIdx = null; }
           else if(nivel === "area"){ adminSelectedFilaIdx = null; }
@@ -5080,8 +5258,12 @@
       });
       wireColorDot(detailBox.querySelector(`#nestedNewColor_${abbr}`), detailBox.querySelector(`#nestedNewColorDot_${abbr}`));
       const nestedAsegNew = detailBox.querySelector(`#nestedNewAseg_${abbr}`);
-      if(nestedAsegNew) nestedAsegNew.addEventListener("blur", ()=> completeAsesorAbbreviation(nestedAsegNew));
+      if(nestedAsegNew){
+        nestedAsegNew.addEventListener("blur", ()=> completeAsesorAbbreviation(nestedAsegNew));
+        wireAsesorSuggestList(nestedAsegNew, detailBox.querySelector(`#nestedNewAsegSuggest_${abbr}`));
+      }
       detailBox.querySelector(`#nestedAddCancelBtn_${abbr}`).addEventListener("click", ()=>{
+        if(hayDatosSinGuardarEnNested() && !confirm("¿Cancelar? Se va a perder lo que escribiste.")) return;
         addVehBox.style.display = "none";
       });
       detailBox.querySelector(`#nestedAddConfirmBtn_${abbr}`).addEventListener("click", async ()=>{
@@ -5091,7 +5273,12 @@
         const modeloInput = detailBox.querySelector(`#nestedNewModelo_${abbr}`);
         if(!modeloInput.value.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
         const dup = findPlate(plate);
-        if(dup){ showToast(`${plate} ya está ubicada en otro lugar — quitala de ahí primero`); return; }
+        if(dup){
+          const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
+          const haceRato = minutesAgoText(dupEntry.lastUpdated);
+          showToast(`${plate} ya está ubicada en otro lugar${haceRato ? ` (se agregó ${haceRato})` : ""} — quitala de ahí primero`);
+          return;
+        }
         const snap = snapshotZones();
         contenedor.plates.unshift({
           plate,
@@ -5102,7 +5289,7 @@
         });
         pushUndo(snap, `Agregar ${plate} en ${info.label} · ${campoObj.campo}${areaObj ? " · "+areaObj.area : ""}${filaObj ? " · "+filaObj.fila : ""}`);
         await saveState(true);
-        showToast("Listo — vehículo agregado");
+        showToastWithUndo("Listo — vehículo agregado");
         drawZoneDetail();
       });
 
@@ -5130,7 +5317,10 @@
       if(editSaveBtn){
         wireColorDot(detailBox.querySelector(`#nestedEditColor_${abbr}`), detailBox.querySelector(`#nestedEditColorDot_${abbr}`));
         const editAsegEl = detailBox.querySelector(`#nestedEditAseg_${abbr}`);
-        if(editAsegEl) editAsegEl.addEventListener("blur", ()=> completeAsesorAbbreviation(editAsegEl));
+        if(editAsegEl){
+          editAsegEl.addEventListener("blur", ()=> completeAsesorAbbreviation(editAsegEl));
+          wireAsesorSuggestList(editAsegEl, detailBox.querySelector(`#nestedEditAsegSuggest_${abbr}`));
+        }
         editSaveBtn.addEventListener("click", async ()=>{
           const idx = adminNestedEditingIdx;
           const p = contenedor.plates[idx];
@@ -5210,16 +5400,18 @@
           `;
         }
         if(idx === adminEditingPlateIdx){
+          const tiempoAca = lastMovedLabel(p);
           return `
             <div class="spaceEditForm" data-idx="${idx}">
+              <div class="lastMovedBanner recency-${tiempoAca.recency}">🕒 ${escapeHtml(tiempoAca.diasTexto)} · desde el ${escapeHtml(tiempoAca.fecha)}</div>
               <div class="labeledFieldRow">
                 <label class="labeledFieldBox" style="flex:1.3;">
                   <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-                  <input type="text" id="zoneEditPlaca_${abbr}" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" autocapitalize="characters">
+                  <input type="text" id="zoneEditPlaca_${abbr}" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
                 </label>
                 <label class="labeledFieldBox" style="flex:1;">
                   <span class="labeledFieldLabel">Asesor</span>
-                  <input type="text" id="zoneEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" list="asesorSuggestions">
+                  <input type="text" id="zoneEditAseg_${abbr}" value="${escapeHtml(p.aseguradora || "")}" autocomplete="off"><div class="customSuggestList" id="zoneEditAsegSuggest_${abbr}" style="display:none;"></div>
                 </label>
               </div>
               <div class="labeledFieldRow">
@@ -5309,11 +5501,11 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters">
+              <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
             </label>
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">Asesor</span>
-              <input type="text" id="zoneNewAseguradora_${abbr}" list="asesorSuggestions">
+              <input type="text" id="zoneNewAseguradora_${abbr}" autocomplete="off"><div class="customSuggestList" id="zoneNewAsegSuggest_${abbr}" style="display:none;"></div>
             </label>
           </div>
           <div class="labeledFieldRow">
@@ -5477,6 +5669,7 @@
         const zoneAsegWarnEdit = detailBox.querySelector(`#zoneEditAsesorWarn_${abbr}`);
         if(zoneAsegInputEdit){
           zoneAsegInputEdit.addEventListener("blur", ()=> completeAsesorAbbreviation(zoneAsegInputEdit, zoneAsegWarnEdit));
+          wireAsesorSuggestList(zoneAsegInputEdit, detailBox.querySelector(`#zoneEditAsegSuggest_${abbr}`));
           zoneAsegInputEdit.addEventListener("input", ()=>{ if(zoneAsegWarnEdit) zoneAsegWarnEdit.style.display = "none"; });
         }
         const editMoveGridAdmin = detailBox.querySelector(`#zoneEditGrid_${abbr}`);
@@ -5620,7 +5813,7 @@
           const idx = parseInt(b.getAttribute("data-idx"),10);
           const p = c.plates[idx];
           if(!p) return;
-          openPhotoReportModal(p.plate, info.label, c.campo, false, false, p.aseguradora, p.modelo, p.color, p.circulacion);
+          openPhotoReportModal(p.plate, info.label, c.campo, false, false, p.aseguradora, p.modelo, p.color, p.circulacion, p.lastUpdated);
         });
       });
       detailBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
@@ -5707,6 +5900,7 @@
       const zoneAsegWarnNew = detailBox.querySelector(`#zoneNewAsesorWarn_${abbr}`);
       if(zoneAsegInputNew){
         zoneAsegInputNew.addEventListener("blur", ()=> completeAsesorAbbreviation(zoneAsegInputNew, zoneAsegWarnNew));
+        wireAsesorSuggestList(zoneAsegInputNew, detailBox.querySelector(`#zoneNewAsegSuggest_${abbr}`));
         zoneAsegInputNew.addEventListener("input", ()=>{ if(zoneAsegWarnNew) zoneAsegWarnNew.style.display = "none"; });
       }
       addToggleBtn.addEventListener("click", ()=>{
@@ -5756,9 +5950,10 @@
           if(dupEntry.modelo && !modInput.value.trim()) modInput.value = dupEntry.modelo;
           if(colInput && dupEntry.color && !colInput.value.trim()) colInput.value = dupEntry.color;
           const yaAca = dup.zoneKey === zone.key && dupCampo === c.campo;
+          const haceRato = minutesAgoText(dupEntry.lastUpdated);
           newDupWarn.innerHTML = yaAca
-            ? `<span class="dupWarnIcon">⚠️</span> ${v} ya está en este mismo ${labelLower}.`
-            : `<span class="dupWarnIcon">🔁</span> ${v} está en ${dupInfo.label}, campo ${dupCampo}. Al confirmar, se moverá acá (sus datos ya se completaron solos).`;
+            ? `<span class="dupWarnIcon">⚠️</span> ${v} ya está en este mismo ${labelLower}${haceRato ? ` — se agregó <strong>${haceRato}</strong>, ¿seguro que no es un toque doble?` : "."}`
+            : `<span class="dupWarnIcon">🔁</span> ${v} está en ${dupInfo.label}, campo ${dupCampo}${haceRato ? ` (actualizada ${haceRato})` : ""}. Al confirmar, se moverá acá (sus datos ya se completaron solos).`;
           newDupWarn.style.display = "flex";
           newSimilarWarn.style.display = "none";
         } else {
@@ -5812,7 +6007,7 @@
           const ok = await updaterAddNew(zone.key, c.campo, plateRaw, aseguradora, modeloInput.value, "first", colorInput.value, circulacionInput.value);
           if(ok){
             pushUndo(snap, `Agregar ${normalizePlate(plateRaw)} en ${c.campo}`);
-            showToast("Listo — vehículo en este espacio");
+            showToastWithUndo("Listo — vehículo en este espacio");
             drawZoneGrid();
             drawZoneDetail();
             openPhotoReportModal(plateForReport, info.label, c.campo, false, true, aseguradora, modeloInput.value, colorInput.value, circulacionInput.value);
@@ -5982,6 +6177,7 @@
       <div class="tableScrollWrap" id="resumenTableScrollWrap">
         <table>
           <thead><tr>
+            <th style="width:50px;" data-sort="pi" title="Orden de llegada dentro del campo">Pos.</th>
             <th style="width:70px;" data-sort="campo">Campo</th>
             <th data-sort="zoneLabel">Zona</th>
             <th data-sort="modelo">Modelo</th>
@@ -6117,6 +6313,7 @@
           tr.dataset.ci = r.ci;
           tr.dataset.pi = r.pi;
           tr.innerHTML = `
+            <td><span class="orderBadge" title="Orden de llegada dentro de este campo">${r.pi+1}</span></td>
             <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${highlightMatch(r.campo, filterText)}</span></td>
             <td>${highlightMatch(r.zoneLabel, filterText)}</td>
             <td>${r.modelo ? highlightMatch(r.modelo, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
@@ -7118,6 +7315,46 @@
   // tipeo, ej. "Danniel" en vez de "Daniel"), se avisa sin bloquear nada
   // — así alguien nuevo que no conoce cómo se escriben los nombres del
   // equipo no termina creando una variante más por accidente.
+  // Reemplaza al <datalist> nativo para las sugerencias de asesor — en
+  // varios navegadores móviles esa lista se ve pero no se puede tocar
+  // para elegirla, solo queda como información. Este desplegable propio
+  // sí se puede tocar: filtra mientras escribís y selecciona al tocar.
+  function wireAsesorSuggestList(input, dropdown){
+    if(!input || !dropdown) return;
+    let justSelected = false;
+    function mostrar(){
+      if(justSelected){ justSelected = false; dropdown.style.display = "none"; return; }
+      const texto = input.value.trim().toLowerCase();
+      const conocidos = getKnownAsesores();
+      const coincidencias = (texto ? conocidos.filter(n => n.toLowerCase().includes(texto)) : conocidos).slice(0, 8);
+      if(coincidencias.length === 0){ dropdown.style.display = "none"; return; }
+      dropdown.innerHTML = coincidencias.map(n=>`<div class="customSuggestItem">${escapeHtml(n)}</div>`).join("");
+      dropdown.querySelectorAll(".customSuggestItem").forEach(item=>{
+        // mousedown (no click) para que se dispare ANTES del blur del
+        // input — si no, el blur cierra el desplegable primero y el
+        // click nunca llega a registrarse.
+        item.addEventListener("mousedown", (e)=>{
+          e.preventDefault();
+          justSelected = true;
+          input.value = item.textContent;
+          dropdown.style.display = "none";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          // Sin input.focus() acá: el preventDefault() de arriba ya evita
+          // que el campo pierda el foco con el toque, así que no hace
+          // falta forzarlo — y forzarlo disparaba el evento "focus", que
+          // volvía a abrir el desplegable con la misma sugerencia recién
+          // elegida.
+        });
+      });
+      dropdown.style.display = "block";
+    }
+    input.addEventListener("focus", mostrar);
+    input.addEventListener("input", mostrar);
+    input.addEventListener("blur", ()=>{
+      setTimeout(()=>{ dropdown.style.display = "none"; }, 150);
+    });
+  }
+
   function completeAsesorAbbreviation(input, warnDiv){
     if(warnDiv) warnDiv.style.display = "none";
     if(!input) return;
@@ -7144,8 +7381,16 @@
     // diferencia es realmente mínima en relación al largo del nombre.
     const umbral = escrito.length <= 4 ? 1 : 2;
     if(mejor && mejorDistancia > 0 && mejorDistancia <= umbral){
-      warnDiv.innerHTML = `<span class="dupWarnIcon">💭</span> ¿Quisiste decir "${escapeHtml(mejor)}"? Ya está guardado así.`;
+      warnDiv.innerHTML = `<span class="dupWarnIcon">💭</span> ¿Quisiste decir <span class="asesorSuggestionLink" id="asesorSuggestionLink">"${escapeHtml(mejor)}"</span>? Ya está guardado así.`;
       warnDiv.style.display = "flex";
+      const link = warnDiv.querySelector("#asesorSuggestionLink");
+      if(link){
+        link.addEventListener("click", ()=>{
+          input.value = mejor;
+          warnDiv.style.display = "none";
+          input.focus();
+        });
+      }
     }
   }
 
@@ -7157,16 +7402,25 @@
   // una idea visual rápida de qué se está escribiendo.
   const COLOR_NAME_MAP = {
     "blanco":"#ffffff", "blanca":"#ffffff", "perla":"#f2efe9", "perlado":"#f2efe9", "marfil":"#fdf6e3",
-    "negro":"#1c1c1c", "negra":"#1c1c1c",
+    "white":"#ffffff", "pearl":"#f2efe9", "ivory":"#fdf6e3",
+    "negro":"#1c1c1c", "negra":"#1c1c1c", "black":"#1c1c1c",
     "gris":"#9aa0a6", "plata":"#c4c8cb", "plateado":"#c4c8cb", "plateada":"#c4c8cb", "plomo":"#8b8f92", "grafito":"#4a4d50",
+    "gray":"#9aa0a6", "grey":"#9aa0a6", "silver":"#c4c8cb", "graphite":"#4a4d50", "charcoal":"#4a4d50",
     "rojo":"#c0392b", "roja":"#c0392b", "vino":"#722f37", "vinotinto":"#722f37", "guinda":"#722f37",
+    "red":"#c0392b", "maroon":"#722f37", "burgundy":"#722f37", "wine":"#722f37",
     "azul":"#2e6da4", "celeste":"#5dade2", "turquesa":"#17a2a2", "marino":"#1c3f6e",
+    "blue":"#2e6da4", "skyblue":"#5dade2", "turquoise":"#17a2a2", "navy":"#1c3f6e",
     "verde":"#2f9e44", "oliva":"#6b8e23",
+    "green":"#2f9e44", "olive":"#6b8e23",
     "amarillo":"#f1c40f", "amarilla":"#f1c40f", "dorado":"#c9a227", "dorada":"#c9a227", "champagne":"#e8d5a3",
-    "naranja":"#e67e22", "naranjado":"#e67e22",
+    "yellow":"#f1c40f", "gold":"#c9a227", "golden":"#c9a227",
+    "naranja":"#e67e22", "naranjado":"#e67e22", "orange":"#e67e22",
     "marron":"#795548", "marrón":"#795548", "cafe":"#6f4e37", "café":"#6f4e37", "beige":"#dcc9a3", "arena":"#dcc9a3", "chocolate":"#5a3825",
+    "brown":"#795548", "coffee":"#6f4e37", "tan":"#dcc9a3",
     "morado":"#8e44ad", "purpura":"#8e44ad", "púrpura":"#8e44ad", "lila":"#b39ddb",
-    "rosado":"#e91e8c", "rosa":"#e91e8c", "fucsia":"#e6007e"
+    "purple":"#8e44ad", "violet":"#8e44ad", "lilac":"#b39ddb",
+    "rosado":"#e91e8c", "rosa":"#e91e8c", "fucsia":"#e6007e",
+    "pink":"#e91e8c", "fuchsia":"#e6007e", "magenta":"#e6007e"
   };
   function guessColorHex(text){
     if(!text) return null;
@@ -7692,6 +7946,9 @@
       console.error("Error mostrando la interfaz", e);
     }
     if(currentUser.role !== "actualizacion"){
+      // Para Búsqueda, arrancar directo en Resumen — lo primero que
+      // interesa ver son los vehículos, no el Dashboard.
+      if(currentUser.role === "consulta") activeTab = "__resumen__";
       (async function(){
         try{
           await loadState();
@@ -7992,6 +8249,81 @@
   document.getElementById("unifyModelosBtn").addEventListener("click", openUnifyModelosModal);
   document.getElementById("unifyModelosCloseBtn").addEventListener("click", ()=>{
     document.getElementById("unifyModelosModal").classList.remove("show");
+  });
+
+  // Recorre TODOS los vehículos del sistema — zonas normales, Sin
+  // ubicación, y también adentro de áreas/filas de las zonas anidadas
+  // (Taller/Recepción) — devolviendo cada placa junto con el arreglo
+  // "plates" real al que pertenece (para poder tocarla ahí mismo).
+  function forEachPlateEverywhere(cb){
+    [...ZONES, SIN_UBICACION_INFO].forEach(z=>{
+      (state.zones[z.key] || []).forEach(c=>{
+        (c.plates || []).forEach(p=> cb(p, c.plates, z));
+        (c.areas || []).forEach(a=>{
+          (a.plates || []).forEach(p=> cb(p, a.plates, z));
+          (a.filas || []).forEach(f=>{
+            (f.plates || []).forEach(p=> cb(p, f.plates, z));
+          });
+        });
+      });
+    });
+  }
+  function findPlatesToClean(){
+    const candidatos = [];
+    forEachPlateEverywhere((p, arr, z)=>{
+      const limpia = normalizePlate(p.plate);
+      if(limpia && limpia !== p.plate){
+        // Si YA existe otra placa (de verdad distinta) guardada con la
+        // forma limpia, no se puede renombrar sin más — sería fusionar 2
+        // vehículos en 1. Ese caso se marca aparte, para resolverlo a
+        // mano (quitar una de las dos).
+        let hayOtraConEseNombre = false;
+        forEachPlateEverywhere(p2=>{ if(p2 !== p && p2.plate === limpia) hayOtraConEseNombre = true; });
+        candidatos.push({ original: p.plate, limpia, zonaLabel: z.label, conflicto: hayOtraConEseNombre, arr, p });
+      }
+    });
+    return candidatos;
+  }
+  function openCleanPlatesModal(){
+    if(!guardEdit()) return;
+    const overlay = document.getElementById("cleanPlatesModal");
+    const body = document.getElementById("cleanPlatesBody");
+    function draw(){
+      const candidatos = findPlatesToClean();
+      if(candidatos.length === 0){
+        body.innerHTML = `<div class="dashCardGood" style="padding:14px; text-align:center; border-radius:10px;">✓ Todas las placas ya están en formato limpio.</div>`;
+        return;
+      }
+      body.innerHTML = candidatos.map((c,i)=>`
+        <div class="historyItem" style="margin-bottom:8px;">
+          <strong>"${escapeHtml(c.original)}"</strong> → <strong>"${escapeHtml(c.limpia)}"</strong>
+          <div class="historyMeta">${escapeHtml(c.zonaLabel)}</div>
+          ${c.conflicto
+            ? `<div class="authError" style="margin-top:4px;">⚠️ Ya existe otra placa guardada como "${escapeHtml(c.limpia)}" — resolvé ese duplicado a mano antes de limpiar esta.</div>`
+            : `<button type="button" class="secondaryBtn cleanPlateBtn" data-idx="${i}" style="margin-top:6px; width:100%;">Limpiar a "${escapeHtml(c.limpia)}"</button>`
+          }
+        </div>
+      `).join("");
+      body.querySelectorAll(".cleanPlateBtn").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          const c = candidatos[parseInt(btn.getAttribute("data-idx"),10)];
+          if(!confirm(`¿Cambiar "${c.original}" por "${c.limpia}"?`)) return;
+          const snap = snapshotZones();
+          c.p.plate = c.limpia;
+          c.p.lastUpdated = new Date().toISOString();
+          pushUndo(snap, `Limpiar formato de placa "${c.original}" → "${c.limpia}"`);
+          await saveState(true);
+          showToast(`"${c.original}" → "${c.limpia}"`);
+          draw();
+        });
+      });
+    }
+    draw();
+    overlay.classList.add("show");
+  }
+  document.getElementById("cleanPlatesBtn").addEventListener("click", openCleanPlatesModal);
+  document.getElementById("cleanPlatesCloseBtn").addEventListener("click", ()=>{
+    document.getElementById("cleanPlatesModal").classList.remove("show");
   });
 
   function findAsesorPairsToUnify(){
@@ -9253,12 +9585,14 @@
           `;
         }
         if(idx === updEditingPlateIdx){
+          const tiempoAca = lastMovedLabel(p);
           return `
             <div class="spaceEditForm" data-idx="${idx}">
+              <div class="lastMovedBanner recency-${tiempoAca.recency}">🕒 ${escapeHtml(tiempoAca.diasTexto)} · desde el ${escapeHtml(tiempoAca.fecha)}</div>
               <div class="labeledFieldRow">
                 <label class="labeledFieldBox" style="flex:1.3;">
                   <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-                  <input type="text" id="spaceEditPlaca" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" autocapitalize="characters">
+                  <input type="text" id="spaceEditPlaca" class="plate reqField plateUpperField" value="${escapeHtml(p.plate)}" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
                 </label>
                 ${currentUser.showMovedBy
                   ? `<label class="labeledFieldBox" style="flex:1;">
@@ -9267,7 +9601,7 @@
                     </label>`
                   : `<label class="labeledFieldBox" style="flex:1;">
                       <span class="labeledFieldLabel">Asesor</span>
-                      <input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" list="asesorSuggestions">
+                      <input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" autocomplete="off"><div class="customSuggestList" id="spaceEditAsegSuggest" style="display:none;"></div>
                     </label>`
                 }
               </div>
@@ -9362,12 +9696,12 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" autocapitalize="characters">
+              <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
             </label>
             ${currentUser.showMovedBy ? `` : `
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">Asesor</span>
-              <input type="text" id="updSpaceNewAseguradora" list="asesorSuggestions">
+              <input type="text" id="updSpaceNewAseguradora" autocomplete="off"><div class="customSuggestList" id="updSpaceNewAsegSuggest" style="display:none;"></div>
             </label>
             `}
           </div>
@@ -9426,6 +9760,7 @@
       const updAsegWarnNew = spaceInfoBox.querySelector("#updSpaceAsesorWarn");
       if(updAsegInputNew){
         updAsegInputNew.addEventListener("blur", ()=> completeAsesorAbbreviation(updAsegInputNew, updAsegWarnNew));
+        wireAsesorSuggestList(updAsegInputNew, spaceInfoBox.querySelector("#updSpaceNewAsegSuggest"));
         updAsegInputNew.addEventListener("input", ()=>{ if(updAsegWarnNew) updAsegWarnNew.style.display = "none"; });
       }
       addToggleBtn.addEventListener("click", ()=>{
@@ -9518,6 +9853,7 @@
         const editAsegWarn = spaceInfoBox.querySelector("#spaceEditAsesorWarn");
         if(editAsegInput){
           editAsegInput.addEventListener("blur", ()=> completeAsesorAbbreviation(editAsegInput, editAsegWarn));
+          wireAsesorSuggestList(editAsegInput, spaceInfoBox.querySelector("#spaceEditAsegSuggest"));
           editAsegInput.addEventListener("input", ()=>{ if(editAsegWarn) editAsegWarn.style.display = "none"; });
         }
         const moveToggleBtn = spaceInfoBox.querySelector("#spaceEditMoveToggle");
@@ -9674,7 +10010,7 @@
           const idx = parseInt(b.getAttribute("data-idx"),10);
           const p = entry.plates[idx];
           if(!p) return;
-          openPhotoReportModal(p.plate, zoneInfo(updSpaceZone).label, campoLabel, false, false, p.aseguradora, p.modelo, p.color, p.circulacion);
+          openPhotoReportModal(p.plate, zoneInfo(updSpaceZone).label, campoLabel, false, false, p.aseguradora, p.modelo, p.color, p.circulacion, p.lastUpdated);
         });
       });
       spaceInfoBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
@@ -9802,10 +10138,11 @@
           if(dupEntry.modelo && !modInput.value.trim()) modInput.value = dupEntry.modelo;
           if(colInput && dupEntry.color && !colInput.value.trim()) colInput.value = dupEntry.color;
           const yaAca = dup.zoneKey === updSpaceZone && dupCampo === campoLabel;
+          const haceRato = minutesAgoText(dupEntry.lastUpdated);
           if(yaAca){
-            spaceDupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya está en este mismo ${labelLower}.`;
+            spaceDupWarn.innerHTML = `<span class="dupWarnIcon">⚠️</span> ${v} ya está en este mismo ${labelLower}${haceRato ? ` — se agregó <strong>${haceRato}</strong>, ¿seguro que no es un toque doble?` : "."}`;
           } else {
-            spaceDupWarn.innerHTML = `<span class="dupWarnIcon">🔁</span> ${v} está en ${dupInfo.label}, campo ${dupCampo}. Al confirmar, se moverá acá (sus datos ya se completaron solos).`;
+            spaceDupWarn.innerHTML = `<span class="dupWarnIcon">🔁</span> ${v} está en ${dupInfo.label}, campo ${dupCampo}${haceRato ? ` (actualizada ${haceRato})` : ""}. Al confirmar, se moverá acá (sus datos ya se completaron solos).`;
           }
           spaceDupWarn.style.display = "flex";
           spaceSimilarWarn.style.display = "none";
@@ -9864,11 +10201,13 @@
         const plateForReport = normalizePlate(plateRaw);
         const zoneLabelForReport = zoneInfo(updSpaceZone).label;
         await runGuarded(spaceAddBtn, "Guardando…", async ()=>{
+          const snap = snapshotZones();
           const ok = await updaterAddNew(updSpaceZone, campoLabel, plateRaw, aseguradora, modelo, "first", color, circulacion);
           if(ok){
+            pushUndo(snap, `Agregar ${plateForReport} en ${zoneLabelForReport} · ${campoLabel}`);
             lastAddZoneKey = updSpaceZone;
             vibrateSuccess();
-            showToast("Listo — vehículo en este espacio");
+            showToastWithUndo("Listo — vehículo en este espacio");
             refreshSpaceGrid(campoLabel);
             drawZoneFilterRow();
             drawAllList();
