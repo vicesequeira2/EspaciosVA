@@ -1446,6 +1446,23 @@
     margin-bottom:18px;
   }
   .allAreasZoneBlock:last-child{ margin-bottom:0; }
+  .allAreasBodySimple .allAreasZoneHeader{
+    font-size:1.05rem;
+  }
+  .allAreasBodySimple .spaceGrid{
+    grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));
+    gap:10px;
+  }
+  .allAreasTileSimple{
+    display:flex; align-items:center; justify-content:center;
+    min-height:56px;
+    font-size:1.15rem;
+    font-weight:800;
+    padding:10px 8px;
+    background: var(--surface-2);
+    border:1.5px solid var(--border);
+  }
+  .allAreasTileSimple:active{ background: var(--surface-3); }
   .nestedBreadcrumbLink{
     cursor:pointer;
     text-decoration:underline;
@@ -2263,6 +2280,16 @@
     background:#fbeae8;
     color:#a13d33;
   }
+  .llaveBtnTablero.active{
+    border-color:#2e6da4;
+    background:#e8f1fa;
+    color:#1c4a73;
+  }
+  .llaveBtnVehiculo.active{
+    border-color:#c9821c;
+    background:#fbf1e0;
+    color:#8a5a10;
+  }
   .circulacionSummaryTag{
     display:inline-block;
     margin-left:6px;
@@ -2273,6 +2300,8 @@
   }
   .circulacionSummaryTagOk{ background:#eaf5ee; color:#2e7d4f; }
   .circulacionSummaryTagNo{ background:#fbeae8; color:#a13d33; }
+  .llaveSummaryTagTablero{ background:#e8f1fa; color:#1c4a73; }
+  .llaveSummaryTagVehiculo{ background:#fbf1e0; color:#8a5a10; }
   .tiempoAquiTag{
     display:inline-block;
     margin-top:6px;
@@ -2303,6 +2332,11 @@
     border:1px solid rgba(0,0,0,0.15);
     vertical-align:middle;
     margin-left:2px;
+  }
+  .plateLlaveIcon{
+    font-size:0.78rem;
+    vertical-align:middle;
+    margin-left:1px;
   }
   /* Al abrir "Agregar", se oculta todo lo que no sea el formulario en sí —
      la lista de vehículos de ese espacio, la navegación entre espacios, el
@@ -3421,6 +3455,15 @@
   }
 
   let storageAvailable = true;
+  // Recuerda el texto EXACTO que había guardado en el servidor la última
+  // vez que se leyó o se guardó con éxito — sirve para detectar cuando
+  // otra sesión (ej. la misma cuenta compartida "AVALUO" usada desde 2
+  // celulares a la vez) guardó algo en el medio. Sin esto, guardar
+  // sobreescribe TODO el estado a ciegas, y el cambio de la otra persona
+  // desaparece sin ningún aviso — por eso a veces "no se guardaba" un
+  // cambio: en realidad SÍ se guardó, pero otro guardado casi al mismo
+  // tiempo lo borró encima sin que nadie se enterara.
+  let lastKnownServerStateRaw = null;
   let storageWarned = false;
   let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
   let pendingUpdaterSearch = ""; // texto del buscador de Actualización a restaurar después de un refresco, para no perder el filtro que ya tenías escrito
@@ -3476,15 +3519,28 @@
     renderAll();
   }
 
+  // Cuenta puntual "AVALUO": arranca directo mostrando todas sus áreas, en
+  // grande, para elegir rápido dónde agregar sin tener que primero elegir
+  // zona y campo a mano — pensado para minimizar errores de apuro. Se
+  // compara sin mayúsculas/acentos, por si se escribe distinto en algún
+  // lado ("Avaluo", "AVALUO", "avalúo").
+  function isAvaluoUser(){
+    if(!(currentUser && currentUser.username)) return false;
+    const norm = currentUser.username.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+    return norm === "avaluo";
+  }
+
   // Muestra de un vistazo la cuadrícula completa de TODAS las zonas
   // visibles, cada una con su propio encabezado — para ver el estado de
   // todo el parqueo sin tener que entrar zona por zona. Tocar un cuadrito
   // lleva directo a esa zona (o a Resumen filtrado, para quien no edita).
-  function openAllAreasModal(){
-    const overlay = document.getElementById("allAreasModal");
-    const body = document.getElementById("allAreasBody");
+  // En modo simple (la cuenta AVALUO) se ven solo los nombres, grandes,
+  // sin los detalles de ocupación — para identificar rápido dónde agregar.
+  // Arma el HTML de "todas las áreas" — se reutiliza tanto en el modal
+  // (Admin y demás roles) como en la vista fija sin cerrar (AVALUO).
+  function buildAllAreasHTML(){
     const zonas = visibleZonesForCurrentUser();
-    body.innerHTML = zonas.map(z=>{
+    return zonas.map(z=>{
       const arr = state.zones[z.key] || [];
       if(arr.length === 0){
         return `
@@ -3504,7 +3560,7 @@
           fillClass = occ > cap ? "overloaded" : (occ === cap ? "full" : (occ > 0 ? "partial" : "empty"));
         }
         return `
-          <button type="button" class="spaceGridBtn allAreasTile ${fillClass}" data-zone="${z.key}">
+          <button type="button" class="spaceGridBtn allAreasTile ${fillClass}" data-zone="${z.key}" data-campo="${escapeAttrLike(c.campo)}">
             ${fillClass === "overloaded" ? `<span class="spaceGridOverloadTag" title="Tiene más vehículos que el límite definido">⚠️</span>` : ``}
             <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
             ${cap ? `<span class="spaceGridCount">${occ}/${cap}</span>` : `<span class="spaceGridCount spaceGridNoCapText">${occ}</span>`}
@@ -3518,11 +3574,28 @@
         </div>
       `;
     }).join("");
-    body.querySelectorAll(".allAreasTile").forEach(btn=>{
+  }
+  function wireAllAreasTiles(container, onNavigate){
+    container.querySelectorAll(".allAreasTile").forEach(btn=>{
       btn.addEventListener("click", ()=>{
-        overlay.classList.remove("show");
-        goToZoneFromDashboard(btn.getAttribute("data-zone"));
+        onNavigate(btn.getAttribute("data-zone"), btn.getAttribute("data-campo"));
       });
+    });
+  }
+  function openAllAreasModal(){
+    const overlay = document.getElementById("allAreasModal");
+    const body = document.getElementById("allAreasBody");
+    body.classList.remove("allAreasBodySimple");
+    body.innerHTML = buildAllAreasHTML();
+    wireAllAreasTiles(body, (zoneKey, campo)=>{
+      overlay.classList.remove("show");
+      if(currentUser && currentUser.role === "actualizacion"){
+        updSpaceZone = zoneKey;
+        updSelectedCampo = campo;
+        renderUpdaterPanel();
+      } else {
+        goToZoneFromDashboard(zoneKey);
+      }
     });
     overlay.classList.add("show");
   }
@@ -3684,7 +3757,10 @@
     if(m.startsWith("listo") || m.startsWith("guardado") || m.includes("agregado") || m.includes("actualizado") || m.includes("eliminado") || m.includes("copiad") || m.includes("recuperad") || m.includes("aplicad") || m.includes("cerrada")) return "success";
     return "info";
   }
-  function showToast(msg, duration){
+  let importantToastUntil = 0; // mientras haya un aviso importante (ej. choque al guardar) mostrado hace poco, no se deja que otro mensaje lo tape encima sin querer
+  function showToast(msg, duration, important){
+    if(!important && Date.now() < importantToastUntil) return;
+    if(important) importantToastUntil = Date.now() + (duration || 4000);
     const t = document.getElementById("toast");
     t.textContent = msg || "Guardado";
     t.classList.remove("toast-success","toast-error","toast-warn","toast-info");
@@ -3701,6 +3777,7 @@
   // de agregar; si para cuando tocás "Deshacer" ya se hizo algo más
   // encima, no deshace lo nuevo por error — avisa en cambio.
   function showToastWithUndo(msg, duration){
+    if(Date.now() < importantToastUntil) return; // no tapar un aviso importante reciente (ej. "no se guardó por un choque")
     const stackLenAlMostrar = undoStack.length;
     const t = document.getElementById("toast");
     t.innerHTML = `<span>${escapeHtml(msg)}</span> <button type="button" id="toastUndoBtn" class="toastUndoBtn">Deshacer</button>`;
@@ -3885,6 +3962,7 @@
       try{
         const shared = await window.storage.get(STORAGE_KEY, true);
         if(shared && shared.value){
+          lastKnownServerStateRaw = shared.value;
           state = JSON.parse(shared.value);
           if(!state.capacities) state.capacities = {};
           let needsResave = migrateStateToBlocksIfNeeded(state);
@@ -3962,14 +4040,36 @@
     if(!storageAvailable){
       if(!storageWarned){ storageWarned = true; showStorageBanner(); }
       renderMeta();
-      return;
+      return false;
     }
 
     try{
+      // Antes de guardar, se revisa si el servidor tiene algo DISTINTO de
+      // lo último que leímos acá — significa que otra sesión (la misma
+      // cuenta usada desde otro celular, por ejemplo) guardó un cambio en
+      // el medio. Si se sobreescribe a ciegas, ese cambio ajeno desaparece
+      // sin que nadie se entere — eso hacía que pareciera que "a veces no
+      // se guarda" un cambio, cuando en realidad SÍ se guardaba, pero el
+      // guardado de otra sesión lo pisaba encima segundos después.
+      //
+      // Acá NO se recarga el estado a ciegas (eso perdería el cambio que
+      // la persona recién hizo, sin guardarlo nunca) — se avisa
+      // claramente y no se guarda nada, para que la persona actualice la
+      // pantalla a mano y rehaga su cambio sobre datos al día.
+      if(lastKnownServerStateRaw !== null){
+        const actual = await window.storage.get(STORAGE_KEY, true).catch(()=>null);
+        if(actual && actual.value && actual.value !== lastKnownServerStateRaw){
+          showToast("⚠️ Alguien más guardó un cambio justo antes que vos — tu cambio NO se guardó. Tocá 🔄 Actualizar y volvé a intentarlo.", 7000, true);
+          renderMeta();
+          return false;
+        }
+      }
       const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
       if(!result || typeof result !== "object"){
         throw new Error("Unexpected response type");
       }
+      lastKnownServerStateRaw = JSON.stringify(state);
+      importantToastUntil = 0; // el guardado funciono: ya no hace falta proteger un aviso viejo de choque/sin-conexion
       if(!silent) showToast("Guardado");
       if(pendingSaveRetry){
         pendingSaveRetry = false;
@@ -3984,11 +4084,14 @@
       console.error("Error guardando, se reintentará automáticamente", e);
       if(!pendingSaveRetry){
         pendingSaveRetry = true;
-        showToast("Sin conexión con el guardado — reintentando solo...", 4000);
+        showToast("Sin conexión con el guardado — reintentando solo...", 4000, true);
         scheduleSaveRetry();
       }
+      renderMeta();
+      return false;
     }
     renderMeta();
+    return true;
   }
 
   function scheduleSaveRetry(){
@@ -4002,6 +4105,8 @@
       try{
         const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
         if(result && typeof result === "object"){
+          lastKnownServerStateRaw = JSON.stringify(state);
+          importantToastUntil = 0; // el guardado funciono: ya no hace falta proteger un aviso viejo de choque/sin-conexion
           pendingSaveRetry = false;
           clearInterval(saveRetryTimer);
           saveRetryTimer = null;
@@ -4377,7 +4482,7 @@
     return new Promise(resolve => canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.85));
   }
 
-  function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, lastUpdated){
+  function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated){
     const overlay = document.getElementById("photoReportModal");
     const summaryBox = document.getElementById("photoReportSummary");
     const fecha = new Date().toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
@@ -4392,8 +4497,13 @@
       : circulacion === "no"
         ? `<span class="circulacionSummaryTag circulacionSummaryTagNo">🚫 No circula</span>`
         : "";
+    const llaveTag = llave === "tablero"
+      ? `<span class="circulacionSummaryTag llaveSummaryTagTablero">🔑 Tablero ${escapeHtml(campoLabel)}</span>`
+      : llave === "vehiculo"
+        ? `<span class="circulacionSummaryTag llaveSummaryTagVehiculo">🔒 Llave dentro del vehículo</span>`
+        : "";
     const tiempoAquiTag = tiempoAqui ? `<div class="tiempoAquiTag tiempoAquiTag-${tiempoAqui.recency}">🕒 ${tiempoAqui.diasTexto}</div>` : "";
-    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${escapeHtml(plate)}</strong>${circulacionTag}<div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${tiempoAquiTag}`;
+    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${escapeHtml(plate)}</strong>${circulacionTag}${llaveTag}<div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${tiempoAquiTag}`;
 
     // Si el modal se vuelve a abrir sin haberse cerrado antes (ej. compartir
     // y enseguida tocar otra placa), esto evita que se acumulen listeners
@@ -4453,7 +4563,8 @@
       shareBtn.disabled = true;
       shareBtn.textContent = "Compartiendo…";
       const circulacionTexto = circulacion === "puede" ? "✅ Puede circular" : circulacion === "no" ? "🚫 No circula" : "";
-      const text = `Placa: ${plate}\nZona: ${zoneLabel}\nCampo: ${campoLabel}\nFecha: ${fecha}${modelo ? `\nModelo: ${modelo}` : ""}${color ? `\nColor: ${color}` : ""}${aseguradora ? `\nAsesor: ${aseguradora}` : ""}${circulacionTexto ? `\n${circulacionTexto}` : ""}`;
+      const llaveTexto = llave === "tablero" ? `🔑 Tablero ${campoLabel}` : llave === "vehiculo" ? "🔒 Llave dentro del vehículo" : "";
+      const text = `Placa: ${plate}\nZona: ${zoneLabel}\nCampo: ${campoLabel}\nFecha: ${fecha}${modelo ? `\nModelo: ${modelo}` : ""}${color ? `\nColor: ${color}` : ""}${aseguradora ? `\nAsesor: ${aseguradora}` : ""}${circulacionTexto ? `\n${circulacionTexto}` : ""}${llaveTexto ? `\n${llaveTexto}` : ""}`;
       if(!navigator.share){
         showToast("Tu navegador no puede compartir fotos directamente. Guardalas y compartilas manualmente junto con este texto.", 5000);
         shareBtn.disabled = false;
@@ -4701,13 +4812,14 @@
 
   // Intenta agregar `plate` al `campoLabel` de `zoneKey`. Maneja duplicados
   // preguntando si se debe mover. Devuelve true si finalmente se agregó.
-  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw){
+  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw){
     const plate = normalizePlate(plateRaw);
     if(!plate) return false;
     let aseguradora = (aseguradoraRaw || "").trim();
     let modelo = (modeloRaw || "").trim();
     let color = (colorRaw || "").trim();
     let circulacion = circulacionRaw || ""; // "puede" | "no" | "" (sin indicar)
+    let llave = llaveRaw || ""; // "tablero" | "vehiculo" | "" (sin indicar — solo pasa si se llama desde algún lado que no la pida)
     const info = zoneInfo(zoneKey);
     const campo = campoLabel ? normalizeCampo(campoLabel)
       : (UNNUMBERED_ONLY_ZONES.has(zoneKey) ? nextLineLabel(zoneKey) : nextAutoCampo(zoneKey));
@@ -4730,6 +4842,7 @@
       if(!modelo) modelo = dupEntry.modelo || "";
       if(!color) color = dupEntry.color || "";
       if(!circulacion) circulacion = dupEntry.circulacion || "";
+      if(!llave) llave = dupEntry.llave || "";
       removePlateAt(dup.zoneKey, dup.campoIdx, dup.plateIdx);
     }
 
@@ -4748,7 +4861,7 @@
       }
     }
 
-    insertPlateAtPosition(getOrCreateCampo(zoneKey, campo), { plate, aseguradora, modelo, color, circulacion, lastUpdated: new Date().toISOString() }, position || "first");
+    insertPlateAtPosition(getOrCreateCampo(zoneKey, campo), { plate, aseguradora, modelo, color, circulacion, llave, lastUpdated: new Date().toISOString() }, position || "first");
     rememberPlateInfo(plate, aseguradora, modelo, color).catch(()=>{}); // en segundo plano, no bloquea el guardado principal
     return true;
   }
@@ -5113,6 +5226,17 @@
                   </div>
                 </label>
               </div>
+              <div class="labeledFieldRow">
+                <label class="labeledFieldBox" style="flex:1;">
+                  <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
+                  <div class="circulacionToggle" id="nestedEditLlaveToggle_${abbr}" data-selected="${escapeAttrLike(p.llave || "")}">
+                    <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🔑 Tablero ${escapeHtml(campoObj.campo)}</button>
+                    <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔒 Dentro del vehículo</button>
+                  </div>
+                  <input type="hidden" id="nestedEditLlave_${abbr}" value="${escapeAttrLike(p.llave || "")}">
+                  <p class="authError" id="nestedEditLlaveError_${abbr}" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
+                </label>
+              </div>
               <div class="modalActions" style="margin-top:10px; flex-direction:row; gap:8px;">
                 <button type="button" class="primaryBtn" id="nestedEditSaveBtn_${abbr}" style="flex:1;">Guardar</button>
                 <button type="button" class="secondaryBtn" id="nestedEditCancelBtn_${abbr}" style="flex:1;">Cancelar</button>
@@ -5124,7 +5248,7 @@
         return `
           <div class="spacePlateRow" data-search="${escapeAttrLike((p.plate+" "+(p.aseguradora||"")+" "+(p.modelo||"")+" "+(p.color||"")).toUpperCase())}">
             <div class="spacePlateInfo">
-              <span class="platePlateText">${escapeHtml(p.plate)}</span>${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}
+              <span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${llaveRowIcon(p, [campoObj.campo, areaObj ? areaObj.area : null, filaObj ? filaObj.fila : null].filter(Boolean).join(" · "))}${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}
             </div>
             <div class="spacePlateActions">
               <button type="button" class="spaceEditBtn nestedEditBtn_${abbr}" data-idx="${idx}" title="Editar">✏️</button>
@@ -5181,6 +5305,17 @@
               </div>
             </label>
           </div>
+          <div class="labeledFieldRow">
+            <label class="labeledFieldBox" style="flex:1;">
+              <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
+              <div class="circulacionToggle" id="nestedNewLlaveToggle_${abbr}">
+                <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🔑 Tablero ${escapeHtml(campoObj.campo)}</button>
+                <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔒 Dentro del vehículo</button>
+              </div>
+              <input type="hidden" id="nestedNewLlave_${abbr}" value="">
+              <p class="authError" id="nestedNewLlaveError_${abbr}" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
+            </label>
+          </div>
           <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
             <button type="button" class="primaryBtn" id="nestedAddConfirmBtn_${abbr}" style="flex:1;">Agregar acá</button>
             <button type="button" class="secondaryBtn" id="nestedAddCancelBtn_${abbr}">Cancelar</button>
@@ -5197,7 +5332,9 @@
         const asegVal = detailBox.querySelector(`#nestedNewAseg_${abbr}`).value.trim();
         const modeloVal = detailBox.querySelector(`#nestedNewModelo_${abbr}`).value.trim();
         const colorVal = detailBox.querySelector(`#nestedNewColor_${abbr}`).value.trim();
-        return !!(placaVal || asegVal || modeloVal || colorVal);
+        const llaveEl = detailBox.querySelector(`#nestedNewLlave_${abbr}`);
+        const llaveVal = llaveEl ? llaveEl.value : "";
+        return !!(placaVal || asegVal || modeloVal || colorVal || llaveVal);
       }
       function confirmarSalirSinGuardar(){
         if(addVehBox.style.display === "none") return true; // el formulario ni está abierto
@@ -5257,6 +5394,7 @@
         if(addVehBox.style.display !== "none") detailBox.querySelector(`#nestedNewPlaca_${abbr}`).focus();
       });
       wireColorDot(detailBox.querySelector(`#nestedNewColor_${abbr}`), detailBox.querySelector(`#nestedNewColorDot_${abbr}`));
+      wireLlaveToggle(detailBox.querySelector(`#nestedNewLlaveToggle_${abbr}`), detailBox.querySelector(`#nestedNewLlave_${abbr}`), detailBox.querySelector(`#nestedNewLlaveError_${abbr}`));
       const nestedAsegNew = detailBox.querySelector(`#nestedNewAseg_${abbr}`);
       if(nestedAsegNew){
         nestedAsegNew.addEventListener("blur", ()=> completeAsesorAbbreviation(nestedAsegNew));
@@ -5272,6 +5410,13 @@
         if(!plate){ showToast("Ingresá una placa válida"); return; }
         const modeloInput = detailBox.querySelector(`#nestedNewModelo_${abbr}`);
         if(!modeloInput.value.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
+        const llaveInput = detailBox.querySelector(`#nestedNewLlave_${abbr}`);
+        if(!llaveInput.value){
+          const err = detailBox.querySelector(`#nestedNewLlaveError_${abbr}`);
+          if(err) err.style.display = "block";
+          showToast("Marcá dónde está la llave");
+          return;
+        }
         const dup = findPlate(plate);
         if(dup){
           const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
@@ -5279,12 +5424,16 @@
           showToast(`${plate} ya está ubicada en otro lugar${haceRato ? ` (se agregó ${haceRato})` : ""} — quitala de ahí primero`);
           return;
         }
+        const asegVal = detailBox.querySelector(`#nestedNewAseg_${abbr}`).value.trim();
+        const colorVal = detailBox.querySelector(`#nestedNewColor_${abbr}`).value.trim();
+        const modeloVal = modeloInput.value.trim();
         const snap = snapshotZones();
         contenedor.plates.unshift({
           plate,
-          aseguradora: detailBox.querySelector(`#nestedNewAseg_${abbr}`).value.trim(),
-          modelo: modeloInput.value.trim(),
-          color: detailBox.querySelector(`#nestedNewColor_${abbr}`).value.trim(),
+          aseguradora: asegVal,
+          modelo: modeloVal,
+          color: colorVal,
+          llave: llaveInput.value,
           lastUpdated: new Date().toISOString()
         });
         pushUndo(snap, `Agregar ${plate} en ${info.label} · ${campoObj.campo}${areaObj ? " · "+areaObj.area : ""}${filaObj ? " · "+filaObj.fila : ""}`);
@@ -5294,6 +5443,14 @@
       });
 
       // ---- Editar / Quitar vehículos de este nivel ----
+      detailBox.querySelectorAll(".platePlateTextClickable").forEach(el=>{
+        el.addEventListener("click", ()=>{
+          const idx = parseInt(el.getAttribute("data-idx"),10);
+          const p = contenedor.plates[idx];
+          const ubicacionLabel = [campoObj.campo, areaObj ? areaObj.area : null, filaObj ? filaObj.fila : null].filter(Boolean).join(" · ");
+          openPhotoReportModal(p.plate, info.label, ubicacionLabel, false, false, p.aseguradora, p.modelo, p.color, p.circulacion, p.llave, p.lastUpdated);
+        });
+      });
       detailBox.querySelectorAll(`.nestedEditBtn_${abbr}`).forEach(btn=>{
         btn.addEventListener("click", ()=>{
           adminNestedEditingIdx = parseInt(btn.getAttribute("data-idx"),10);
@@ -5316,6 +5473,7 @@
       const editSaveBtn = detailBox.querySelector(`#nestedEditSaveBtn_${abbr}`);
       if(editSaveBtn){
         wireColorDot(detailBox.querySelector(`#nestedEditColor_${abbr}`), detailBox.querySelector(`#nestedEditColorDot_${abbr}`));
+        wireLlaveToggle(detailBox.querySelector(`#nestedEditLlaveToggle_${abbr}`), detailBox.querySelector(`#nestedEditLlave_${abbr}`), detailBox.querySelector(`#nestedEditLlaveError_${abbr}`));
         const editAsegEl = detailBox.querySelector(`#nestedEditAseg_${abbr}`);
         if(editAsegEl){
           editAsegEl.addEventListener("blur", ()=> completeAsesorAbbreviation(editAsegEl));
@@ -5328,12 +5486,20 @@
           if(!newPlate){ showToast("Ingresá una placa válida"); return; }
           const newModelo = detailBox.querySelector(`#nestedEditModelo_${abbr}`).value.trim();
           if(!newModelo){ showToast("Ingresá el modelo del vehículo"); return; }
+          const newLlave = detailBox.querySelector(`#nestedEditLlave_${abbr}`).value;
+          if(!newLlave){
+            const err = detailBox.querySelector(`#nestedEditLlaveError_${abbr}`);
+            if(err) err.style.display = "block";
+            showToast("Marcá dónde está la llave");
+            return;
+          }
           if(newPlate !== p.plate && findPlate(newPlate)){ showToast(`${newPlate} ya está ubicada en otro lugar`); return; }
           const snap = snapshotZones();
           p.plate = newPlate;
           p.aseguradora = detailBox.querySelector(`#nestedEditAseg_${abbr}`).value.trim();
           p.modelo = newModelo;
           p.color = detailBox.querySelector(`#nestedEditColor_${abbr}`).value.trim();
+          p.llave = newLlave;
           p.lastUpdated = new Date().toISOString();
           pushUndo(snap, `Editar ${newPlate} en ${info.label} · ${campoObj.campo}`);
           await saveState(true);
@@ -5449,6 +5615,15 @@
                 </div>
                 <input type="hidden" id="zoneEditCirculacion_${abbr}" value="${escapeAttrLike(p.circulacion || "")}">
               </div>
+              <div class="circulacionField">
+                <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
+                <div class="circulacionToggle" id="zoneEditLlaveToggle_${abbr}" data-selected="${escapeAttrLike(p.llave || "")}">
+                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🔑 Tablero ${escapeHtml(c.campo)}</button>
+                  <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔒 Dentro del vehículo</button>
+                </div>
+                <input type="hidden" id="zoneEditLlave_${abbr}" value="${escapeAttrLike(p.llave || "")}">
+                <p class="authError" id="zoneEditLlaveError_${abbr}" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
+              </div>
               <div class="modalActions" style="margin-top:10px; flex-direction:row; gap:8px;">
                 <button type="button" class="primaryBtn" id="zoneEditSaveBtn_${abbr}" style="flex:1;">Guardar</button>
                 <button type="button" class="secondaryBtn" id="zoneEditCancelBtn_${abbr}" style="flex:1;">Cancelar</button>
@@ -5465,7 +5640,7 @@
               <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===c.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
             </div>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${zone.key===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
+              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${llaveRowIcon(p, c.campo)}${p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : ""}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${zone.key===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
             </div>
             ${zone.key===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
@@ -5533,6 +5708,15 @@
               <button type="button" class="circulacionBtn circulacionBtnNo" data-value="no">🚫 No circula</button>
             </div>
             <input type="hidden" id="zoneNewCirculacion_${abbr}" value="">
+          </div>
+          <div class="circulacionField">
+            <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
+            <div class="circulacionToggle" id="zoneNewLlaveToggle_${abbr}">
+              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🔑 Tablero ${escapeHtml(c.campo)}</button>
+              <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔒 Dentro del vehículo</button>
+            </div>
+            <input type="hidden" id="zoneNewLlave_${abbr}" value="">
+            <p class="authError" id="zoneNewLlaveError_${abbr}" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
           </div>
           <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
             <button type="button" class="primaryBtn authBtn" id="zoneNewAddBtn_${abbr}" style="flex:1;">Agregar en este espacio</button>
@@ -5665,6 +5849,7 @@
         const editCampoInputAdmin = detailBox.querySelector(`#zoneEditCampo_${abbr}`);
         wireColorDot(detailBox.querySelector(`#zoneEditColor_${abbr}`), detailBox.querySelector(`#zoneEditColorDot_${abbr}`));
         wireCirculacionToggle(detailBox.querySelector(`#zoneEditCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneEditCirculacion_${abbr}`));
+        wireLlaveToggle(detailBox.querySelector(`#zoneEditLlaveToggle_${abbr}`), detailBox.querySelector(`#zoneEditLlave_${abbr}`), detailBox.querySelector(`#zoneEditLlaveError_${abbr}`));
         const zoneAsegInputEdit = detailBox.querySelector(`#zoneEditAseg_${abbr}`);
         const zoneAsegWarnEdit = detailBox.querySelector(`#zoneEditAsesorWarn_${abbr}`);
         if(zoneAsegInputEdit){
@@ -5719,12 +5904,19 @@
           const newModelo = detailBox.querySelector(`#zoneEditModelo_${abbr}`).value.trim();
           const newColor = detailBox.querySelector(`#zoneEditColor_${abbr}`).value.trim();
           const newCirculacion = detailBox.querySelector(`#zoneEditCirculacion_${abbr}`).value;
+          const newLlave = detailBox.querySelector(`#zoneEditLlave_${abbr}`).value;
           const newCampo = normalizeCampo(detailBox.querySelector(`#zoneEditCampo_${abbr}`).value);
           if(!newCampo){ showToast("Ingresá un campo válido"); return; }
           if(!normalizePlate(newPlate)){ showToast("Ingresá una placa válida"); return; }
+          if(!newLlave){
+            const err = detailBox.querySelector(`#zoneEditLlaveError_${abbr}`);
+            if(err) err.style.display = "block";
+            showToast("Marcá dónde está la llave");
+            return;
+          }
           const idxToEdit = adminEditingPlateIdx;
           const ci = state.zones[zone.key].indexOf(c);
-          const ok = await updaterConfirmMove(zone.key, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "first", newPlate, newColor, newCirculacion);
+          const ok = await updaterConfirmMove(zone.key, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "first", newPlate, newColor, newCirculacion, newLlave);
           if(!ok) return;
           showToast("Vehículo actualizado");
           adminEditingPlateIdx = null;
@@ -5813,7 +6005,7 @@
           const idx = parseInt(b.getAttribute("data-idx"),10);
           const p = c.plates[idx];
           if(!p) return;
-          openPhotoReportModal(p.plate, info.label, c.campo, false, false, p.aseguradora, p.modelo, p.color, p.circulacion, p.lastUpdated);
+          openPhotoReportModal(p.plate, info.label, c.campo, false, false, p.aseguradora, p.modelo, p.color, p.circulacion, p.llave, p.lastUpdated);
         });
       });
       detailBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
@@ -5896,6 +6088,7 @@
       }
       wireColorDot(detailBox.querySelector(`#zoneNewColor_${abbr}`), detailBox.querySelector(`#zoneNewColorDot_${abbr}`));
       wireCirculacionToggle(detailBox.querySelector(`#zoneNewCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneNewCirculacion_${abbr}`));
+      wireLlaveToggle(detailBox.querySelector(`#zoneNewLlaveToggle_${abbr}`), detailBox.querySelector(`#zoneNewLlave_${abbr}`), detailBox.querySelector(`#zoneNewLlaveError_${abbr}`));
       const zoneAsegInputNew = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`);
       const zoneAsegWarnNew = detailBox.querySelector(`#zoneNewAsesorWarn_${abbr}`);
       if(zoneAsegInputNew){
@@ -6000,17 +6193,24 @@
         const modeloInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
         const colorInput = detailBox.querySelector(`#zoneNewColor_${abbr}`);
         const circulacionInput = detailBox.querySelector(`#zoneNewCirculacion_${abbr}`);
+        const llaveInput = detailBox.querySelector(`#zoneNewLlave_${abbr}`);
         if(!modeloInput.value.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
+        if(!llaveInput.value){
+          const err = detailBox.querySelector(`#zoneNewLlaveError_${abbr}`);
+          if(err) err.style.display = "block";
+          showToast("Marcá dónde está la llave");
+          return;
+        }
         const plateForReport = normalizePlate(plateRaw);
         await runGuarded(newAddBtn, "Guardando…", async ()=>{
           const snap = snapshotZones();
-          const ok = await updaterAddNew(zone.key, c.campo, plateRaw, aseguradora, modeloInput.value, "first", colorInput.value, circulacionInput.value);
+          const ok = await updaterAddNew(zone.key, c.campo, plateRaw, aseguradora, modeloInput.value, "first", colorInput.value, circulacionInput.value, llaveInput.value);
           if(ok){
             pushUndo(snap, `Agregar ${normalizePlate(plateRaw)} en ${c.campo}`);
             showToastWithUndo("Listo — vehículo en este espacio");
             drawZoneGrid();
             drawZoneDetail();
-            openPhotoReportModal(plateForReport, info.label, c.campo, false, true, aseguradora, modeloInput.value, colorInput.value, circulacionInput.value);
+            openPhotoReportModal(plateForReport, info.label, c.campo, false, true, aseguradora, modeloInput.value, colorInput.value, circulacionInput.value, llaveInput.value);
           }
         });
       }
@@ -6142,7 +6342,7 @@
 
   function renderResumenPanel(){
     const wrap = document.createElement("div");
-    wrap.className = "zonePanel active viewFadeIn";
+    wrap.className = "zonePanel active" + (isSilentRefresh ? "" : " viewFadeIn");
 
     const chips = visibleZonesForCurrentUser().map(z=>{
       const vehCount = (state.zones[z.key]||[]).reduce((a,cc)=>a+cc.plates.length,0);
@@ -6307,7 +6507,7 @@
           const esNuevoGrupo = (r.campo !== campoAnterior || r.zoneKey !== zonaAnterior);
           campoAnterior = r.campo; zonaAnterior = r.zoneKey;
           const tr = document.createElement("tr");
-          tr.className = "resumenRow rowFadeIn" + (wasUpdatedToday(r) ? " updatedToday" : "") + (esNuevoGrupo && idx > 0 ? " campoGroupStart" : "");
+          tr.className = "resumenRow" + (isSilentRefresh ? "" : " rowFadeIn") + (wasUpdatedToday(r) ? " updatedToday" : "") + (esNuevoGrupo && idx > 0 ? " campoGroupStart" : "");
           tr.style.animationDelay = (Math.min(idx, 15) * 22) + "ms";
           tr.dataset.zone = r.zoneKey;
           tr.dataset.ci = r.ci;
@@ -6357,7 +6557,7 @@
 
   function renderDashboardPanel(){
     const wrap = document.createElement("div");
-    wrap.className = "zonePanel active viewFadeIn";
+    wrap.className = "zonePanel active" + (isSilentRefresh ? "" : " viewFadeIn");
 
     const zonasVisibles = visibleZonesForCurrentUser();
     const totalVeh = zonasVisibles.reduce((a,z)=> a + (state.zones[z.key]||[]).reduce((aa,c)=>aa+c.plates.length,0), 0);
@@ -7430,6 +7630,14 @@
     const encontrado = Object.keys(COLOR_NAME_MAP).find(nombre => norm.includes(nombre));
     return encontrado ? COLOR_NAME_MAP[encontrado] : null;
   }
+  // Ícono chico de dónde está la llave, para verlo de un vistazo en la
+  // fila sin tener que abrir Editar — mismo criterio que el circulito de
+  // color: no ocupa espacio, solo se agrega si hay un dato guardado.
+  function llaveRowIcon(p, campoLabelParaTexto){
+    if(p.llave === "tablero") return ` <span class="plateLlaveIcon" title="Llave en el tablero ${escapeAttrLike(campoLabelParaTexto)}">🔑</span>`;
+    if(p.llave === "vehiculo") return ` <span class="plateLlaveIcon" title="Llave dentro del vehículo">🔒</span>`;
+    return "";
+  }
   function updateColorDot(input, dot){
     if(!input || !dot) return;
     const hex = guessColorHex(input.value);
@@ -7459,6 +7667,20 @@
         } else {
           hiddenInput.value = "";
         }
+      });
+    });
+  }
+  // Igual que wireCirculacionToggle, pero SIN poder desmarcar — "¿dónde
+  // está la llave?" es obligatorio, así que una vez elegida una opción,
+  // tocarla de nuevo no la vacía (solo se puede cambiar a la otra).
+  function wireLlaveToggle(container, hiddenInput, errorEl){
+    if(!container || !hiddenInput) return;
+    container.querySelectorAll(".circulacionBtn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        container.querySelectorAll(".circulacionBtn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        hiddenInput.value = btn.getAttribute("data-value");
+        if(errorEl) errorEl.style.display = "none";
       });
     });
   }
@@ -7870,6 +8092,13 @@
   }
 
   let autoRefreshInterval = null;
+  // Al refrescar solo (Búsqueda cada 20 seg, en segundo plano, sin que
+  // nadie toque nada), la tabla de Resumen se reconstruye igual que
+  // siempre — pero replicar la animación de aparición en TODAS las filas
+  // de nuevo se veía como un parpadeo/destello constante, aunque los
+  // datos no hubieran cambiado. Esta bandera le avisa a esa pantalla que
+  // omita la animación en ese caso puntual.
+  let isSilentRefresh = false;
 
   // Vuelve a leer el inventario desde el almacenamiento compartido (por si
   // otra persona hizo cambios mientras esta pestaña seguía abierta) y
@@ -7908,6 +8137,7 @@
       const mainAreaPrevia = document.getElementById("mainArea");
       const mainAreaScrollPrevio = mainAreaPrevia ? mainAreaPrevia.scrollTop : 0;
       await loadState();
+      isSilentRefresh = !!silent;
       if(currentUser.role === "actualizacion"){
         renderUpdaterPanel();
       } else {
@@ -7915,6 +8145,7 @@
         renderAll();
         updateUndoBtn();
       }
+      isSilentRefresh = false;
       requestAnimationFrame(()=>{
         window.scrollTo(0, scrollYPrevia);
         const mainAreaAhora = document.getElementById("mainArea");
@@ -9124,15 +9355,22 @@
     }
 
     const holder = document.getElementById("updaterPanel");
+    const avaluoModo = isAvaluoUser();
     holder.innerHTML = `
       <div class="updaterCard">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
           <h2 style="margin:0;">Actualizar ubicación</h2>
-          <button type="button" id="kioskToggleBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🖥️ Modo kiosco</button>
+          <div style="display:flex; gap:8px;">
+            ${avaluoModo ? `` : `<button type="button" id="updAllAreasBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🗂️ Ver todas mis áreas</button>`}
+            <button type="button" id="kioskToggleBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🖥️ Modo kiosco</button>
+          </div>
         </div>
         <div id="updBrowseSection">
           <input type="text" id="updSearchInput" class="plate" placeholder="Buscar por placa, asesor o modelo…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
           <div id="updSearchResults"></div>
+          ${avaluoModo ? `
+          <div id="updAllAreasFixed" style="margin-top:14px;"></div>
+          ` : `
           <details class="bulk" id="updGridDetails" ${currentUser.searchFocused ? "" : "open"} style="margin-top:14px;">
             <summary>${currentUser.searchFocused ? "Ver espacios y actualizar (opcional)" : "Zona y espacios"}</summary>
             <label style="margin-top:10px;">Zona <span class="zoneConfirmHint" id="zoneConfirmHint" style="display:none;"></span></label>
@@ -9146,6 +9384,7 @@
             <div class="updaterZoneFilterRow" id="updZoneFilterRow" style="margin-top:8px;"></div>
           </details>
           <div id="updAllList"></div>
+          `}
           `}
         </div>
         <div id="updSpaceInfo"></div>
@@ -9269,6 +9508,7 @@
     // Cambiar de zona pide tocar dos veces (para no perder de vista el
     // espacio actual por un toque accidental cerca de otra zona).
     function drawSpaceZoneChips(){
+      if(!spaceZoneChipsBox) return; // vista fija de AVALUO: no tiene esta sección
       const estaRestringido = currentUser.allowedZones && currentUser.allowedZones.length;
       // Sin ubicación es un catch-all general — para cuentas restringidas a
       // ciertas zonas no tiene sentido mostrarla, ya que su trabajo queda
@@ -9315,9 +9555,10 @@
     }
 
     function refreshSpaceGrid(preselect){
+      if(preselect !== undefined) updSelectedCampo = preselect;
+      if(!spaceGridBox){ drawSpaceInfo(); return; } // vista fija de AVALUO: no tiene esta cuadrícula, se navega distinto
       const label = CUSTOM_NAMED_ZONES.has(updSpaceZone) ? "Zonas" : (UNNUMBERED_ONLY_ZONES.has(updSpaceZone) ? "Líneas" : "Campos");
       spaceCampoLabel.textContent = label;
-      if(preselect !== undefined) updSelectedCampo = preselect;
       const arr = state.zones[updSpaceZone] || [];
       const labelLower = label === "Zonas" ? "zona" : (label === "Líneas" ? "línea" : "campo");
       if(arr.length === 0){
@@ -9545,21 +9786,32 @@
 
     function drawSpaceInfo(){
       const campoLabel = updSelectedCampo;
-      if(!campoLabel){
+      function volverABrowse(){
+        // Para AVALUO, los cuadritos de la vista fija se vuelven a armar
+        // acá — si no, al volver de agregar/mover algo, se seguirían
+        // viendo los conteos viejos hasta el próximo refresco completo.
+        const fixedBox = holder.querySelector("#updAllAreasFixed");
+        if(fixedBox){
+          fixedBox.innerHTML = buildAllAreasHTML();
+          wireAllAreasTiles(fixedBox, (zoneKey, campo)=>{
+            updSpaceZone = zoneKey;
+            updSelectedCampo = campo;
+            renderUpdaterPanel();
+          });
+        }
         browseSection.classList.remove("slideInLeft");
         void browseSection.offsetWidth;
         browseSection.classList.add("slideInLeft");
         browseSection.style.display = "block";
         spaceInfoBox.innerHTML = "";
+      }
+      if(!campoLabel){
+        volverABrowse();
         return;
       }
       const entry = (state.zones[updSpaceZone] || []).find(c => c.campo === campoLabel);
       if(!entry){
-        browseSection.classList.remove("slideInLeft");
-        void browseSection.offsetWidth;
-        browseSection.classList.add("slideInLeft");
-        browseSection.style.display = "block";
-        spaceInfoBox.innerHTML = "";
+        volverABrowse();
         return;
       }
       browseSection.style.display = "none";
@@ -9600,8 +9852,8 @@
                       <div class="movedByDisplay" style="border:none; padding:0; background:transparent;">${escapeHtml(movedByText(p.plate))}</div>
                     </label>`
                   : `<label class="labeledFieldBox" style="flex:1;">
-                      <span class="labeledFieldLabel">Asesor</span>
-                      <input type="text" id="spaceEditAseg" value="${escapeHtml(p.aseguradora || "")}" autocomplete="off"><div class="customSuggestList" id="spaceEditAsegSuggest" style="display:none;"></div>
+                      <span class="labeledFieldLabel">Asesor${isAvaluoUser() ? `<span class="labeledFieldReq">*</span>` : ``}</span>
+                      <input type="text" id="spaceEditAseg" class="${isAvaluoUser() ? "reqField" : ""}" value="${escapeHtml(p.aseguradora || "")}" autocomplete="off"><div class="customSuggestList" id="spaceEditAsegSuggest" style="display:none;"></div>
                     </label>`
                 }
               </div>
@@ -9640,6 +9892,15 @@
                 </div>
                 <input type="hidden" id="spaceEditCirculacion" value="${escapeAttrLike(p.circulacion || "")}">
               </div>
+              <div class="circulacionField">
+                <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
+                <div class="circulacionToggle" id="spaceEditLlaveToggle" data-selected="${escapeAttrLike(p.llave || "")}">
+                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🔑 Tablero ${escapeHtml(campoLabel)}</button>
+                  <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔒 Dentro del vehículo</button>
+                </div>
+                <input type="hidden" id="spaceEditLlave" value="${escapeAttrLike(p.llave || "")}">
+                <p class="authError" id="spaceEditLlaveError" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
+              </div>
               <div class="modalActions" style="margin-top:10px; flex-direction:row; gap:8px;">
                 <button type="button" class="primaryBtn" id="spaceEditSaveBtn" style="flex:1;">Guardar</button>
                 <button type="button" class="secondaryBtn" id="spaceEditCancelBtn" style="flex:1;">Cancelar</button>
@@ -9656,7 +9917,7 @@
               <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===entry.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
             </div>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${currentUser.showMovedBy ? ` <span class="plateMuted">· ${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${updSpaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
+              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${llaveRowIcon(p, campoLabel)}${currentUser.showMovedBy ? ` <span class="plateMuted">· ${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${updSpaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
             </div>
             ${updSpaceZone===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
@@ -9700,8 +9961,8 @@
             </label>
             ${currentUser.showMovedBy ? `` : `
             <label class="labeledFieldBox" style="flex:1;">
-              <span class="labeledFieldLabel">Asesor</span>
-              <input type="text" id="updSpaceNewAseguradora" autocomplete="off"><div class="customSuggestList" id="updSpaceNewAsegSuggest" style="display:none;"></div>
+              <span class="labeledFieldLabel">Asesor${isAvaluoUser() ? `<span class="labeledFieldReq">*</span>` : ``}</span>
+              <input type="text" id="updSpaceNewAseguradora" class="${isAvaluoUser() ? "reqField" : ""}" autocomplete="off"><div class="customSuggestList" id="updSpaceNewAsegSuggest" style="display:none;"></div>
             </label>
             `}
           </div>
@@ -9723,13 +9984,22 @@
           <div class="similarWarn" id="updSpaceModelWarn" style="display:none;"></div>
           <div class="similarWarn" id="updSpaceAsesorWarn" style="display:none;"></div>
           <div class="reqFieldHint"><span class="labeledFieldReq">*</span> obligatorio</div>
-          <div class="circulacionField">
+          <div class="circulacionField" id="updCirculacionSection"${isAvaluoUser() ? ` style="display:none;"` : ``}>
             <span class="labeledFieldLabel">¿Puede circular?</span>
             <div class="circulacionToggle" id="updSpaceNewCirculacionToggle">
               <button type="button" class="circulacionBtn circulacionBtnOk" data-value="puede">✅ Puede circular</button>
               <button type="button" class="circulacionBtn circulacionBtnNo" data-value="no">🚫 No circula</button>
             </div>
             <input type="hidden" id="updSpaceNewCirculacion" value="">
+          </div>
+          <div class="circulacionField" id="updLlaveSection"${isAvaluoUser() ? ` style="display:none;"` : ``}>
+            <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
+            <div class="circulacionToggle" id="updSpaceNewLlaveToggle">
+              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🔑 Tablero ${escapeHtml(campoLabel)}</button>
+              <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔒 Dentro del vehículo</button>
+            </div>
+            <input type="hidden" id="updSpaceNewLlave" value="">
+            <p class="authError" id="updSpaceNewLlaveError" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
           </div>
           <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
             <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn" style="flex:1;">Agregar en este espacio</button>
@@ -9756,6 +10026,7 @@
       }
       wireColorDot(spaceInfoBox.querySelector("#updSpaceNewColor"), spaceInfoBox.querySelector("#updSpaceNewColorDot"));
       wireCirculacionToggle(spaceInfoBox.querySelector("#updSpaceNewCirculacionToggle"), spaceInfoBox.querySelector("#updSpaceNewCirculacion"));
+      wireLlaveToggle(spaceInfoBox.querySelector("#updSpaceNewLlaveToggle"), spaceInfoBox.querySelector("#updSpaceNewLlave"), spaceInfoBox.querySelector("#updSpaceNewLlaveError"));
       const updAsegInputNew = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
       const updAsegWarnNew = spaceInfoBox.querySelector("#updSpaceAsesorWarn");
       if(updAsegInputNew){
@@ -9850,6 +10121,7 @@
         const editCampoInput = spaceInfoBox.querySelector("#spaceEditCampo");
         wireColorDot(spaceInfoBox.querySelector("#spaceEditColor"), spaceInfoBox.querySelector("#spaceEditColorDot"));
         wireCirculacionToggle(spaceInfoBox.querySelector("#spaceEditCirculacionToggle"), spaceInfoBox.querySelector("#spaceEditCirculacion"));
+        wireLlaveToggle(spaceInfoBox.querySelector("#spaceEditLlaveToggle"), spaceInfoBox.querySelector("#spaceEditLlave"), spaceInfoBox.querySelector("#spaceEditLlaveError"));
         const editAsegWarn = spaceInfoBox.querySelector("#spaceEditAsesorWarn");
         if(editAsegInput){
           editAsegInput.addEventListener("blur", ()=> completeAsesorAbbreviation(editAsegInput, editAsegWarn));
@@ -9937,14 +10209,27 @@
           const newColor = editColorInput ? editColorInput.value.trim() : (entry.plates[updEditingPlateIdx].color || "");
           const editCirculacionInput = spaceInfoBox.querySelector("#spaceEditCirculacion");
           const newCirculacion = editCirculacionInput ? editCirculacionInput.value : (entry.plates[updEditingPlateIdx].circulacion || "");
+          const editLlaveInput = spaceInfoBox.querySelector("#spaceEditLlave");
+          const newLlave = editLlaveInput ? editLlaveInput.value : (entry.plates[updEditingPlateIdx].llave || "");
           const newCampo = normalizeCampo(editCampoInput.value);
           if(!newCampo){ showToast("Ingresá un campo válido"); return; }
           if(!normalizePlate(newPlate)){ showToast("Ingresá una placa válida"); return; }
+          if(isAvaluoUser() && !newAseguradora){
+            showToast("Ingresá el nombre del asesor");
+            if(editAsegInput) editAsegInput.focus();
+            return;
+          }
+          if(!newLlave){
+            const err = spaceInfoBox.querySelector("#spaceEditLlaveError");
+            if(err) err.style.display = "block";
+            showToast("Marcá dónde está la llave");
+            return;
+          }
           await runGuarded(saveBtn, "Guardando…", async ()=>{
             const idxToEdit = updEditingPlateIdx;
             const currentEntry = (state.zones[updSpaceZone] || []).find(c => c.campo === campoLabel);
             const ci = state.zones[updSpaceZone].indexOf(currentEntry);
-            const ok = await updaterConfirmMove(updSpaceZone, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "first", newPlate, newColor, newCirculacion);
+            const ok = await updaterConfirmMove(updSpaceZone, ci, idxToEdit, editTargetZone, newCampo, newAseguradora, newModelo, "first", newPlate, newColor, newCirculacion, newLlave);
             if(!ok) return; // canceló el diálogo de mover, o no había nada que cambiar: seguimos en edición
             vibrateSuccess();
             showToast("Vehículo actualizado");
@@ -10010,7 +10295,7 @@
           const idx = parseInt(b.getAttribute("data-idx"),10);
           const p = entry.plates[idx];
           if(!p) return;
-          openPhotoReportModal(p.plate, zoneInfo(updSpaceZone).label, campoLabel, false, false, p.aseguradora, p.modelo, p.color, p.circulacion, p.lastUpdated);
+          openPhotoReportModal(p.plate, zoneInfo(updSpaceZone).label, campoLabel, false, false, p.aseguradora, p.modelo, p.color, p.circulacion, p.llave, p.lastUpdated);
         });
       });
       spaceInfoBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
@@ -10197,12 +10482,39 @@
         const color = colorField ? colorField.value : "";
         const circulacionField = spaceInfoBox.querySelector("#updSpaceNewCirculacion");
         const circulacion = circulacionField ? circulacionField.value : "";
+        const llaveField = spaceInfoBox.querySelector("#updSpaceNewLlave");
+        const llave = llaveField ? llaveField.value : "";
         if(!modelo.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
+        if(isAvaluoUser() && !aseguradora.trim()){
+          showToast("Ingresá el nombre del asesor");
+          if(asegField) asegField.focus();
+          return;
+        }
+        if(!llave){
+          const err = spaceInfoBox.querySelector("#updSpaceNewLlaveError");
+          if(err) err.style.display = "block";
+          showToast("Marcá dónde está la llave");
+          return;
+        }
+        // No son obligatorios como Placa/Modelo/Llave (ni Asesor, para la
+        // cuenta AVALUO donde ya se bloqueó arriba), pero para que no se
+        // les pasen por alto sin querer, se pregunta puntualmente por
+        // cada uno que haya quedado vacío antes de guardar — así la
+        // persona decide a propósito si falta ese dato o si de verdad no
+        // aplica, en vez de que quede en blanco por distracción.
+        const faltantes = [];
+        if(!isAvaluoUser() && !aseguradora.trim()) faltantes.push("el Asesor");
+        if(!color.trim()) faltantes.push("el Color");
+        if(!circulacion) faltantes.push("si puede circular");
+        if(faltantes.length){
+          const lista = faltantes.length === 1 ? faltantes[0] : faltantes.slice(0,-1).join(", ") + " y " + faltantes[faltantes.length-1];
+          if(!confirm(`No completaste ${lista}. ¿Guardar igual sin ese dato?`)) return;
+        }
         const plateForReport = normalizePlate(plateRaw);
         const zoneLabelForReport = zoneInfo(updSpaceZone).label;
         await runGuarded(spaceAddBtn, "Guardando…", async ()=>{
           const snap = snapshotZones();
-          const ok = await updaterAddNew(updSpaceZone, campoLabel, plateRaw, aseguradora, modelo, "first", color, circulacion);
+          const ok = await updaterAddNew(updSpaceZone, campoLabel, plateRaw, aseguradora, modelo, "first", color, circulacion, llave);
           if(ok){
             pushUndo(snap, `Agregar ${plateForReport} en ${zoneLabelForReport} · ${campoLabel}`);
             lastAddZoneKey = updSpaceZone;
@@ -10213,11 +10525,31 @@
             drawAllList();
             // Se ofrece de una vez reportar con fotos — "Omitir" si no
             // hace falta ahora mismo, sin obligar a nadie a hacerlo.
-            openPhotoReportModal(plateForReport, zoneLabelForReport, campoLabel, false, true, aseguradora, modelo, color, circulacion);
+            openPhotoReportModal(plateForReport, zoneLabelForReport, campoLabel, false, true, aseguradora, modelo, color, circulacion, llave);
           }
         });
       }
       spaceAddBtn.addEventListener("click", confirmSpaceAdd);
+      // Revelado poco a poco (solo para la cuenta AVALUO): las secciones
+      // de "¿Puede circular?" y "¿Dónde está la llave?" empiezan ocultas
+      // para no cargar la pantalla de entrada, y aparecen juntas recién
+      // cuando Placa y Modelo ya están completos.
+      if(isAvaluoUser()){
+        const circSection = spaceInfoBox.querySelector("#updCirculacionSection");
+        const llaveSection = spaceInfoBox.querySelector("#updLlaveSection");
+        const modeloInputParaRevelar = spaceInfoBox.querySelector("#updSpaceNewModelo");
+        function revelarSiCorresponde(){
+          const listo = !!(normalizePlate(spacePlacaInput.value) && modeloInputParaRevelar.value.trim());
+          if(listo){
+            if(circSection && circSection.style.display === "none") circSection.classList.add("viewFadeIn");
+            if(llaveSection && llaveSection.style.display === "none") llaveSection.classList.add("viewFadeIn");
+            if(circSection) circSection.style.display = "";
+            if(llaveSection) llaveSection.style.display = "";
+          }
+        }
+        spacePlacaInput.addEventListener("input", revelarSiCorresponde);
+        modeloInputParaRevelar.addEventListener("input", revelarSiCorresponde);
+      }
       [spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewAseguradora"), spaceInfoBox.querySelector("#updSpaceNewModelo"), spaceInfoBox.querySelector("#updSpaceNewColor")].filter(Boolean).forEach(inp=>{
         inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter") confirmSpaceAdd(); });
       });
@@ -10228,7 +10560,7 @@
           updSelectedCampo = "";
           updEditingPlateIdx = null;
           updMovingPlateIdx = null;
-          spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
+          if(spaceGridBox) spaceGridBox.querySelectorAll(".spaceGridBtn").forEach(b=>b.classList.remove("active"));
           drawSpaceInfo();
         });
       }
@@ -10259,6 +10591,20 @@
       updateKioskButtonLabel();
       kioskBtn.addEventListener("click", ()=>{
         if(kioskModeActive) exitKioskMode(); else enterKioskMode();
+      });
+    }
+    const allAreasBtnUpd = holder.querySelector("#updAllAreasBtn");
+    if(allAreasBtnUpd) allAreasBtnUpd.addEventListener("click", openAllAreasModal);
+    const allAreasFixedBox = holder.querySelector("#updAllAreasFixed");
+    if(allAreasFixedBox){
+      // Vista fija (sin botón para cerrar) para la cuenta AVALUO — hace
+      // las veces de pantalla principal: siempre está ahí, arriba del
+      // buscador, y tocar un cuadrito lleva directo a agregar/mover ahí.
+      allAreasFixedBox.innerHTML = buildAllAreasHTML();
+      wireAllAreasTiles(allAreasFixedBox, (zoneKey, campo)=>{
+        updSpaceZone = zoneKey;
+        updSelectedCampo = campo;
+        renderUpdaterPanel();
       });
     }
   }
@@ -10307,7 +10653,7 @@
     btn.addEventListener("mouseleave", cancelTimer);
   }
 
-  async function updaterConfirmMove(zoneKey, ci, pi, newZone, newCampo, newAseguradora, newModelo, position, newPlateRaw, newColor, newCirculacion){
+  async function updaterConfirmMove(zoneKey, ci, pi, newZone, newCampo, newAseguradora, newModelo, position, newPlateRaw, newColor, newCirculacion, newLlave){
     if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
@@ -10360,13 +10706,15 @@
     const modeloChanged = newModelo !== (entry.modelo || "");
     const colorChanged = newColor !== undefined && newColor !== (entry.color || "");
     const circulacionChanged = newCirculacion !== undefined && newCirculacion !== (entry.circulacion || "");
-    if(!locationChanged && !aseguradoraChanged && !modeloChanged && !colorChanged && !circulacionChanged && !plateChanged) return false;
+    const llaveChanged = newLlave !== undefined && newLlave !== (entry.llave || "");
+    if(!locationChanged && !aseguradoraChanged && !modeloChanged && !colorChanged && !circulacionChanged && !llaveChanged && !plateChanged) return false;
 
     entry.plate = newPlate;
     entry.aseguradora = newAseguradora;
     entry.modelo = newModelo;
     if(newColor !== undefined) entry.color = newColor;
     if(newCirculacion !== undefined) entry.circulacion = newCirculacion;
+    if(newLlave !== undefined) entry.llave = newLlave;
     entry.lastUpdated = new Date().toISOString();
 
     if(locationChanged){
@@ -10385,13 +10733,13 @@
     return true;
   }
 
-  async function updaterAddNew(zoneKey, campoRaw, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw){
+  async function updaterAddNew(zoneKey, campoRaw, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw){
     if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
     }
     const campo = campoRaw ? normalizeCampo(campoRaw) : nextAutoCampo(zoneKey);
-    const ok = await addPlateToZone(zoneKey, campo, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw);
+    const ok = await addPlateToZone(zoneKey, campo, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw);
     if(ok){
       await saveState(true);
       await logUpdate(normalizePlate(plateRaw), null, null, zoneKey, campo);
