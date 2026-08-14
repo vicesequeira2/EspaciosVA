@@ -2705,7 +2705,7 @@
   <div class="modalCard modalCardWide">
     <h3>📥 Importar Excel</h3>
     <p style="font-size:0.78rem; color:var(--muted);">
-      Subí un Excel con columnas <strong>Placa</strong>, <strong>Modelo</strong>, <strong>Asesor</strong> (o <strong>Nombre</strong>) y <strong>Color</strong> — no hace falta que estén todas, ni en ese orden — se reconocen por el nombre del encabezado, sin importar mayúsculas. Si alguna de esas columnas no está en tu archivo, ese dato simplemente no se toca; el resto de columnas que tenga el archivo (Zona, notas, etc.) se ignoran. Si la columna del asesor trae nombre completo, solo se guarda el primer nombre. Las placas que ya coincidan con algún vehículo ubicado se completan/actualizan; las que no aparezcan en ningún lado se agregan a <strong>Sin ubicación</strong>, listas para reubicar.
+      Subí un Excel con columnas <strong>Placa</strong>, <strong>Modelo</strong>, <strong>Asesor</strong> (o <strong>Nombre</strong>) y <strong>Color</strong> — no hace falta que estén todas, ni en ese orden — se reconocen por el nombre del encabezado, sin importar mayúsculas. Si alguna de esas columnas no está en tu archivo, ese dato simplemente no se toca; el resto de columnas que tenga el archivo (Zona, notas, etc.) se ignoran. Si la columna del asesor trae un código de usuario conocido (ej. "daraal"), se convierte solo al nombre completo del asesor; si trae un nombre suelto, solo se guarda el primer nombre. Las placas que ya coincidan con algún vehículo ubicado se completan/actualizan; las que no aparezcan en ningún lado se agregan a <strong>Sin ubicación</strong>, listas para reubicar.
     </p>
     <button type="button" class="secondaryBtn" id="importExcelChooseBtn" style="width:100%; margin-top:8px;">📁 Elegir archivo Excel</button>
     <div id="importExcelFileName" style="font-size:0.78rem; color:var(--muted); margin-top:6px;"></div>
@@ -3125,12 +3125,29 @@
   // agrega un arreglo "areas"/"filas" opcional, sin tocar el modelo de
   // datos de las demás zonas (que siguen exactamente igual que siempre).
   const NESTED_ZONES = new Set(["Recepcion", "TallerPintura"]);
+  // Orden pedido puntualmente para la cuenta AVALUO: Atrás, Maya, Avalúo
+  // Puff, y Avalúo al final — distinto del orden general de ZONES. Solo
+  // reordena las zonas a las que esa cuenta ya tiene acceso; no cambia a
+  // cuáles zonas puede entrar (eso lo sigue definiendo Admin en Usuarios →
+  // 🔒 Zonas).
+  const AVALUO_ORDEN_ZONAS = ["Atras", "Maya", "AvaluoPuff", "Avaluo"];
+  function ordenarZonasParaAvaluo(zonas){
+    return zonas.slice().sort((a, b)=>{
+      const ia = AVALUO_ORDEN_ZONAS.indexOf(a.key);
+      const ib = AVALUO_ORDEN_ZONAS.indexOf(b.key);
+      if(ia === -1 && ib === -1) return 0;
+      if(ia === -1) return 1;
+      if(ib === -1) return -1;
+      return ia - ib;
+    });
+  }
   function visibleZonesForCurrentUser(){
     if(currentUser && currentUser.role === "consulta"){
       return ZONES.filter(z => !HIDDEN_FROM_BUSQUEDA.has(z.key));
     }
     if(currentUser && currentUser.role === "actualizacion"){
-      return allowedZonesForCurrentUser();
+      const zonas = allowedZonesForCurrentUser();
+      return isAvaluoUser() ? ordenarZonasParaAvaluo(zonas) : zonas;
     }
     return ZONES;
   }
@@ -3325,6 +3342,7 @@
   let updMovingPlateIdx = null;
   let updArmedZoneKey = null;
   let updSelectedListZone = "";
+  let allListVisibleLimit = 60; // para no meter cientos de filas al DOM de una — se va ampliando con "Ver más"
   // (antes acá se guardaba el último asesor/color usado para precompletar
   // el siguiente formulario — se quitó porque hacía que un vehículo nuevo
   // heredara por error el asesor del anterior en vez de quedar en blanco)
@@ -4033,6 +4051,8 @@
 
   let saveRetryTimer = null;
   let pendingSaveRetry = false;
+  let saveRetryAttempts = 0; // tope de reintentos: si el celular queda horas sin señal con la pantalla prendida, no tiene sentido seguir intentando cada 6 seg para siempre — mejor avisar claro y dejar que la persona lo retome a mano cuando quiera.
+  const SAVE_RETRY_MAX_ATTEMPTS = 20; // ~2 minutos de reintentos antes de rendirse
 
   async function saveState(silent){
     state.updatedAt = new Date().toISOString();
@@ -4096,6 +4116,7 @@
 
   function scheduleSaveRetry(){
     if(saveRetryTimer) return;
+    saveRetryAttempts = 0;
     saveRetryTimer = setInterval(async ()=>{
       if(!pendingSaveRetry){
         clearInterval(saveRetryTimer);
@@ -4113,7 +4134,17 @@
           showToast("Conexión recuperada: los cambios pendientes ya se guardaron.", 4000);
           renderMeta();
         }
-      }catch(e){ /* seguimos intentando en el próximo ciclo */ }
+      }catch(e){
+        saveRetryAttempts++;
+        if(saveRetryAttempts >= SAVE_RETRY_MAX_ATTEMPTS){
+          pendingSaveRetry = false;
+          clearInterval(saveRetryTimer);
+          saveRetryTimer = null;
+          showToast("No se pudo guardar después de varios intentos — parece que sigue sin señal. Tocá 🔄 Actualizar cuando vuelva la conexión para guardarlo.", 8000, true);
+          renderMeta();
+        }
+        // si todavía no se llegó al tope, seguimos intentando en el próximo ciclo
+      }
     }, 6000);
   }
 
@@ -4212,14 +4243,38 @@
     // una placa que ya está en Sin ubicación no se detectaría como
     // duplicado al agregarla en un lugar real, y quedaría repetida en los
     // dos lados en vez de moverse.
+    //
+    // También se busca DENTRO de áreas y filas (Taller de Pintura,
+    // Recepción) — antes esto se quedaba corto y una placa que ya estaba
+    // adentro de un área no se detectaba como duplicado, permitiendo que
+    // la misma placa terminara repetida en dos lugares a la vez.
+    // "platesArray" es una referencia directa al arreglo real donde vive
+    // la placa encontrada (sea el del campo, el de un área, o el de una
+    // fila) — así quien llama no necesita saber a mano cuál de los tres
+    // niveles es, ni reconstruir la ruta para llegar a ella.
     for(const z of [...ZONES, SIN_UBICACION_INFO]){
       const arr = state.zones[z.key] || [];
       for(let ci=0; ci<arr.length; ci++){
-        const plates = arr[ci].plates;
+        const campoObj = arr[ci];
+        const plates = campoObj.plates;
         for(let pi=0; pi<plates.length; pi++){
           if(z.key===excludeZone && ci===excludeCampoIdx && pi===excludePlateIdx) continue;
           if(plateMatchKey(plates[pi].plate) === buscado){
-            return { zoneKey: z.key, campoIdx: ci, plateIdx: pi };
+            return { zoneKey: z.key, campoIdx: ci, plateIdx: pi, platesArray: plates };
+          }
+        }
+        for(const ar of (campoObj.areas || [])){
+          for(let pi=0; pi<ar.plates.length; pi++){
+            if(plateMatchKey(ar.plates[pi].plate) === buscado){
+              return { zoneKey: z.key, campoIdx: ci, plateIdx: pi, platesArray: ar.plates };
+            }
+          }
+          for(const f of (ar.filas || [])){
+            for(let pi=0; pi<f.plates.length; pi++){
+              if(plateMatchKey(f.plates[pi].plate) === buscado){
+                return { zoneKey: z.key, campoIdx: ci, plateIdx: pi, platesArray: f.plates };
+              }
+            }
           }
         }
       }
@@ -4307,12 +4362,17 @@
   // desde una fila del Resumen (filtro por placa).
   // Quita una entrada de placa por identidad de objeto (evita bugs de
   // índices desfasados cuando se remueven dos placas en la misma operación).
-  function removePlateEntryByRef(zoneKey, campoObj, entryObj){
-    const idx = campoObj.plates.indexOf(entryObj);
+  // Recibe el arreglo de placas directamente (no el objeto del campo) —
+  // así funciona igual sea el arreglo de un campo normal, de un área, o
+  // de una fila, sin que quien llama tenga que saber en cuál de los tres
+  // niveles está la placa que se está quitando.
+  function removePlateEntryByRef(zoneKey, platesArray, entryObj){
+    const idx = platesArray.indexOf(entryObj);
     if(idx === -1) return;
-    campoObj.plates.splice(idx, 1);
-    // El campo/línea sigue existiendo aunque quede sin vehículos — es un
-    // espacio físico real, no debería desaparecer solo por vaciarse.
+    platesArray.splice(idx, 1);
+    // El campo/línea/área/fila sigue existiendo aunque quede sin
+    // vehículos — es un espacio físico real, no debería desaparecer solo
+    // por vaciarse.
   }
 
   // Vista de solo lectura para el rol Búsqueda: muestra el detalle del
@@ -4498,9 +4558,9 @@
         ? `<span class="circulacionSummaryTag circulacionSummaryTagNo">🚫 No circula</span>`
         : "";
     const llaveTag = llave === "tablero"
-      ? `<span class="circulacionSummaryTag llaveSummaryTagTablero">🔑 Tablero ${escapeHtml(campoLabel)}</span>`
+      ? `<span class="circulacionSummaryTag llaveSummaryTagTablero">🗂️ Tablero ${escapeHtml(campoLabel)}</span>`
       : llave === "vehiculo"
-        ? `<span class="circulacionSummaryTag llaveSummaryTagVehiculo">🔒 Llave dentro del vehículo</span>`
+        ? `<span class="circulacionSummaryTag llaveSummaryTagVehiculo">🔑 Llave dentro del vehículo</span>`
         : "";
     const tiempoAquiTag = tiempoAqui ? `<div class="tiempoAquiTag tiempoAquiTag-${tiempoAqui.recency}">🕒 ${tiempoAqui.diasTexto}</div>` : "";
     summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${escapeHtml(plate)}</strong>${circulacionTag}${llaveTag}<div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${tiempoAquiTag}`;
@@ -4563,7 +4623,7 @@
       shareBtn.disabled = true;
       shareBtn.textContent = "Compartiendo…";
       const circulacionTexto = circulacion === "puede" ? "✅ Puede circular" : circulacion === "no" ? "🚫 No circula" : "";
-      const llaveTexto = llave === "tablero" ? `🔑 Tablero ${campoLabel}` : llave === "vehiculo" ? "🔒 Llave dentro del vehículo" : "";
+      const llaveTexto = llave === "tablero" ? `🗂️ Tablero ${campoLabel}` : llave === "vehiculo" ? "🔑 Llave dentro del vehículo" : "";
       const text = `Placa: ${plate}\nZona: ${zoneLabel}\nCampo: ${campoLabel}\nFecha: ${fecha}${modelo ? `\nModelo: ${modelo}` : ""}${color ? `\nColor: ${color}` : ""}${aseguradora ? `\nAsesor: ${aseguradora}` : ""}${circulacionTexto ? `\n${circulacionTexto}` : ""}${llaveTexto ? `\n${llaveTexto}` : ""}`;
       if(!navigator.share){
         showToast("Tu navegador no puede compartir fotos directamente. Guardalas y compartilas manualmente junto con este texto.", 5000);
@@ -4685,7 +4745,8 @@
         const snap = snapshotZones();
         targetEntry.aseguradora = newAseguradora;
         targetEntry.modelo = newModelo;
-        targetEntry.lastUpdated = new Date().toISOString();
+        // No se toca lastUpdated: no cambió de lugar, solo se corrigieron
+        // datos — no es un movimiento real.
         pushUndo(snap, `Editar datos de ${plate}`);
         cleanup();
         await saveState();
@@ -4700,12 +4761,12 @@
         if(dup){
           const dupInfo = zoneInfo(dup.zoneKey);
           const dupCampoObj = state.zones[dup.zoneKey][dup.campoIdx];
-          const dupEntry = dupCampoObj.plates[dup.plateIdx];
+          const dupEntry = dup.platesArray[dup.plateIdx];
           const choice = await askMoveOrCancel(newPlate, dupInfo.label, dupCampoObj.campo, zoneInfo(newZone).label, newCampo);
           if(choice !== "move") return;
           const snap = snapshotZones();
-          removePlateEntryByRef(dup.zoneKey, dupCampoObj, dupEntry);
-          removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
+          removePlateEntryByRef(dup.zoneKey, dup.platesArray, dupEntry);
+          removePlateEntryByRef(zoneKey, targetCampoObj.plates, targetEntry);
           getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() });
           pushUndo(snap, `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`);
           cleanup();
@@ -4727,7 +4788,7 @@
       }
 
       const snap = snapshotZones();
-      removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
+      removePlateEntryByRef(zoneKey, targetCampoObj.plates, targetEntry);
       getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() });
       pushUndo(snap, `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`);
       cleanup();
@@ -4741,7 +4802,7 @@
     async function onDelete(){
       if(!confirm(`¿Eliminar ${plate} del inventario?`)) return;
       const snap = snapshotZones();
-      removePlateEntryByRef(zoneKey, targetCampoObj, targetEntry);
+      removePlateEntryByRef(zoneKey, targetCampoObj.plates, targetEntry);
       pushUndo(snap, `Eliminar ${plate}`);
       cleanup();
       await saveState();
@@ -4837,7 +4898,7 @@
       // Es un MOVER, no un vehículo nuevo: si no se escribió aseguradora/modelo
       // en este formulario, se conservan los que ya tenía en su ubicación
       // anterior, en vez de perderlos por dejar esos campos vacíos.
-      const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
+      const dupEntry = dup.platesArray[dup.plateIdx];
       if(!aseguradora) aseguradora = dupEntry.aseguradora || "";
       if(!modelo) modelo = dupEntry.modelo || "";
       if(!color) color = dupEntry.color || "";
@@ -5198,6 +5259,10 @@
       `;
 
       const plateRowsHtml = contenedor.plates.length ? contenedor.plates.map((p, idx)=>{
+        // Mientras se está editando un vehículo puntual, se esconden los
+        // demás de este mismo nivel — así en pantalla solo queda el que
+        // se está tocando.
+        if(adminNestedEditingIdx !== null && idx !== adminNestedEditingIdx) return "";
         if(idx === adminNestedEditingIdx){
           const tiempoAca = lastMovedLabel(p);
           return `
@@ -5230,8 +5295,8 @@
                 <label class="labeledFieldBox" style="flex:1;">
                   <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
                   <div class="circulacionToggle" id="nestedEditLlaveToggle_${abbr}" data-selected="${escapeAttrLike(p.llave || "")}">
-                    <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🔑 Tablero ${escapeHtml(campoObj.campo)}</button>
-                    <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔒 Dentro del vehículo</button>
+                    <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Tablero ${escapeHtml(campoObj.campo)}</button>
+                    <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔑 Dentro del vehículo</button>
                   </div>
                   <input type="hidden" id="nestedEditLlave_${abbr}" value="${escapeAttrLike(p.llave || "")}">
                   <p class="authError" id="nestedEditLlaveError_${abbr}" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
@@ -5309,8 +5374,8 @@
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
               <div class="circulacionToggle" id="nestedNewLlaveToggle_${abbr}">
-                <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🔑 Tablero ${escapeHtml(campoObj.campo)}</button>
-                <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔒 Dentro del vehículo</button>
+                <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Tablero ${escapeHtml(campoObj.campo)}</button>
+                <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔑 Dentro del vehículo</button>
               </div>
               <input type="hidden" id="nestedNewLlave_${abbr}" value="">
               <p class="authError" id="nestedNewLlaveError_${abbr}" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
@@ -5419,7 +5484,7 @@
         }
         const dup = findPlate(plate);
         if(dup){
-          const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
+          const dupEntry = dup.platesArray[dup.plateIdx];
           const haceRato = minutesAgoText(dupEntry.lastUpdated);
           showToast(`${plate} ya está ubicada en otro lugar${haceRato ? ` (se agregó ${haceRato})` : ""} — quitala de ahí primero`);
           return;
@@ -5500,7 +5565,9 @@
           p.modelo = newModelo;
           p.color = detailBox.querySelector(`#nestedEditColor_${abbr}`).value.trim();
           p.llave = newLlave;
-          p.lastUpdated = new Date().toISOString();
+          // No se toca lastUpdated acá: este formulario nunca cambia de
+          // campo/área/fila, así que no es un movimiento real — solo se
+          // están corrigiendo datos del mismo vehículo en el mismo lugar.
           pushUndo(snap, `Editar ${newPlate} en ${info.label} · ${campoObj.campo}`);
           await saveState(true);
           showToast("Vehículo actualizado");
@@ -5552,6 +5619,10 @@
       const siguiente = adminSelectedCi < arr.length-1 ? arr[adminSelectedCi+1] : null;
 
       const plateRowsHtml = c.plates.length ? c.plates.map((p, idx)=>{
+        // Mientras se está editando un vehículo puntual, se esconden los
+        // demás de este mismo campo — así en pantalla solo queda el que
+        // se está tocando.
+        if(adminEditingPlateIdx !== null && idx !== adminEditingPlateIdx) return "";
         if(idx === adminMovingPlateIdx){
           return `
             <div class="quickMoveForm" data-idx="${idx}">
@@ -5618,8 +5689,8 @@
               <div class="circulacionField">
                 <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
                 <div class="circulacionToggle" id="zoneEditLlaveToggle_${abbr}" data-selected="${escapeAttrLike(p.llave || "")}">
-                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🔑 Tablero ${escapeHtml(c.campo)}</button>
-                  <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔒 Dentro del vehículo</button>
+                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Tablero ${escapeHtml(c.campo)}</button>
+                  <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔑 Dentro del vehículo</button>
                 </div>
                 <input type="hidden" id="zoneEditLlave_${abbr}" value="${escapeAttrLike(p.llave || "")}">
                 <p class="authError" id="zoneEditLlaveError_${abbr}" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
@@ -5712,8 +5783,8 @@
           <div class="circulacionField">
             <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
             <div class="circulacionToggle" id="zoneNewLlaveToggle_${abbr}">
-              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🔑 Tablero ${escapeHtml(c.campo)}</button>
-              <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔒 Dentro del vehículo</button>
+              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Tablero ${escapeHtml(c.campo)}</button>
+              <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔑 Dentro del vehículo</button>
             </div>
             <input type="hidden" id="zoneNewLlave_${abbr}" value="">
             <p class="authError" id="zoneNewLlaveError_${abbr}" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
@@ -5950,7 +6021,7 @@
           if(!confirm(`¿Eliminar ${plateToRemove.plate} del inventario? No se puede deshacer desde acá.`)) return;
           rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
           const snap = snapshotZones();
-          removePlateEntryByRef(zone.key, c, plateToRemove);
+          removePlateEntryByRef(zone.key, c.plates, plateToRemove);
           pushUndo(snap, `Eliminar ${plateToRemove.plate}`);
           await saveState();
           showToast("Vehículo eliminado del inventario");
@@ -6135,7 +6206,7 @@
         if(dup){
           const dupInfo = zoneInfo(dup.zoneKey);
           const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
-          const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
+          const dupEntry = dup.platesArray[dup.plateIdx];
           const asegInput = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`);
           const modInput = detailBox.querySelector(`#zoneNewModelo_${abbr}`);
           const colInput = detailBox.querySelector(`#zoneNewColor_${abbr}`);
@@ -6335,6 +6406,21 @@
         c.plates.forEach((entry, pi)=>{
           rows.push({ zoneKey: z.key, zoneLabel: z.label, color: z.color, campo: c.campo, placa: entry.plate, aseguradora: entry.aseguradora || "", modelo: entry.modelo || "", vehicleColor: entry.color || "", lastUpdated: entry.lastUpdated, ci, pi });
         });
+        // Antes esto se quedaba afuera: los vehículos que viven dentro de
+        // áreas o filas (Taller de Pintura, Recepción) no entraban acá —
+        // así que tampoco aparecían en Resumen, en los conteos del
+        // Dashboard, en la lista de "Todos los vehículos", ni en las
+        // hojas de Excel que se arman con esta misma lista.
+        (c.areas || []).forEach(ar=>{
+          ar.plates.forEach(entry=>{
+            rows.push({ zoneKey: z.key, zoneLabel: z.label, color: z.color, campo: `${c.campo} › ${ar.area}`, placa: entry.plate, aseguradora: entry.aseguradora || "", modelo: entry.modelo || "", vehicleColor: entry.color || "", lastUpdated: entry.lastUpdated, ci, pi: null });
+          });
+          (ar.filas || []).forEach(f=>{
+            f.plates.forEach(entry=>{
+              rows.push({ zoneKey: z.key, zoneLabel: z.label, color: z.color, campo: `${c.campo} › ${ar.area} › ${f.fila}`, placa: entry.plate, aseguradora: entry.aseguradora || "", modelo: entry.modelo || "", vehicleColor: entry.color || "", lastUpdated: entry.lastUpdated, ci, pi: null });
+            });
+          });
+        });
       });
     });
     return rows;
@@ -6513,7 +6599,7 @@
           tr.dataset.ci = r.ci;
           tr.dataset.pi = r.pi;
           tr.innerHTML = `
-            <td><span class="orderBadge" title="Orden de llegada dentro de este campo">${r.pi+1}</span></td>
+            <td><span class="orderBadge" title="Orden de llegada dentro de este campo">${r.pi === null ? "·" : r.pi+1}</span></td>
             <td><span class="spotNum${r.campo===SIN_ASIGNAR?" sinAsignar":""}" style="background:${r.color}">${highlightMatch(r.campo, filterText)}</span></td>
             <td>${highlightMatch(r.zoneLabel, filterText)}</td>
             <td>${r.modelo ? highlightMatch(r.modelo, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
@@ -6522,6 +6608,15 @@
             <td>${r.aseguradora ? highlightMatch(r.aseguradora, filterText) : '<span style="color:var(--muted);">—</span>'}</td>
           `;
           tr.addEventListener("click", ()=>{
+            if(r.pi === null){
+              // Vehículo dentro de un área/fila (Taller de Pintura,
+              // Recepción) — el modal de ver/editar ubicación plano no
+              // entiende esa estructura anidada todavía; se manda a la
+              // zona para que lo abra desde ahí, en vez de romper o
+              // mostrar el vehículo equivocado.
+              showToast(`${r.placa} está dentro de "${r.campo}" — abrilo desde la zona en Admin o Actualización.`, 4500);
+              return;
+            }
             if(currentUser && currentUser.role === "consulta"){
               openViewDetailModal(r.zoneKey, r.ci, r.pi);
             } else {
@@ -7010,15 +7105,26 @@
   }
   function addZoneSheet(wb, z, fechaLarga, horaLarga){
     const campos = state.zones[z.key] || [];
-    const totalVeh = campos.reduce((a,c)=>a+c.plates.length,0);
+    // Cuenta TODOS los vehículos de la zona, incluidos los que están
+    // adentro de áreas y filas (Taller de Pintura, Recepción) — antes
+    // solo se contaban los que estaban directo en el campo, y los demás
+    // quedaban afuera del total mostrado arriba de la hoja también.
+    const totalVeh = campos.reduce((a,c)=>{
+      let sub = c.plates.length;
+      (c.areas || []).forEach(ar=>{
+        sub += ar.plates.length;
+        (ar.filas || []).forEach(f=> sub += f.plates.length);
+      });
+      return a + sub;
+    }, 0);
     const cap = state.capacities[z.key];
     const capTxt = (cap && cap>0) ? ` · ${campos.length}/${cap} campos ocupados` : ``;
     // El check-in es exclusivo de Parqueo Gash Externo — solo esa hoja
     // suma las columnas de Check-in y Notas, ninguna otra zona las tiene.
     const esCheckinZone = z.key === CHECKIN_ZONE_KEY;
     const headerCols = esCheckinZone
-      ? ["Campo","Placa","Asesor","Modelo","Color","Última actualización","Check-in","Notas del check-in"]
-      : ["Campo","Placa","Asesor","Modelo","Color","Última actualización"];
+      ? ["Campo","Placa","Asesor","Modelo","Color","Llave","Última actualización","Check-in","Notas del check-in"]
+      : ["Campo","Placa","Asesor","Modelo","Color","Llave","Última actualización"];
     const lastCol = headerCols.length - 1;
 
     const data = [
@@ -7027,14 +7133,28 @@
       [],
       headerCols
     ];
-    campos.forEach(c => c.plates.forEach(p => {
-      const row = [c.campo, p.plate, p.aseguradora || "", p.modelo || "", p.color || "", fechaCortaExcel(p)];
+    const llaveTexto = (p)=> p.llave === "tablero" ? "Tablero" : p.llave === "vehiculo" ? "Dentro del vehículo" : "";
+    function agregarFila(campoLabel, p){
+      const row = [campoLabel, p.plate, p.aseguradora || "", p.modelo || "", p.color || "", llaveTexto(p), fechaCortaExcel(p)];
       if(esCheckinZone){
         const info = checkinExcelInfo(p);
         row.push(info.status, info.notes);
       }
       data.push(row);
-    }));
+    }
+    campos.forEach(c => {
+      c.plates.forEach(p => agregarFila(c.campo, p));
+      // Vehículos que están directo en una área (no en una fila adentro),
+      // y los que están en cada fila — ambos se marcan con "campo ›
+      // área[ › fila]" en la columna Campo, para no perder de dónde son
+      // exactamente al verlos en la hoja.
+      (c.areas || []).forEach(ar=>{
+        ar.plates.forEach(p => agregarFila(`${c.campo} › ${ar.area}`, p));
+        (ar.filas || []).forEach(f=>{
+          f.plates.forEach(p => agregarFila(`${c.campo} › ${ar.area} › ${f.fila}`, p));
+        });
+      });
+    });
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     ws["!merges"] = [
@@ -7042,28 +7162,13 @@
       { s:{r:1,c:0}, e:{r:1,c:lastCol} }
     ];
     ws["!cols"] = esCheckinZone
-      ? [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 32 }, { wch: 26 }]
-      : [{ wch: 14 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 18 }];
+      ? [{ wch: 20 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 32 }, { wch: 26 }]
+      : [{ wch: 20 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 18 }];
     if(data.length > 4){
       const lastColLetter = String.fromCharCode(65 + lastCol);
       ws["!autofilter"] = { ref: `A4:${lastColLetter}${data.length}` };
     }
     XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(z.label));
-  }
-
-  // Libro de Excel con una sola zona — para compartir un pedazo puntual del
-  // inventario sin mandar las 9 hojas completas.
-  function buildSingleZoneWorkbook(zoneKey){
-    const z = zoneInfo(zoneKey);
-    if(!z) return null;
-    const wb = XLSX.utils.book_new();
-    const now = new Date();
-    const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
-    const horaLarga = now.toLocaleTimeString("es-CR", {hour:"2-digit", minute:"2-digit"});
-    addZoneSheet(wb, z, fechaLarga, horaLarga);
-    const fecha = now.toISOString().slice(0,10);
-    const nombreArchivo = z.label.replace(/[^\w\sáéíóúÁÉÍÓÚñÑ-]/g, "").trim().replace(/\s+/g, "_");
-    return { wb, fileName: `Inventario_${nombreArchivo}_${fecha}.xlsx` };
   }
 
   function buildInventoryWorkbook(zoneKeysFilter){
@@ -7634,8 +7739,8 @@
   // fila sin tener que abrir Editar — mismo criterio que el circulito de
   // color: no ocupa espacio, solo se agrega si hay un dato guardado.
   function llaveRowIcon(p, campoLabelParaTexto){
-    if(p.llave === "tablero") return ` <span class="plateLlaveIcon" title="Llave en el tablero ${escapeAttrLike(campoLabelParaTexto)}">🔑</span>`;
-    if(p.llave === "vehiculo") return ` <span class="plateLlaveIcon" title="Llave dentro del vehículo">🔒</span>`;
+    if(p.llave === "tablero") return ` <span class="plateLlaveIcon" title="Llave en el tablero ${escapeAttrLike(campoLabelParaTexto)}">🗂️</span>`;
+    if(p.llave === "vehiculo") return ` <span class="plateLlaveIcon" title="Llave dentro del vehículo">🔑</span>`;
     return "";
   }
   function updateColorDot(input, dot){
@@ -8310,6 +8415,35 @@
   function normalizarEncabezado(s){
     return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
   }
+  // Tabla de equivalencias: código de usuario (como aparece a veces en la
+  // columna Asesor de Excels externos) → nombre real del asesor. Si el
+  // valor de esa columna coincide con uno de estos códigos, se reemplaza
+  // por el nombre completo de acá — sin recortarlo a "solo el primer
+  // nombre" como se hace con nombres sueltos, porque acá el nombre
+  // completo (columna B) ya es justo lo que se quiere guardar.
+  const ASESOR_CODIGO_MAP = {
+    "daraal": "Daniel",
+    "kaboar": "Katherine Bonilla",
+    "jaesso": "Javier",
+    "mazubr": "maria",
+    "ilbero": "ileana",
+    "crgase": "carlos",
+    "jerobr": "jeffry",
+    "vamora": "valeria",
+    "syarvi": "syani",
+    "vichfa": "vivian",
+    "micaji": "milton",
+    "naagob": "nancy"
+  };
+  function resolverAsesorImportado(valorCrudo){
+    const limpio = String(valorCrudo || "").trim();
+    if(!limpio) return "";
+    const codigo = limpio.toLowerCase();
+    if(ASESOR_CODIGO_MAP[codigo]) return ASESOR_CODIGO_MAP[codigo];
+    // No es un código conocido — se trata como nombre suelto, igual que
+    // antes: si trae nombre completo, solo se guarda la primera palabra.
+    return limpio.split(/\s+/)[0] || "";
+  }
   function parseExcelParaImportar(workbook){
     const filas = [];
     let huboEncabezadoValido = false;
@@ -8344,10 +8478,10 @@
         filas.push({
           plate,
           modelo: colModelo !== -1 ? String(fila[colModelo] || "").trim() : "",
-          // Si la columna trae nombre completo (ej. "Juan Carlos Pérez
-          // Rodríguez"), solo se guarda la primera palabra — el primer
-          // nombre, sin segundo nombre ni apellidos.
-          asesor: colAsesor !== -1 ? String(fila[colAsesor] || "").trim().split(/\s+/)[0] || "" : "",
+          // Si coincide con un código conocido (ver ASESOR_CODIGO_MAP), se
+          // usa el nombre completo correspondiente. Si no, sigue como
+          // antes: nombre suelto, solo se guarda la primera palabra.
+          asesor: colAsesor !== -1 ? resolverAsesorImportado(fila[colAsesor]) : "",
           color: colColor !== -1 ? String(fila[colColor] || "").trim() : ""
         });
       }
@@ -8361,7 +8495,7 @@
     filas.forEach(fila=>{
       const dup = findPlate(fila.plate);
       if(dup){
-        const entry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
+        const entry = dup.platesArray[dup.plateIdx];
         let cambio = false;
         if(fila.modelo && fila.modelo !== entry.modelo){ entry.modelo = fila.modelo; cambio = true; }
         if(fila.asesor && fila.asesor !== entry.aseguradora){ entry.aseguradora = fila.asesor; cambio = true; }
@@ -9370,6 +9504,7 @@
           <div id="updSearchResults"></div>
           ${avaluoModo ? `
           <div id="updAllAreasFixed" style="margin-top:14px;"></div>
+          <div id="updAllList" style="margin-top:14px;"></div>
           ` : `
           <details class="bulk" id="updGridDetails" ${currentUser.searchFocused ? "" : "open"} style="margin-top:14px;">
             <summary>${currentUser.searchFocused ? "Ver espacios y actualizar (opcional)" : "Zona y espacios"}</summary>
@@ -9417,6 +9552,7 @@
       zoneFilterRow.querySelectorAll(".updaterZoneChip").forEach(btn=>{
         btn.addEventListener("click", ()=>{
           updSelectedListZone = btn.getAttribute("data-zone");
+          allListVisibleLimit = 60;
           zoneFilterRow.querySelectorAll(".updaterZoneChip").forEach(b=>b.classList.remove("active"));
           btn.classList.add("active");
           if(zoneFilterSummary){
@@ -9462,8 +9598,23 @@
       }
 
       let listHtml;
+      let hayMasParaMostrar = false;
       if(rows.length === 0){
         listHtml = `<div class="dashEmptyNote">Sin resultados para ese filtro.</div>`;
+      } else if(!updSelectedListZone && !q){
+        // Solo se recorta la vista "todo, sin filtrar" — es la que puede
+        // llegar a cientos de filas. Filtrando por texto o por zona, el
+        // resultado ya es chico de por sí, así que no hace falta limitarlo.
+        const rowsRecortadas = rows.slice(0, allListVisibleLimit);
+        hayMasParaMostrar = rows.length > allListVisibleLimit;
+        listHtml = visibleZonesForCurrentUser().map(z=>{
+          const zoneRows = rowsRecortadas.filter(r => r.zoneKey === z.key);
+          if(zoneRows.length === 0) return "";
+          return `
+            <div class="updaterZoneGroupHeader"><span class="dot" style="background:${z.color}"></span>${z.label} <span class="count">${zoneRows.length}</span></div>
+            ${zoneRows.map(rowHtml).join("")}
+          `;
+        }).join("");
       } else if(!updSelectedListZone){
         listHtml = visibleZonesForCurrentUser().map(z=>{
           const zoneRows = rows.filter(r => r.zoneKey === z.key);
@@ -9480,14 +9631,22 @@
       allListBox.innerHTML = `
         <div class="updaterAllListTitle">${title}</div>
         <div class="updaterAllListScroll">${listHtml}</div>
+        ${hayMasParaMostrar ? `<button type="button" class="linkBackBtn" id="updAllListMoreBtn" style="text-decoration:none; font-weight:700; margin-top:6px;">Ver más (${Math.min(allListVisibleLimit, rows.length)} de ${rows.length})</button>` : ``}
       `;
       allListBox.querySelectorAll(".updaterAllListRow").forEach(row=>{
         row.addEventListener("click", ()=>{
           goToPlate(row.getAttribute("data-plate"));
         });
       });
+      const moreBtn = allListBox.querySelector("#updAllListMoreBtn");
+      if(moreBtn){
+        moreBtn.addEventListener("click", ()=>{
+          allListVisibleLimit += 60;
+          drawAllList();
+        });
+      }
     }
-    listFilterInput.addEventListener("input", drawAllList);
+    listFilterInput.addEventListener("input", ()=>{ allListVisibleLimit = 60; drawAllList(); });
     listFilterInput.addEventListener("keyup", drawAllList);
     // Si veníamos de un refresco con texto ya escrito en el buscador, se
     // restaura acá — si no, el filtro se perdía cada vez que la pantalla
@@ -9821,6 +9980,10 @@
       const labelLower = CUSTOM_NAMED_ZONES.has(updSpaceZone) ? "zona" : (UNNUMBERED_ONLY_ZONES.has(updSpaceZone) ? "línea" : "campo");
 
       const plateRowsHtml = entry.plates.length ? entry.plates.map((p,idx)=>{
+        // Mientras se está editando un vehículo puntual, se esconden los
+        // demás de este mismo espacio — así en pantalla solo queda el que
+        // se está tocando, sin riesgo de confundirse con el de al lado.
+        if(updEditingPlateIdx !== null && idx !== updEditingPlateIdx) return "";
         if(idx === updMovingPlateIdx){
           return `
             <div class="quickMoveForm" data-idx="${idx}">
@@ -9895,8 +10058,8 @@
               <div class="circulacionField">
                 <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
                 <div class="circulacionToggle" id="spaceEditLlaveToggle" data-selected="${escapeAttrLike(p.llave || "")}">
-                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🔑 Tablero ${escapeHtml(campoLabel)}</button>
-                  <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔒 Dentro del vehículo</button>
+                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Tablero ${escapeHtml(campoLabel)}</button>
+                  <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔑 Dentro del vehículo</button>
                 </div>
                 <input type="hidden" id="spaceEditLlave" value="${escapeAttrLike(p.llave || "")}">
                 <p class="authError" id="spaceEditLlaveError" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
@@ -9936,7 +10099,11 @@
       spaceInfoBox.classList.remove("slideInRight");
       void spaceInfoBox.offsetWidth; // fuerza el reflujo para poder repetir la animación
       spaceInfoBox.classList.add("slideInRight");
-      spaceInfoBox.classList.remove("formOnlyMode"); // cada render fresco arranca mostrando todo, no solo el formulario
+      // Editar un vehículo puntual también activa "solo este" — si no, se
+      // seguían viendo todos los demás vehículos del campo alrededor del
+      // formulario de edición, cuando lo que se quiere es enfocarse en
+      // ese único vehículo.
+      spaceInfoBox.classList.toggle("formOnlyMode", updEditingPlateIdx !== null);
       const esSinUbicacion = SINGLE_BUCKET_ZONES.has(updSpaceZone);
       spaceInfoBox.innerHTML = `
         <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">${esSinUbicacion ? "← Volver / cambiar de zona" : "← Volver a la lista de espacios"}</button>
@@ -9995,8 +10162,8 @@
           <div class="circulacionField" id="updLlaveSection"${isAvaluoUser() ? ` style="display:none;"` : ``}>
             <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
             <div class="circulacionToggle" id="updSpaceNewLlaveToggle">
-              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🔑 Tablero ${escapeHtml(campoLabel)}</button>
-              <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔒 Dentro del vehículo</button>
+              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Tablero ${escapeHtml(campoLabel)}</button>
+              <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔑 Dentro del vehículo</button>
             </div>
             <input type="hidden" id="updSpaceNewLlave" value="">
             <p class="authError" id="updSpaceNewLlaveError" style="display:none; margin-top:4px;">Marcá dónde está la llave.</p>
@@ -10082,7 +10249,7 @@
         const doRemove = async ()=>{
           if(yaEnSinUbicacion){
             rememberPlateInfo(plateToRemove.plate, plateToRemove.aseguradora, plateToRemove.modelo).catch(()=>{});
-            removePlateEntryByRef(updSpaceZone, entry, plateToRemove);
+            removePlateEntryByRef(updSpaceZone, entry.plates, plateToRemove);
             await saveState(true);
             await appendLog(HISTORY_KEY, {
               ts: nowStamp(),
@@ -10415,7 +10582,7 @@
         if(dup){
           const dupInfo = zoneInfo(dup.zoneKey);
           const dupCampo = state.zones[dup.zoneKey][dup.campoIdx].campo;
-          const dupEntry = state.zones[dup.zoneKey][dup.campoIdx].plates[dup.plateIdx];
+          const dupEntry = dup.platesArray[dup.plateIdx];
           const asegInput = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
           const modInput = spaceInfoBox.querySelector("#updSpaceNewModelo");
           const colInput = spaceInfoBox.querySelector("#updSpaceNewColor");
@@ -10694,10 +10861,10 @@
       if(dup){
         const dupInfo = zoneInfo(dup.zoneKey);
         const dupCampoObj = state.zones[dup.zoneKey][dup.campoIdx];
-        const dupEntry = dupCampoObj.plates[dup.plateIdx];
+        const dupEntry = dup.platesArray[dup.plateIdx];
         const choice = await askMoveOrCancel(newPlate, dupInfo.label, dupCampoObj.campo, zoneInfo(newZone).label, newCampo);
         if(choice !== "move") return false;
-        removePlateEntryByRef(dup.zoneKey, dupCampoObj, dupEntry);
+        removePlateEntryByRef(dup.zoneKey, dup.platesArray, dupEntry);
       }
     }
 
@@ -10715,10 +10882,14 @@
     if(newColor !== undefined) entry.color = newColor;
     if(newCirculacion !== undefined) entry.circulacion = newCirculacion;
     if(newLlave !== undefined) entry.llave = newLlave;
-    entry.lastUpdated = new Date().toISOString();
+    // El "hace cuánto está acá" solo tiene sentido si de verdad se movió de
+    // lugar — si solo se le corrigió el asesor o el modelo sin cambiar de
+    // zona/campo, no debería reiniciar ese contador como si fuera un
+    // movimiento real.
+    if(locationChanged) entry.lastUpdated = new Date().toISOString();
 
     if(locationChanged){
-      removePlateEntryByRef(zoneKey, campoObj, entry);
+      removePlateEntryByRef(zoneKey, campoObj.plates, entry);
       insertPlateAtPosition(getOrCreateCampo(newZone, newCampo), entry, position || "first");
     }
     const descripcion = locationChanged
