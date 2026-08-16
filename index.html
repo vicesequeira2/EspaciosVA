@@ -3485,6 +3485,13 @@
   let storageWarned = false;
   let pendingResumenFilter = ""; // texto a precargar en el filtro del Resumen al saltar ahí desde la búsqueda
   let pendingUpdaterSearch = ""; // texto del buscador de Actualización a restaurar después de un refresco, para no perder el filtro que ya tenías escrito
+  // Si el formulario de "Agregar" está abierto (con datos ya escritos)
+  // justo cuando hace falta refrescar — por ejemplo, porque apareció el
+  // aviso de que otra sesión guardó algo antes — se guarda todo lo que
+  // ya se había tecleado acá, para no obligar a volver a escribirlo desde
+  // cero después de actualizar. Se limpia apenas se usa (o si se cierra
+  // el formulario sin usarlo).
+  let pendingUpdSpaceAddForm = null;
   let pendingResumenState = null; // { zoneKey, onlyToday, sortKey, sortDir } — se usa junto con pendingResumenFilter al refrescar en segundo plano
   const undoStack = []; // { snapshot, description, ts }, máx 10
   const UNDO_LIMIT = 10;
@@ -3633,6 +3640,106 @@
   // pareja, y no aparecen como si fueran vehículos distintos por un simple
   // guión de más o de menos.
   function normalizePlate(v){ return String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+
+  // Escanear placa con la cámara (OCR). Tesseract.js es pesado (~2MB) —
+  // en vez de cargarlo siempre para todos, se trae solo la primera vez
+  // que alguien realmente toca "Escanear", y de ahí en más queda en
+  // caché para el resto de la sesión.
+  let tesseractLoadPromise = null;
+  function loadTesseractIfNeeded(){
+    if(window.Tesseract) return Promise.resolve();
+    if(tesseractLoadPromise) return tesseractLoadPromise;
+    tesseractLoadPromise = new Promise((resolve, reject)=>{
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js";
+      script.onload = () => resolve();
+      script.onerror = () => { tesseractLoadPromise = null; reject(new Error("No se pudo cargar el lector de placas")); };
+      document.head.appendChild(script);
+    });
+    return tesseractLoadPromise;
+  }
+
+  // De todo el texto que el OCR alcanzó a leer en la foto (que puede traer
+  // basura: el marco de la placa, texto del parachoques, etc.), se busca
+  // el tramo que más se parece a una placa real: letras y números
+  // pegados, de tamaño razonable (entre 4 y 8 caracteres). Si hay varios
+  // candidatos, se prefiere el más largo — las placas de Costa Rica rara
+  // vez son cortas, así que un tramo cortito suele ser ruido del OCR.
+  function extraerPlacaDeTextoOcr(textoCrudo){
+    const limpio = String(textoCrudo || "").toUpperCase();
+    // Se separa por espacios/saltos de línea reales (esos sí marcan
+    // palabras distintas), pero DENTRO de cada palabra se quitan guiones
+    // y símbolos sueltos antes de medir el largo — muchas placas de Costa
+    // Rica se escriben con guion (ej. "PE-61392"), y sin este paso el
+    // guion partía la placa en dos pedazos y se perdía la parte de letras.
+    const palabras = limpio.split(/\s+/).map(w => w.replace(/[^A-Z0-9]/g, "")).filter(Boolean);
+    const tieneLetraYNumero = (s) => /[A-Z]/.test(s) && /[0-9]/.test(s);
+    const largoRazonable = (s) => s.length >= 4 && s.length <= 8;
+
+    // Se prefiere una palabra que tenga LETRAS Y NÚMEROS a la vez — así
+    // no se confunde con texto decorativo de la foto ("COSTA", "RICA")
+    // que por casualidad cae en un largo parecido al de una placa.
+    const conAmbos = palabras.filter(w => largoRazonable(w) && tieneLetraYNumero(w));
+    if(conAmbos.length){
+      conAmbos.sort((a,b)=> b.length - a.length);
+      return conAmbos[0];
+    }
+    // Si ninguna palabra sola alcanza eso, puede ser que el OCR haya
+    // leído la placa separada en dos por el espacio físico real del
+    // diseño (ej. "BZL 006") — se prueba uniendo pares de palabras
+    // consecutivas, exigiendo igual que el resultado tenga letras y
+    // números (para no unir dos palabras de ruido al azar).
+    for(let i=0; i<palabras.length-1; i++){
+      const unido = palabras[i] + palabras[i+1];
+      if(largoRazonable(unido) && tieneLetraYNumero(unido)) return unido;
+    }
+    // Último recurso: cualquier palabra del largo esperado, aunque no
+    // tenga números (por si el OCR falló en leer algún dígito) — mejor
+    // sugerir algo revisable que no sugerir nada.
+    const candidatos = palabras.filter(largoRazonable);
+    if(candidatos.length){
+      candidatos.sort((a,b)=> b.length - a.length);
+      return candidatos[0];
+    }
+    return "";
+  }
+
+  // Conecta el botón de cámara junto a un campo de Placa: abre la cámara,
+  // corre el OCR sobre la foto, y si encuentra algo que parece una placa,
+  // lo pone en el campo (la persona igual lo puede corregir a mano antes
+  // de guardar — el OCR nunca guarda solo, solo sugiere).
+  function wirePlateOcrButton(scanBtn, plateInput, fileInput){
+    if(!scanBtn || !plateInput || !fileInput) return;
+    scanBtn.addEventListener("click", ()=> fileInput.click());
+    fileInput.addEventListener("change", async ()=>{
+      const file = fileInput.files && fileInput.files[0];
+      fileInput.value = "";
+      if(!file) return;
+      const textoOriginalBtn = scanBtn.textContent;
+      scanBtn.disabled = true;
+      scanBtn.textContent = "⏳";
+      try{
+        await loadTesseractIfNeeded();
+        const resultado = await window.Tesseract.recognize(file, "eng");
+        const textoLeido = (resultado && resultado.data && resultado.data.text) || "";
+        const placaEncontrada = extraerPlacaDeTextoOcr(textoLeido);
+        if(placaEncontrada){
+          plateInput.value = placaEncontrada;
+          plateInput.dispatchEvent(new Event("input", { bubbles: true }));
+          plateInput.focus();
+          showToast(`Se leyó "${placaEncontrada}" — revisá que esté bien antes de guardar.`, 4000);
+        } else {
+          showToast("No se pudo leer la placa en esa foto — probá de nuevo más de cerca, o escribila a mano.", 4000);
+        }
+      }catch(e){
+        console.error("Error leyendo la placa con la cámara", e);
+        showToast("No se pudo leer la placa — escribila a mano.", 3500);
+      }finally{
+        scanBtn.disabled = false;
+        scanBtn.textContent = textoOriginalBtn;
+      }
+    });
+  }
 
   // ¿Se actualizó (movió, editó o registró) este vehículo hoy? Sirve para
   // resaltar en la interfaz "ya pasé por esta placa" durante una ronda.
@@ -4542,7 +4649,33 @@
     return new Promise(resolve => canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.85));
   }
 
-  function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated){
+  // Antes de abrir el modal a sacar fotos (cuando se toca un vehículo ya
+  // existente, no recién agregado), se revisa si el servidor tiene algo
+  // MÁS NUEVO que lo último que se leyó acá — por ejemplo, si otra
+  // persona movió o editó ese mismo vehículo desde otro celular. Si es
+  // así, se avisa ANTES de que alguien invierta tiempo sacando fotos con
+  // datos que podrían estar viejos (la llave puede ya no estar donde dice
+  // la pantalla, por ejemplo).
+  async function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated){
+    if(isTest || isAutoPrompt){
+      // Modo prueba: no hay nada que guardar. Recién agregado: los datos
+      // son los que se acaban de guardar hace instantes, no hace falta
+      // revisar de nuevo.
+      _openPhotoReportModalInner(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated);
+      return;
+    }
+    if(storageAvailable && lastKnownServerStateRaw !== null){
+      try{
+        const actual = await window.storage.get(STORAGE_KEY, true);
+        if(actual && actual.value && actual.value !== lastKnownServerStateRaw){
+          const seguirIgual = confirm(`Los datos de "${plate}" podrían estar desactualizados — parece que alguien más guardó un cambio después de la última vez que se actualizó esta pantalla.\n\nTocá Cancelar y actualizá (🔄) antes de sacar la foto, para compartir la info correcta. Tocá Aceptar si igual querés seguir con lo que se ve ahora.`);
+          if(!seguirIgual) return;
+        }
+      }catch(e){ /* si la verificación falla (sin señal, etc.), se sigue igual — no bloquea por eso */ }
+    }
+    _openPhotoReportModalInner(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated);
+  }
+  function _openPhotoReportModalInner(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated){
     const overlay = document.getElementById("photoReportModal");
     const summaryBox = document.getElementById("photoReportSummary");
     const fecha = new Date().toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
@@ -4922,7 +5055,20 @@
       }
     }
 
-    insertPlateAtPosition(getOrCreateCampo(zoneKey, campo), { plate, aseguradora, modelo, color, circulacion, llave, lastUpdated: new Date().toISOString() }, position || "first");
+    const campoObj = getOrCreateCampo(zoneKey, campo);
+    // Campos pensados para un solo vehículo (capacidad = 1): si ya tiene
+    // uno y llega un vehículo DISTINTO, el que estaba se manda a "Sin
+    // ubicación" en vez de quedar los dos amontonados ahí — es un campo
+    // físico real, no puede haber dos autos ocupando el mismo lugar a la
+    // vez. Si el campo no tiene capacidad definida, o admite más de uno,
+    // esto no aplica y el vehículo se agrega junto a los demás como
+    // siempre.
+    if(campoObj.capacidad === 1 && campoObj.plates.length > 0 && zoneKey !== SIN_UBICACION_KEY){
+      const desplazados = campoObj.plates.splice(0, campoObj.plates.length);
+      const sinUbicCampo = getOrCreateCampo(SIN_UBICACION_KEY, SIN_UBICACION_CAMPO);
+      desplazados.forEach(entry => sinUbicCampo.plates.push(entry));
+    }
+    insertPlateAtPosition(campoObj, { plate, aseguradora, modelo, color, circulacion, llave, lastUpdated: new Date().toISOString() }, position || "first");
     rememberPlateInfo(plate, aseguradora, modelo, color).catch(()=>{}); // en segundo plano, no bloquea el guardado principal
     return true;
   }
@@ -5350,7 +5496,11 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <input type="text" id="nestedNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="text" id="nestedNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text" style="flex:1;">
+                <button type="button" id="nestedNewPlacaScanBtn_${abbr}" class="secondaryBtn" title="Escanear placa con la cámara" style="flex:0 0 auto; padding:8px 10px;">📷</button>
+                <input type="file" accept="image/*" capture="environment" id="nestedNewPlacaScanInput_${abbr}" style="display:none;">
+              </div>
             </label>
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">Asesor</span>
@@ -5459,6 +5609,7 @@
         if(addVehBox.style.display !== "none") detailBox.querySelector(`#nestedNewPlaca_${abbr}`).focus();
       });
       wireColorDot(detailBox.querySelector(`#nestedNewColor_${abbr}`), detailBox.querySelector(`#nestedNewColorDot_${abbr}`));
+      wirePlateOcrButton(detailBox.querySelector(`#nestedNewPlacaScanBtn_${abbr}`), detailBox.querySelector(`#nestedNewPlaca_${abbr}`), detailBox.querySelector(`#nestedNewPlacaScanInput_${abbr}`));
       wireLlaveToggle(detailBox.querySelector(`#nestedNewLlaveToggle_${abbr}`), detailBox.querySelector(`#nestedNewLlave_${abbr}`), detailBox.querySelector(`#nestedNewLlaveError_${abbr}`));
       const nestedAsegNew = detailBox.querySelector(`#nestedNewAseg_${abbr}`);
       if(nestedAsegNew){
@@ -5502,7 +5653,17 @@
           lastUpdated: new Date().toISOString()
         });
         pushUndo(snap, `Agregar ${plate} en ${info.label} · ${campoObj.campo}${areaObj ? " · "+areaObj.area : ""}${filaObj ? " · "+filaObj.fila : ""}`);
-        await saveState(true);
+        const guardado = await saveState(true);
+        if(!guardado){
+          // No se guardó de verdad (por ejemplo, choque con otra sesión) —
+          // se deshace la mutación local para no dejar el vehículo
+          // "agregado" solo en pantalla sin estar guardado en el
+          // servidor, y se avisa (saveState ya mostró su propio aviso).
+          contenedor.plates.shift();
+          undoStack.pop();
+          updateUndoBtn();
+          return;
+        }
         showToastWithUndo("Listo — vehículo agregado");
         drawZoneDetail();
       });
@@ -5747,7 +5908,11 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text" style="flex:1;">
+                <button type="button" id="zoneNewPlacaScanBtn_${abbr}" class="secondaryBtn" title="Escanear placa con la cámara" style="flex:0 0 auto; padding:8px 10px;">📷</button>
+                <input type="file" accept="image/*" capture="environment" id="zoneNewPlacaScanInput_${abbr}" style="display:none;">
+              </div>
             </label>
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">Asesor</span>
@@ -6198,6 +6363,7 @@
       const newDupWarn = detailBox.querySelector(`#zoneNewDupWarn_${abbr}`);
       const newSimilarWarn = detailBox.querySelector(`#zoneNewSimilarWarn_${abbr}`);
       const newAddBtn = detailBox.querySelector(`#zoneNewAddBtn_${abbr}`);
+      wirePlateOcrButton(detailBox.querySelector(`#zoneNewPlacaScanBtn_${abbr}`), newPlacaInput, detailBox.querySelector(`#zoneNewPlacaScanInput_${abbr}`));
 
       function checkNewDup(){
         const v = normalizePlate(newPlacaInput.value);
@@ -6282,6 +6448,11 @@
             drawZoneGrid();
             drawZoneDetail();
             openPhotoReportModal(plateForReport, info.label, c.campo, false, true, aseguradora, modeloInput.value, colorInput.value, circulacionInput.value, llaveInput.value);
+          } else {
+            // Igual que en Actualización: si no se guardó de verdad, se
+            // revierte la mutación local para no dejar un vehículo
+            // "fantasma" que se ve en pantalla pero nunca quedó guardado.
+            state.zones = snap;
           }
         });
       }
@@ -8233,6 +8404,33 @@
       // entero al refrescar.
       const updSearch = document.getElementById("updSearchInput");
       if(updSearch && updSearch.value) pendingUpdaterSearch = updSearch.value;
+      // Si el formulario de "Agregar" está abierto con datos escritos,
+      // se guardan para restaurarlos después de refrescar — sin esto, la
+      // pantalla se reconstruye entera y hay que volver a escribir todo,
+      // justo cuando más molesta (por ejemplo, al reintentar después de
+      // un aviso de choque entre sesiones).
+      const addBox = document.getElementById("updSpaceAddBox");
+      if(addBox && addBox.style.display !== "none"){
+        const placaEl = document.getElementById("updSpaceNewPlaca");
+        const asegEl = document.getElementById("updSpaceNewAseguradora");
+        const modeloEl = document.getElementById("updSpaceNewModelo");
+        const colorEl = document.getElementById("updSpaceNewColor");
+        const circEl = document.getElementById("updSpaceNewCirculacion");
+        const llaveEl = document.getElementById("updSpaceNewLlave");
+        const hayAlgoEscrito = (placaEl && placaEl.value.trim()) || (asegEl && asegEl.value.trim()) || (modeloEl && modeloEl.value.trim()) || (colorEl && colorEl.value.trim());
+        if(hayAlgoEscrito){
+          pendingUpdSpaceAddForm = {
+            zoneKey: updSpaceZone,
+            campo: updSelectedCampo,
+            placa: placaEl ? placaEl.value : "",
+            aseguradora: asegEl ? asegEl.value : "",
+            modelo: modeloEl ? modeloEl.value : "",
+            color: colorEl ? colorEl.value : "",
+            circulacion: circEl ? circEl.value : "",
+            llave: llaveEl ? llaveEl.value : ""
+          };
+        }
+      }
       // Reconstruir la pantalla mueve el scroll de vuelta arriba por
       // defecto — muy molesto en Búsqueda, que refresca sola cada 20 seg
       // de fondo sin que nadie la toque. Se guarda dónde estabas parado y
@@ -10124,7 +10322,11 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text" style="flex:1;">
+                <button type="button" id="updSpaceNewPlacaScanBtn" class="secondaryBtn" title="Escanear placa con la cámara" style="flex:0 0 auto; padding:8px 10px;">📷</button>
+                <input type="file" accept="image/*" capture="environment" id="updSpaceNewPlacaScanInput" style="display:none;">
+              </div>
             </label>
             ${currentUser.showMovedBy ? `` : `
             <label class="labeledFieldBox" style="flex:1;">
@@ -10211,6 +10413,37 @@
         spaceInfoBox.classList.add("formOnlyMode");
         spaceInfoBox.querySelector("#updSpaceNewPlaca").focus();
       });
+      // Si veníamos de un refresco con el formulario abierto y datos ya
+      // escritos (típicamente porque hubo que actualizar tras un aviso de
+      // choque entre sesiones), se reabre solo y se rellena de nuevo — así
+      // no hay que volver a escribir todo, solo tocar "Agregar" otra vez.
+      if(pendingUpdSpaceAddForm && pendingUpdSpaceAddForm.zoneKey === updSpaceZone && pendingUpdSpaceAddForm.campo === updSelectedCampo){
+        const datos = pendingUpdSpaceAddForm;
+        pendingUpdSpaceAddForm = null;
+        addBox.style.display = "block";
+        addToggleBtn.style.display = "none";
+        spaceInfoBox.classList.add("formOnlyMode");
+        const placaEl = spaceInfoBox.querySelector("#updSpaceNewPlaca");
+        const asegEl = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
+        const modeloEl = spaceInfoBox.querySelector("#updSpaceNewModelo");
+        const colorEl = spaceInfoBox.querySelector("#updSpaceNewColor");
+        if(placaEl) placaEl.value = datos.placa;
+        if(asegEl) asegEl.value = datos.aseguradora;
+        if(modeloEl) modeloEl.value = datos.modelo;
+        if(colorEl){
+          colorEl.value = datos.color;
+          updateColorDot(colorEl, spaceInfoBox.querySelector("#updSpaceNewColorDot"));
+        }
+        if(datos.circulacion){
+          const btn = spaceInfoBox.querySelector(`#updSpaceNewCirculacionToggle .circulacionBtn[data-value="${datos.circulacion}"]`);
+          if(btn) btn.click();
+        }
+        if(datos.llave){
+          const btn = spaceInfoBox.querySelector(`#updSpaceNewLlaveToggle .circulacionBtn[data-value="${datos.llave}"]`);
+          if(btn) btn.click();
+        }
+        showToast("Se recuperó lo que tenías escrito — tocá \"Agregar\" para guardarlo con los datos al día.", 5000);
+      }
       const cancelAddBtn = spaceInfoBox.querySelector("#updSpaceAddCancelBtn");
       if(cancelAddBtn){
         cancelAddBtn.addEventListener("click", ()=>{
@@ -10574,6 +10807,7 @@
       const spaceDupWarn = spaceInfoBox.querySelector("#updSpaceDupWarn");
       const spaceSimilarWarn = spaceInfoBox.querySelector("#updSpaceSimilarWarn");
       const spaceAddBtn = spaceInfoBox.querySelector("#updSpaceAddBtn");
+      wirePlateOcrButton(spaceInfoBox.querySelector("#updSpaceNewPlacaScanBtn"), spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewPlacaScanInput"));
 
       function checkSpacePlateInfo(){
         const v = normalizePlate(spacePlacaInput.value);
@@ -10693,6 +10927,13 @@
             // Se ofrece de una vez reportar con fotos — "Omitir" si no
             // hace falta ahora mismo, sin obligar a nadie a hacerlo.
             openPhotoReportModal(plateForReport, zoneLabelForReport, campoLabel, false, true, aseguradora, modelo, color, circulacion, llave);
+          } else {
+            // Si no se guardó de verdad (ej. choque con otra sesión), se
+            // revierte la mutación local — si no, el vehículo quedaría
+            // "agregado" solo en la memoria de este celular, sin estar
+            // realmente en el servidor, aunque se viera en pantalla como
+            // si hubiera funcionado.
+            state.zones = snap;
           }
         });
       }
@@ -10911,12 +11152,60 @@
     }
     const campo = campoRaw ? normalizeCampo(campoRaw) : nextAutoCampo(zoneKey);
     const ok = await addPlateToZone(zoneKey, campo, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw);
-    if(ok){
-      await saveState(true);
-      await logUpdate(normalizePlate(plateRaw), null, null, zoneKey, campo);
-    }
-    return ok;
+    if(!ok) return false;
+    // Antes, si saveState() fallaba (por ejemplo por un choque con otra
+    // sesión), esto no se revisaba — la pantalla seguía como si hubiera
+    // guardado bien (formulario se cerraba, aparecía "Listo") aunque el
+    // vehículo nunca se hubiera guardado de verdad en el servidor. Ahora
+    // se revisa: si no se guardó, se avisa que falló en vez de fingir que
+    // funcionó.
+    const guardado = await saveState(true);
+    if(!guardado) return false;
+    await logUpdate(normalizePlate(plateRaw), null, null, zoneKey, campo);
+    return true;
   }
+
+  // Si se cierra la pestaña, se recarga, o se apaga el celular mientras hay
+  // un formulario de Agregar con algo escrito (o uno de Editar abierto) sin
+  // haber guardado, el navegador muestra su propio aviso nativo de "tenés
+  // cambios sin guardar" antes de salir de verdad. Funciona en los 3
+  // paneles (Admin, Actualización, la vista anidada) a la vez, buscando
+  // por el patrón de ID en vez de una lista fija — así no hace falta tocar
+  // esto cada vez que se agregue un formulario nuevo en algún lado.
+  // Sube por los padres buscando algún display:none puesto A MANO (que es
+  // como esta app esconde sus formularios — con style.display, no con
+  // clases CSS) — así no depende de que el navegador calcule el layout
+  // completo para saber si algo está realmente visible.
+  function estaOcultoPorEstiloEnLinea(el){
+    let nodo = el;
+    while(nodo && nodo.nodeType === 1){
+      if(nodo.style && nodo.style.display === "none") return true;
+      nodo = nodo.parentElement;
+    }
+    return false;
+  }
+  function hayFormularioSinGuardar(){
+    const camposDeTexto = document.querySelectorAll(
+      '[id^="updSpaceNewPlaca"], [id^="zoneNewPlaca_"], [id^="nestedNewPlaca_"], ' +
+      '[id^="updSpaceNewAseguradora"], [id^="zoneNewAseguradora_"], [id^="nestedNewAseg_"], ' +
+      '[id^="updSpaceNewModelo"], [id^="zoneNewModelo_"], [id^="nestedNewModelo_"], ' +
+      '[id^="updSpaceNewColor"], [id^="zoneNewColor_"], [id^="nestedNewColor_"]'
+    );
+    for(const el of camposDeTexto){
+      if(!estaOcultoPorEstiloEnLinea(el) && el.value && el.value.trim()) return true;
+    }
+    // Cualquier formulario de Editar abierto también cuenta — ahí siempre
+    // hay datos cargados (los del vehículo), y perderlos a medio editar
+    // sin avisar sería igual de molesto.
+    if(document.querySelector(".spaceEditForm")) return true;
+    return false;
+  }
+  window.addEventListener("beforeunload", (e)=>{
+    if(hayFormularioSinGuardar()){
+      e.preventDefault();
+      e.returnValue = ""; // el texto exacto lo define el navegador, no la app
+    }
+  });
 
   document.getElementById("logoutBtn").addEventListener("click", async ()=>{
     if(!confirm("¿Cerrar sesión?")) return;
@@ -10986,19 +11275,6 @@
   // Avisa antes de cerrar/recargar si quedó una placa escrita en algún
   // formulario de "agregar" sin confirmar todavía, para no perderla por un
   // toque accidental (cerrar pestaña, recargar, botón atrás del celular).
-  function hasUnsavedFieldData(){
-    const el = document.getElementById("updSpaceNewPlaca");
-    if(el && el.value && el.value.trim()) return true;
-    const adminInputs = document.querySelectorAll('input[id^="zoneNewPlaca_"]');
-    for(const inp of adminInputs){ if(inp.value && inp.value.trim()) return true; }
-    return false;
-  }
-  window.addEventListener("beforeunload", (e)=>{
-    if(hasUnsavedFieldData()){
-      e.preventDefault();
-      e.returnValue = "";
-    }
-  });
   window.addEventListener("offline", updateOfflineBanner);
 
   // Menú "⚙️ Administrar": agrupa Usuarios/Historial/Invitados/Respaldo/
