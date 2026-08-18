@@ -2247,6 +2247,27 @@
     margin-top:6px;
     opacity:0.8;
   }
+  .formProgressIndicator{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:10px;
+    font-size:0.72rem;
+    color: var(--muted);
+  }
+  .formProgressDots{
+    display:flex;
+    gap:3px;
+  }
+  .formProgressDot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background: var(--border);
+    transition: background 0.15s ease;
+  }
+  .formProgressDot.filled{
+    background: var(--ok);
+  }
   .editMoveSection{
     margin-top:12px;
     padding-top:12px;
@@ -5493,6 +5514,7 @@
         <div style="margin-top:12px;">${plateRowsHtml}</div>
         <button type="button" class="linkBackBtn" id="nestedAddVehBtn_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar vehículo acá</button>
         <div id="nestedAddVehBox_${abbr}" style="display:none; margin-top:8px;">
+          <div class="formProgressIndicator" id="nestedAddProgress_${abbr}"></div>
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
@@ -5607,10 +5629,23 @@
       addVehBtn.addEventListener("click", ()=>{
         addVehBox.style.display = addVehBox.style.display === "none" ? "block" : "none";
         if(addVehBox.style.display !== "none") detailBox.querySelector(`#nestedNewPlaca_${abbr}`).focus();
+        nestedRefrescarProgreso();
       });
       wireColorDot(detailBox.querySelector(`#nestedNewColor_${abbr}`), detailBox.querySelector(`#nestedNewColorDot_${abbr}`));
       wirePlateOcrButton(detailBox.querySelector(`#nestedNewPlacaScanBtn_${abbr}`), detailBox.querySelector(`#nestedNewPlaca_${abbr}`), detailBox.querySelector(`#nestedNewPlacaScanInput_${abbr}`));
       wireLlaveToggle(detailBox.querySelector(`#nestedNewLlaveToggle_${abbr}`), detailBox.querySelector(`#nestedNewLlave_${abbr}`), detailBox.querySelector(`#nestedNewLlaveError_${abbr}`));
+      const nestedProgressBox = detailBox.querySelector(`#nestedAddProgress_${abbr}`);
+      const nestedCamposProgreso = () => [
+        detailBox.querySelector(`#nestedNewPlaca_${abbr}`),
+        detailBox.querySelector(`#nestedNewAseg_${abbr}`),
+        detailBox.querySelector(`#nestedNewModelo_${abbr}`),
+        detailBox.querySelector(`#nestedNewColor_${abbr}`),
+        detailBox.querySelector(`#nestedNewLlave_${abbr}`)
+      ];
+      const nestedRefrescarProgreso = () => actualizarProgresoFormulario(nestedProgressBox, nestedCamposProgreso());
+      addVehBox.addEventListener("input", nestedRefrescarProgreso);
+      addVehBox.addEventListener("click", ()=> setTimeout(nestedRefrescarProgreso, 0));
+      nestedRefrescarProgreso();
       const nestedAsegNew = detailBox.querySelector(`#nestedNewAseg_${abbr}`);
       if(nestedAsegNew){
         nestedAsegNew.addEventListener("blur", ()=> completeAsesorAbbreviation(nestedAsegNew));
@@ -5905,6 +5940,7 @@
         ${plateRowsHtml}
         <button type="button" class="linkBackBtn" id="zoneAddToggle_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="zoneAddBox_${abbr}" style="display:none;">
+          <div class="formProgressIndicator" id="zoneAddProgress_${abbr}"></div>
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
@@ -6325,6 +6361,21 @@
       wireColorDot(detailBox.querySelector(`#zoneNewColor_${abbr}`), detailBox.querySelector(`#zoneNewColorDot_${abbr}`));
       wireCirculacionToggle(detailBox.querySelector(`#zoneNewCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneNewCirculacion_${abbr}`));
       wireLlaveToggle(detailBox.querySelector(`#zoneNewLlaveToggle_${abbr}`), detailBox.querySelector(`#zoneNewLlave_${abbr}`), detailBox.querySelector(`#zoneNewLlaveError_${abbr}`));
+      const zoneProgressBox = detailBox.querySelector(`#zoneAddProgress_${abbr}`);
+      const zoneCamposProgreso = () => [
+        detailBox.querySelector(`#zoneNewPlaca_${abbr}`),
+        detailBox.querySelector(`#zoneNewAseguradora_${abbr}`),
+        detailBox.querySelector(`#zoneNewModelo_${abbr}`),
+        detailBox.querySelector(`#zoneNewColor_${abbr}`),
+        detailBox.querySelector(`#zoneNewCirculacion_${abbr}`),
+        detailBox.querySelector(`#zoneNewLlave_${abbr}`)
+      ];
+      const zoneRefrescarProgreso = () => actualizarProgresoFormulario(zoneProgressBox, zoneCamposProgreso());
+      if(addBox){
+        addBox.addEventListener("input", zoneRefrescarProgreso);
+        addBox.addEventListener("click", ()=> setTimeout(zoneRefrescarProgreso, 0));
+        zoneRefrescarProgreso();
+      }
       const zoneAsegInputNew = detailBox.querySelector(`#zoneNewAseguradora_${abbr}`);
       const zoneAsegWarnNew = detailBox.querySelector(`#zoneNewAsesorWarn_${abbr}`);
       if(zoneAsegInputNew){
@@ -6337,6 +6388,7 @@
         addToggleBtn.style.display = "none";
         detailBox.classList.add("formOnlyMode");
         detailBox.querySelector(`#zoneNewPlaca_${abbr}`).focus();
+        zoneRefrescarProgreso();
       });
       const cancelAddBtn = detailBox.querySelector(`#zoneNewCancelBtn_${abbr}`);
       if(cancelAddBtn){
@@ -10319,6 +10371,7 @@
         ${plateRowsHtml}
         <button type="button" class="linkBackBtn" id="updSpaceAddToggle" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="updSpaceAddBox" style="display:none;">
+          <div class="formProgressIndicator" id="updAddProgress"></div>
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
@@ -10396,6 +10449,27 @@
       wireColorDot(spaceInfoBox.querySelector("#updSpaceNewColor"), spaceInfoBox.querySelector("#updSpaceNewColorDot"));
       wireCirculacionToggle(spaceInfoBox.querySelector("#updSpaceNewCirculacionToggle"), spaceInfoBox.querySelector("#updSpaceNewCirculacion"));
       wireLlaveToggle(spaceInfoBox.querySelector("#updSpaceNewLlaveToggle"), spaceInfoBox.querySelector("#updSpaceNewLlave"), spaceInfoBox.querySelector("#updSpaceNewLlaveError"));
+      // Indicador de progreso: se recalcula solo con cualquier tecleo o
+      // toque dentro del formulario (delegado en addBox, así cubre todos
+      // los campos y botones de una sola vez, sin engancharlos uno por
+      // uno). El setTimeout tras un click deja que el botón tocado (ej.
+      // "Puede circular") termine de actualizar su campo oculto antes de
+      // volver a contar.
+      const progressBox = spaceInfoBox.querySelector("#updAddProgress");
+      const camposProgreso = () => [
+        spaceInfoBox.querySelector("#updSpaceNewPlaca"),
+        spaceInfoBox.querySelector("#updSpaceNewAseguradora"),
+        spaceInfoBox.querySelector("#updSpaceNewModelo"),
+        spaceInfoBox.querySelector("#updSpaceNewColor"),
+        spaceInfoBox.querySelector("#updSpaceNewCirculacion"),
+        spaceInfoBox.querySelector("#updSpaceNewLlave")
+      ];
+      const refrescarProgreso = () => actualizarProgresoFormulario(progressBox, camposProgreso());
+      if(addBox){
+        addBox.addEventListener("input", refrescarProgreso);
+        addBox.addEventListener("click", ()=> setTimeout(refrescarProgreso, 0));
+        refrescarProgreso();
+      }
       const updAsegInputNew = spaceInfoBox.querySelector("#updSpaceNewAseguradora");
       const updAsegWarnNew = spaceInfoBox.querySelector("#updSpaceAsesorWarn");
       if(updAsegInputNew){
@@ -10412,6 +10486,7 @@
         // que distraiga mientras se completa.
         spaceInfoBox.classList.add("formOnlyMode");
         spaceInfoBox.querySelector("#updSpaceNewPlaca").focus();
+        refrescarProgreso();
       });
       // Si veníamos de un refresco con el formulario abierto y datos ya
       // escritos (típicamente porque hubo que actualizar tras un aviso de
@@ -11183,6 +11258,20 @@
       nodo = nodo.parentElement;
     }
     return false;
+  }
+  // Dibuja los puntitos de progreso (● llenos / ○ vacíos) de un formulario
+  // de agregar — se usa en los 3 paneles (Admin, Actualización, vista
+  // anidada) para no repetir esta lógica 3 veces. Solo cuenta los campos
+  // que están REALMENTE visibles ahora mismo — así, con el revelado
+  // progresivo de AVALUO, el total crece solo cuando Circulación/Llave
+  // aparecen, en vez de contarlas desde el principio como "pendientes".
+  function actualizarProgresoFormulario(progressBox, campos){
+    if(!progressBox) return;
+    const visibles = campos.filter(el => el && !estaOcultoPorEstiloEnLinea(el));
+    if(visibles.length === 0){ progressBox.innerHTML = ""; return; }
+    const llenos = visibles.filter(el => el.type === "hidden" ? !!el.value : !!(el.value && el.value.trim())).length;
+    const dots = visibles.map((_, i) => `<span class="formProgressDot${i < llenos ? " filled" : ""}"></span>`).join("");
+    progressBox.innerHTML = `<span class="formProgressDots">${dots}</span><span>${llenos}/${visibles.length} completado</span>`;
   }
   function hayFormularioSinGuardar(){
     const camposDeTexto = document.querySelectorAll(
