@@ -616,6 +616,28 @@
     padding: 30px 10px;
     font-size:0.85rem;
   }
+  .resumenSuggestBox{
+    text-align:center;
+    padding: 0 10px 24px;
+    font-size:0.85rem;
+    color: var(--muted);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .resumenSuggestBtn{
+    background: var(--surface-2);
+    border:1.5px solid var(--border);
+    border-radius:999px;
+    padding:4px 12px;
+    font-weight:800;
+    font-size:0.85rem;
+    color: var(--ink);
+    cursor:pointer;
+  }
+  .resumenSuggestBtn:active{ background: var(--surface-3); }
   .emptyState::before{
     content:"🔍";
     display:block;
@@ -1082,6 +1104,13 @@
     width:100%;
     padding: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  }
+  #viewDetailModal.show .modalCard{
+    animation: viewDetailPop 0.22s ease;
+  }
+  @keyframes viewDetailPop{
+    from{ opacity:0; transform: scale(0.94) translateY(6px); }
+    to{ opacity:1; transform: scale(1) translateY(0); }
   }
   .modalCard h3{margin:0 0 8px; font-size:1rem;}
   .modalCard p{margin:0 0 16px; font-size:0.88rem; color:var(--muted); line-height:1.4;}
@@ -1695,6 +1724,17 @@
     font-weight:600;
   }
   .vehicleDetailRowIcon{ font-size:0.92rem; }
+  .vehicleDetailAvatar{
+    display:inline-flex;
+    align-items:center; justify-content:center;
+    width:20px; height:20px;
+    border-radius:50%;
+    color:#fff;
+    font-size:0.68rem;
+    font-weight:800;
+    vertical-align:middle;
+    margin-right:2px;
+  }
   .vehicleDetailRowValue{
     font-size:0.9rem;
     color:var(--ink);
@@ -4562,6 +4602,35 @@
     closeBtn.addEventListener("click", onClose);
   }
 
+  // Un color siempre igual para el mismo nombre de asesor (para el
+  // circulito-avatar del detalle de vehículo) — no es aleatorio: se elige
+  // según las letras del nombre, así "Daniel" siempre sale del mismo
+  // color en cualquier pantalla, sin tener que guardar nada aparte.
+  const AVATAR_COLOR_PALETTE = ["#4f8fd1","#5fb37a","#c97a3d","#a175d4","#e0529c","#3aa6a0","#d1954f","#7a8fd1","#4caf7d","#d9553f"];
+  function avatarColorForName(nombre){
+    const limpio = String(nombre || "").trim();
+    if(!limpio) return AVATAR_COLOR_PALETTE[0];
+    let hash = 0;
+    for(let i=0;i<limpio.length;i++) hash = (hash * 31 + limpio.charCodeAt(i)) >>> 0;
+    return AVATAR_COLOR_PALETTE[hash % AVATAR_COLOR_PALETTE.length];
+  }
+  // Ícono según el tipo de vehículo, adivinado por palabras conocidas en
+  // el modelo — es solo un detalle visual, así que si no reconoce nada
+  // usa el auto genérico 🚗 sin ningún problema.
+  const MODELO_ICONO_KEYWORDS = [
+    { icono:"🛻", palabras:["hilux","ranger","d-max","dmax","frontier","navara","l200","amarok","tacoma","tundra","f-150","f150","silverado","colorado"] },
+    { icono:"🚙", palabras:["cross","suv","rav4","tucson","sportage","cr-v","crv","tiguan","kona","creta","captur","corolla cross","nivius","territory","edge","explorer","4runner","fortuner","pajero","montero","x-trail","xtrail","cx-5","cx5","sorento","santa fe","trailblazer"] },
+    { icono:"🚐", palabras:["hiace","van","transit","sprinter","urvan","carnival","h-1","h1"] },
+    { icono:"🏍️", palabras:["moto","motocicleta","scooter"] },
+  ];
+  function iconoParaModelo(modelo){
+    const norm = String(modelo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    if(!norm) return "🚗";
+    for(const grupo of MODELO_ICONO_KEYWORDS){
+      if(grupo.palabras.some(pal => norm.includes(pal))) return grupo.icono;
+    }
+    return "🚗";
+  }
   function openViewDetailModal(zoneKey, ci, pi){
     const arr = state.zones[zoneKey];
     if(!arr || !arr[ci] || pi >= arr[ci].plates.length){
@@ -4571,21 +4640,29 @@
     const campoObj = arr[ci];
     const entry = campoObj.plates[pi];
     const zi = zoneInfo(zoneKey);
+    const colorReal = entry.color ? guessColorHex(entry.color) : null;
+    const acento = colorReal || zi.color;
+    const tiempoAca = lastMovedLabel(entry);
+    const icono = iconoParaModelo(entry.modelo);
+    const asesorInicial = entry.aseguradora ? entry.aseguradora.trim().charAt(0).toUpperCase() : null;
 
     const overlay = document.getElementById("viewDetailModal");
     const body = document.getElementById("viewDetailBody");
     body.innerHTML = `
-      <div class="vehicleDetailHeader" style="border-left-color:${zi.color};">
-        <span class="vehicleDetailIconBadge" style="background:${zi.color}22;"><span class="vehicleDetailIcon">🚗</span></span>
+      <div class="vehicleDetailHeader" style="border-left-color:${acento};">
+        <span class="vehicleDetailIconBadge" style="background:${acento}22;"><span class="vehicleDetailIcon">${icono}</span></span>
         <div>
           <div class="vehicleDetailPlate">${escapeHtml(entry.plate)}</div>
           <div class="vehicleDetailZone"><span class="dot" style="background:${zi.color}"></span>${zi.label} · campo ${escapeHtml(campoObj.campo)}</div>
         </div>
       </div>
+      <div class="lastMovedBanner recency-${tiempoAca.recency}">🕒 ${escapeHtml(tiempoAca.diasTexto)} · desde el ${escapeHtml(tiempoAca.fecha)}</div>
       <div class="vehicleDetailCard">
         <div class="vehicleDetailRow">
           <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🧑‍💼</span>Asesor</span>
-          <strong class="vehicleDetailRowValue">${entry.aseguradora ? escapeHtml(entry.aseguradora) : "—"}</strong>
+          <strong class="vehicleDetailRowValue">
+            ${asesorInicial ? `<span class="vehicleDetailAvatar" style="background:${avatarColorForName(entry.aseguradora)};">${escapeHtml(asesorInicial)}</span> ` : ""}${entry.aseguradora ? escapeHtml(entry.aseguradora) : "—"}
+          </strong>
         </div>
         <div class="vehicleDetailRow">
           <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🚘</span>Modelo</span>
@@ -4593,11 +4670,11 @@
         </div>
         <div class="vehicleDetailRow">
           <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🎨</span>Color</span>
-          <strong class="vehicleDetailRowValue">${entry.color ? escapeHtml(entry.color) : "—"}${entry.color && guessColorHex(entry.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(entry.color)}"></span>` : ""}</strong>
+          <strong class="vehicleDetailRowValue">${entry.color ? escapeHtml(entry.color) : "—"}${colorReal ? ` <span class="plateColorDot" style="background:${colorReal}"></span>` : ""}</strong>
         </div>
         <div class="vehicleDetailRow">
           <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🕒</span>Última actualización</span>
-          <strong class="vehicleDetailRowValue">${lastMovedLabel(entry).fecha}</strong>
+          <strong class="vehicleDetailRowValue">${tiempoAca.fecha}</strong>
         </div>
       </div>
     `;
@@ -6808,7 +6885,76 @@
       const tbody = wrap.querySelector("#resumenTbody");
       tbody.innerHTML = "";
       if(rows.length===0){
-        wrap.querySelector("#resumenEmpty").innerHTML = `<div class="emptyState">No hay resultados.</div>`;
+        // Sin resultados: si lo escrito se parece bastante a una placa,
+        // asesor o modelo que sí existe (un par de letras cambiadas,
+        // invertidas, o de más/menos), se sugiere en vez de dejar a la
+        // persona con un "sin resultados" seco. Para asesor/modelo
+        // (nombres de varias palabras, como "Katherine Bonilla" o
+        // "Corolla Cross"), se compara tanto contra el campo completo
+        // como contra cada palabra suelta — así un typo en una sola
+        // palabra de un nombre largo también se detecta, no solo cuando
+        // se equivocó el nombre entero. El umbral de tolerancia crece
+        // con el largo de lo comparado (una palabra de 4 letras tolera
+        // 1 típo; una de 12, hasta 3) — así no se vuelve permisivo de
+        // más con textos cortos. Solo si se escribieron al menos 3
+        // caracteres (con 1-2 letras, casi cualquier cosa "se parece").
+        let sugerenciasHtml = "";
+        if(filterText && filterText.length >= 3){
+          const todasLasFilas = buildResumenRows();
+          function distanciaMinima(valor){
+            if(!valor) return Infinity;
+            const valorUpper = valor.toUpperCase();
+            let mejor = distanciaEdicion(filterText, valorUpper);
+            valorUpper.split(/\s+/).forEach(palabra=>{
+              if(palabra.length >= 3) mejor = Math.min(mejor, distanciaEdicion(filterText, palabra));
+            });
+            return mejor;
+          }
+          function toleraPara(valor){
+            // La tolerancia se calcula sobre lo que la PERSONA escribió, no
+            // sobre el campo completo contra el que se compara — si no,
+            // comparar un texto corto ("Danel") contra un nombre largo de
+            // 2 palabras ("Katherine Bonilla") daba una tolerancia enorme
+            // y sugería cosas que no se parecían en nada. Con esto: 2 de
+            // tolerancia hasta 8 caracteres escritos (como antes, para
+            // placas), y un poco más solo si se escribió bastante texto.
+            return Math.max(2, Math.floor(filterText.length * 0.25));
+          }
+          const candidatos = [];
+          const vistos = new Set();
+          function agregarCandidato(tipo, valor, etiqueta){
+            if(!valor) return;
+            const dist = distanciaMinima(valor);
+            if(dist <= 0 || dist > toleraPara(valor)) return;
+            const key = tipo + "|" + valor.toUpperCase();
+            if(vistos.has(key)) return;
+            vistos.add(key);
+            candidatos.push({ tipo, valor, etiqueta, dist });
+          }
+          todasLasFilas.forEach(r=>{
+            agregarCandidato("placa", r.placa, r.placa);
+            agregarCandidato("asesor", r.aseguradora, `${r.aseguradora} (asesor)`);
+            agregarCandidato("modelo", r.modelo, `${r.modelo} (modelo)`);
+          });
+          candidatos.sort((a,b)=> a.dist - b.dist);
+          const top3 = candidatos.slice(0, 3);
+          if(top3.length){
+            sugerenciasHtml = `
+              <div class="resumenSuggestBox">
+                ¿Quisiste decir…
+                ${top3.map(c=>`<button type="button" class="resumenSuggestBtn" data-valor="${escapeAttrLike(c.valor)}">${escapeHtml(c.etiqueta)}</button>`).join(" ")}
+                ?
+              </div>
+            `;
+          }
+        }
+        wrap.querySelector("#resumenEmpty").innerHTML = `<div class="emptyState">No hay resultados.</div>${sugerenciasHtml}`;
+        wrap.querySelectorAll(".resumenSuggestBtn").forEach(btn=>{
+          btn.addEventListener("click", ()=>{
+            filterInput.value = btn.getAttribute("data-valor");
+            draw();
+          });
+        });
       } else {
         wrap.querySelector("#resumenEmpty").innerHTML = "";
         let campoAnterior = null, zonaAnterior = null;
@@ -10341,6 +10487,33 @@
         `;
       }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
 
+      // En Taller de Pintura y Recepción, un campo puede tener vehículos
+      // organizados adentro de áreas y filas (eso solo se arma desde
+      // Admin) — antes esto no se mostraba acá en absoluto: alguien en
+      // Actualización entraba al campo y lo veía "vacío" aunque Admin ya
+      // hubiera puesto vehículos ahí, organizados en un nivel más
+      // profundo. Se listan aparte, con su ubicación exacta, y se pueden
+      // quitar desde acá — para editarlos a fondo (cambiar asesor,
+      // modelo, etc.) todavía hay que hacerlo desde la vista de Admin.
+      const vehiculosAnidados = [];
+      (entry.areas || []).forEach(ar=>{
+        ar.plates.forEach(p => vehiculosAnidados.push({ p, ubicacion: ar.area, platesArray: ar.plates }));
+        (ar.filas || []).forEach(f=>{
+          f.plates.forEach(p => vehiculosAnidados.push({ p, ubicacion: `${ar.area} · ${f.fila}`, platesArray: f.plates }));
+        });
+      });
+      const nestedRowsHtml = vehiculosAnidados.length ? `
+        <div class="plateRowsLegend" style="margin-top:14px;">📍 También hay vehículos en áreas/filas de este ${labelLower} — para editarlos a fondo, usá la vista de Admin</div>
+        ${vehiculosAnidados.map((item, nidx)=>`
+          <div class="spacePlateRow" data-nidx="${nidx}">
+            <div class="spacePlateInfoWrap">
+              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-nidx="${nidx}" title="Tocá la placa para reportar con fotos">${escapeHtml(item.p.plate)}</span>${llaveRowIcon(item.p, `${campoLabel} · ${item.ubicacion}`)} <span class="plateMuted">· ${escapeHtml(item.ubicacion)}</span>${item.p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(item.p.modelo)}</span>` : ""}</span>
+            </div>
+            <button type="button" class="nestedRemoveBtn" data-nidx="${nidx}" title="Quitar">✕</button>
+          </div>
+        `).join("")}
+      ` : "";
+
       const camposArr = state.zones[updSpaceZone] || [];
       const idxActual = camposArr.indexOf(entry);
       const anterior = idxActual > 0 ? camposArr[idxActual-1] : null;
@@ -10369,6 +10542,7 @@
         ${entry.plates.length > 5 ? `<input type="text" id="spacePlateFilterInput" class="plate" placeholder="Filtrar los vehículos de este espacio…" style="margin-bottom:8px;">` : ``}
         ${entry.plates.length > 0 ? `<div class="plateRowsLegend">🔀 Mover　✏️ Editar　✕ Quitar　·　el numerito es el orden de llegada</div>` : ``}
         ${plateRowsHtml}
+        ${nestedRowsHtml}
         <button type="button" class="linkBackBtn" id="updSpaceAddToggle" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="updSpaceAddBox" style="display:none;">
           <div class="formProgressIndicator" id="updAddProgress"></div>
@@ -10765,12 +10939,40 @@
           drawSpaceInfo();
         });
       });
-      spaceInfoBox.querySelectorAll(".platePlateTextClickable").forEach(b=>{
+      spaceInfoBox.querySelectorAll(".platePlateTextClickable[data-idx]").forEach(b=>{
         b.addEventListener("click", ()=>{
           const idx = parseInt(b.getAttribute("data-idx"),10);
           const p = entry.plates[idx];
           if(!p) return;
           openPhotoReportModal(p.plate, zoneInfo(updSpaceZone).label, campoLabel, false, false, p.aseguradora, p.modelo, p.color, p.circulacion, p.llave, p.lastUpdated);
+        });
+      });
+      // Vehículos que viven en áreas/filas de este campo (ver
+      // vehiculosAnidados más arriba) — se puede consultar con fotos y
+      // quitar desde acá, aunque para editar a fondo haya que ir a Admin.
+      spaceInfoBox.querySelectorAll(".platePlateTextClickable[data-nidx]").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const item = vehiculosAnidados[parseInt(b.getAttribute("data-nidx"),10)];
+          if(!item) return;
+          openPhotoReportModal(item.p.plate, zoneInfo(updSpaceZone).label, `${campoLabel} · ${item.ubicacion}`, false, false, item.p.aseguradora, item.p.modelo, item.p.color, item.p.circulacion, item.p.llave, item.p.lastUpdated);
+        });
+      });
+      spaceInfoBox.querySelectorAll(".nestedRemoveBtn").forEach(b=>{
+        b.addEventListener("click", async (e)=>{
+          const item = vehiculosAnidados[parseInt(b.getAttribute("data-nidx"),10)];
+          if(!item) return;
+          if(!confirm(`¿Quitar ${item.p.plate} de acá? Se va a mover a "Sin ubicación" en vez de borrarse.`)) return;
+          const snap = snapshotZones();
+          removePlateEntryByRef(updSpaceZone, item.platesArray, item.p);
+          ensureSinUbicacionConsolidada();
+          const sinUbicCampo = getOrCreateCampo(SIN_UBICACION_KEY, SIN_UBICACION_CAMPO);
+          item.p.lastUpdated = new Date().toISOString();
+          sinUbicCampo.plates.push(item.p);
+          pushUndo(snap, `Quitar ${item.p.plate} de ${zoneInfo(updSpaceZone).label} · ${campoLabel} · ${item.ubicacion}`);
+          const guardado = await saveState(true);
+          if(!guardado){ state.zones = snap; return; }
+          showToast(`${item.p.plate} se movió a Sin ubicación`);
+          drawSpaceInfo();
         });
       });
       spaceInfoBox.querySelectorAll(".spaceMoveBtn").forEach(b=>{
