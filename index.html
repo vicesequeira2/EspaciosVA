@@ -1177,6 +1177,15 @@
     font-weight:700;
     margin:0 0 12px;
   }
+  #offlineBanner{
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:200;
+    border-radius:0;
+    border-width:0 0 1px;
+    margin:0;
+    text-align:center;
+  }
   .guestBanner{
     background:#fff6e0;
     color:#8a5a1c;
@@ -2171,6 +2180,38 @@
   .lastMovedLabel.recency-recent{ color:#8b9198; }
   .lastMovedLabel.recency-stale{ color:#b0b5ba; }
   .lastMovedLabel.recency-none{ color:#b0b5ba; font-style:italic; }
+  .refreshNeededBanner{
+    position:sticky;
+    top:0;
+    z-index:70;
+    background:#fbeae8;
+    border-bottom:2px solid #a13d33;
+    padding:12px 16px 14px;
+    text-align:center;
+  }
+  .refreshNeededText{
+    font-size:0.85rem;
+    font-weight:700;
+    color:#7a2b22;
+    margin-bottom:10px;
+    line-height:1.35;
+  }
+  .refreshNeededBtn{
+    display:block;
+    width:100%;
+    max-width:320px;
+    margin:0 auto;
+    background:#a13d33;
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    padding:16px;
+    font-size:1.05rem;
+    font-weight:800;
+    cursor:pointer;
+    box-shadow:0 2px 8px rgba(161,61,51,0.35);
+  }
+  .refreshNeededBtn:active{ background:#8a3229; }
   .lastMovedBanner{
     font-size:0.76rem;
     font-weight:700;
@@ -2518,10 +2559,11 @@
 </head>
 <body>
 
+<div class="offlineBanner" id="offlineBanner" style="display:none;">📵 Sin conexión a internet — revisá tu wifi o datos móviles</div>
+
 <div class="authGate" id="authGate">
   <div class="authCard">
     <div class="authGreeting" id="authGreeting"></div>
-    <div class="offlineBanner" id="offlineBanner" style="display:none;">📵 Sin conexión a internet — revisá tu wifi o datos móviles</div>
     <div class="offlineBanner" id="guestLinkError" style="display:none;"></div>
     <h1 class="authTitle">Inventario <span class="dash">·</span> Parqueo</h1>
 
@@ -2707,6 +2749,7 @@
       <button class="secondaryBtn" id="photoReportCloseBtn">Cerrar</button>
     </div>
     <p class="reqFieldHint" id="photoReportShareHint" style="text-align:center; margin-top:6px;">Elegí al menos una foto para poder compartir</p>
+    <p class="reqFieldHint" id="photoReportWhatsappHint" style="text-align:center; margin-top:4px;">"Compartir" abre el menú del celular — ahí elegís WhatsApp (u otra app) y las fotos van juntas</p>
   </div>
 </div>
 
@@ -3705,19 +3748,35 @@
   // Escanear placa con la cámara (OCR). Tesseract.js es pesado (~2MB) —
   // en vez de cargarlo siempre para todos, se trae solo la primera vez
   // que alguien realmente toca "Escanear", y de ahí en más queda en
-  // caché para el resto de la sesión.
-  let tesseractLoadPromise = null;
-  function loadTesseractIfNeeded(){
+  // caché para el resto de la sesión. Importante: la librería se trae de
+  // jsDelivr, no de cdnjs — cdnjs nunca llegó a publicar las versiones
+  // recientes de tesseract.js (se quedó en una versión de hace años), así
+  // que apuntar ahí hacía que la carga fallara siempre.
+  let tesseractScriptPromise = null;
+  function loadTesseractScriptIfNeeded(){
     if(window.Tesseract) return Promise.resolve();
-    if(tesseractLoadPromise) return tesseractLoadPromise;
-    tesseractLoadPromise = new Promise((resolve, reject)=>{
+    if(tesseractScriptPromise) return tesseractScriptPromise;
+    tesseractScriptPromise = new Promise((resolve, reject)=>{
       const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js";
+      script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
       script.onload = () => resolve();
-      script.onerror = () => { tesseractLoadPromise = null; reject(new Error("No se pudo cargar el lector de placas")); };
+      script.onerror = () => { tesseractScriptPromise = null; reject(new Error("No se pudo cargar el lector de placas")); };
       document.head.appendChild(script);
     });
-    return tesseractLoadPromise;
+    return tesseractScriptPromise;
+  }
+  // Desde la versión 5 de Tesseract.js, la forma correcta de usarla es
+  // crear un "worker" una vez (que internamente carga el modelo de
+  // idioma) y reutilizarlo — la función vieja "Tesseract.recognize(...)"
+  // directa quedó obsoleta y ya no es la vía documentada. Se guarda el
+  // worker ya listo para no tener que recrearlo en cada foto — solo la
+  // primera vez tarda un poco más.
+  let tesseractWorkerPromise = null;
+  function getTesseractWorker(){
+    if(tesseractWorkerPromise) return tesseractWorkerPromise;
+    tesseractWorkerPromise = loadTesseractScriptIfNeeded().then(()=> window.Tesseract.createWorker("eng"));
+    tesseractWorkerPromise.catch(()=>{ tesseractWorkerPromise = null; }); // si falla, se puede reintentar en el próximo toque
+    return tesseractWorkerPromise;
   }
 
   // De todo el texto que el OCR alcanzó a leer en la foto (que puede traer
@@ -3780,8 +3839,8 @@
       scanBtn.disabled = true;
       scanBtn.textContent = "⏳";
       try{
-        await loadTesseractIfNeeded();
-        const resultado = await window.Tesseract.recognize(file, "eng");
+        const worker = await getTesseractWorker();
+        const resultado = await worker.recognize(file);
         const textoLeido = (resultado && resultado.data && resultado.data.text) || "";
         const placaEncontrada = extraerPlacaDeTextoOcr(textoLeido);
         if(placaEncontrada){
@@ -4016,6 +4075,39 @@
     }
   }
 
+  // Aviso persistente (no un toast que se va solo) para cuando hace falta
+  // ACTUALIZAR sí o sí antes de poder seguir — por ejemplo, un choque con
+  // otra sesión, o varios intentos fallidos de guardar. Se queda fijo
+  // arriba de la pantalla, con un botón grande justo debajo del cuadro de
+  // aviso, para que quede clarísimo dónde hay que tocar — no un texto
+  // suelto entre otros mensajes.
+  function showRefreshNeededBanner(mensaje, accionPersonalizada){
+    const existente = document.getElementById("refreshNeededBanner");
+    if(existente) existente.remove();
+    const b = document.createElement("div");
+    b.id = "refreshNeededBanner";
+    b.className = "refreshNeededBanner";
+    b.innerHTML = `
+      <div class="refreshNeededText">${escapeHtml(mensaje)}</div>
+      <button type="button" class="refreshNeededBtn" id="refreshNeededBtnAction">🔄 Actualizar</button>
+    `;
+    const appRoot = document.getElementById("appRoot");
+    const contenedor = appRoot || document.body;
+    if(contenedor.firstElementChild && contenedor.contains(contenedor.firstElementChild)){
+      contenedor.insertBefore(b, contenedor.firstElementChild);
+    } else {
+      contenedor.appendChild(b);
+    }
+    document.getElementById("refreshNeededBtnAction").addEventListener("click", ()=>{
+      b.remove();
+      if(accionPersonalizada) accionPersonalizada(); else refreshDataFromStorage(false);
+    });
+  }
+  function hideRefreshNeededBanner(){
+    const existente = document.getElementById("refreshNeededBanner");
+    if(existente) existente.remove();
+  }
+
   async function checkStorageAvailable(){
     if(!window.storage || typeof window.storage.set !== "function" || typeof window.storage.get !== "function"){
       return false;
@@ -4228,7 +4320,7 @@
     if(!storageAvailable){
       if(!storageWarned){ storageWarned = true; showStorageBanner(); }
       renderMeta();
-      return false;
+      return "offline";
     }
 
     try{
@@ -4245,19 +4337,33 @@
       // claramente y no se guarda nada, para que la persona actualice la
       // pantalla a mano y rehaga su cambio sobre datos al día.
       if(lastKnownServerStateRaw !== null){
-        const actual = await window.storage.get(STORAGE_KEY, true).catch(()=>null);
+        // Mismo criterio que en el modal de fotos: sin señal, este pedido
+        // podría quedarse esperando mucho más de lo razonable — con este
+        // límite, si no hay respuesta en 2.5 segundos se sigue directo al
+        // intento de guardado real (que si falla, ahí sí activa el
+        // reintento automático de fondo). Sin este límite, toda la app
+        // podía quedar congelada esperando esta verificación, sin llegar
+        // siquiera a intentar guardar de verdad.
+        const timeoutPromise = new Promise((resolve)=> setTimeout(()=> resolve(null), 2500));
+        const actual = await Promise.race([window.storage.get(STORAGE_KEY, true).catch(()=>null), timeoutPromise]);
         if(actual && actual.value && actual.value !== lastKnownServerStateRaw){
-          showToast("⚠️ Alguien más guardó un cambio justo antes que vos — tu cambio NO se guardó. Tocá 🔄 Actualizar y volvé a intentarlo.", 7000, true);
+          showRefreshNeededBanner("⚠️ Alguien más guardó un cambio justo antes que vos — tu cambio NO se guardó.");
           renderMeta();
-          return false;
+          return "conflict";
         }
       }
-      const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+      // El guardado real también necesita un límite — si no, sin señal
+      // podría quedarse esperando en vez de fallar rápido y pasar al
+      // reintento automático de fondo (que es lo que de verdad resuelve
+      // el guardado más adelante).
+      const setTimeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout")), 8000));
+      const result = await Promise.race([window.storage.set(STORAGE_KEY, JSON.stringify(state), true), setTimeoutPromise]);
       if(!result || typeof result !== "object"){
         throw new Error("Unexpected response type");
       }
       lastKnownServerStateRaw = JSON.stringify(state);
       importantToastUntil = 0; // el guardado funciono: ya no hace falta proteger un aviso viejo de choque/sin-conexion
+      hideRefreshNeededBanner();
       if(!silent) showToast("Guardado");
       if(pendingSaveRetry){
         pendingSaveRetry = false;
@@ -4268,7 +4374,11 @@
       // No apagamos storageAvailable de forma permanente: la próxima acción
       // vuelve a intentar guardar sola. Además, programamos un reintento de
       // fondo para el cambio que quedó pendiente, por si la persona no
-      // vuelve a tocar nada por un rato.
+      // vuelve a tocar nada por un rato. IMPORTANTE: acá se devuelve
+      // "offline", no false — quien llama NO debe revertir la mutación
+      // local en este caso (a diferencia de un choque real), porque si la
+      // revierte, no queda nada que el reintento automático pueda llegar
+      // a guardar más tarde.
       console.error("Error guardando, se reintentará automáticamente", e);
       if(!pendingSaveRetry){
         pendingSaveRetry = true;
@@ -4276,26 +4386,32 @@
         scheduleSaveRetry();
       }
       renderMeta();
-      return false;
+      return "offline";
     }
     renderMeta();
     return true;
   }
 
+  let saveRetryAttemptEnCurso = false; // evita que se solapen 2 intentos si uno tarda más que los 6 seg del ciclo
   function scheduleSaveRetry(){
     if(saveRetryTimer) return;
     saveRetryAttempts = 0;
+    saveRetryAttemptEnCurso = false;
     saveRetryTimer = setInterval(async ()=>{
       if(!pendingSaveRetry){
         clearInterval(saveRetryTimer);
         saveRetryTimer = null;
         return;
       }
+      if(saveRetryAttemptEnCurso) return; // el intento anterior todavía no terminó (señal muy lenta) — se espera al próximo ciclo
+      saveRetryAttemptEnCurso = true;
       try{
-        const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+        const setTimeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout")), 8000));
+        const result = await Promise.race([window.storage.set(STORAGE_KEY, JSON.stringify(state), true), setTimeoutPromise]);
         if(result && typeof result === "object"){
           lastKnownServerStateRaw = JSON.stringify(state);
           importantToastUntil = 0; // el guardado funciono: ya no hace falta proteger un aviso viejo de choque/sin-conexion
+          hideRefreshNeededBanner();
           pendingSaveRetry = false;
           clearInterval(saveRetryTimer);
           saveRetryTimer = null;
@@ -4308,10 +4424,16 @@
           pendingSaveRetry = false;
           clearInterval(saveRetryTimer);
           saveRetryTimer = null;
-          showToast("No se pudo guardar después de varios intentos — parece que sigue sin señal. Tocá 🔄 Actualizar cuando vuelva la conexión para guardarlo.", 8000, true);
+          // Acá "Actualizar" no debe recargar a secas — eso perdería el
+          // cambio que quedó pendiente sin guardar. En cambio, reintenta
+          // guardar de nuevo (que además revisa por las dudas si hubo
+          // algún choque con otra sesión en el medio).
+          showRefreshNeededBanner("No se pudo guardar después de varios intentos — parece que sigue sin señal.", ()=> saveState(false));
           renderMeta();
         }
         // si todavía no se llegó al tope, seguimos intentando en el próximo ciclo
+      }finally{
+        saveRetryAttemptEnCurso = false;
       }
     }, 6000);
   }
@@ -4764,12 +4886,19 @@
     }
     if(storageAvailable && lastKnownServerStateRaw !== null){
       try{
-        const actual = await window.storage.get(STORAGE_KEY, true);
+        // Sin señal, un pedido de red puede quedarse esperando mucho más
+        // de lo que alguien espera para algo tan simple como sacar una
+        // foto — con este límite de 2.5 segundos, si no hay respuesta
+        // para entonces se sigue igual (como si hubiera fallado), en vez
+        // de dejar a la persona esperando sin saber si el botón "no
+        // funciona".
+        const timeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout")), 2500));
+        const actual = await Promise.race([window.storage.get(STORAGE_KEY, true), timeoutPromise]);
         if(actual && actual.value && actual.value !== lastKnownServerStateRaw){
           const seguirIgual = confirm(`Los datos de "${plate}" podrían estar desactualizados — parece que alguien más guardó un cambio después de la última vez que se actualizó esta pantalla.\n\nTocá Cancelar y actualizá (🔄) antes de sacar la foto, para compartir la info correcta. Tocá Aceptar si igual querés seguir con lo que se ve ahora.`);
           if(!seguirIgual) return;
         }
-      }catch(e){ /* si la verificación falla (sin señal, etc.), se sigue igual — no bloquea por eso */ }
+      }catch(e){ /* si la verificación falla o tarda demasiado (sin señal, etc.), se sigue igual — no bloquea por eso */ }
     }
     _openPhotoReportModalInner(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated);
   }
@@ -4848,14 +4977,73 @@
       slot2.querySelector(".photoReportSlotText").textContent = "✓ Foto 2";
       updateShareState();
     }
+    // Mismo texto que ya se arma para "Compartir" — se separó en una
+    // función aparte para que el botón de WhatsApp use exactamente lo
+    // mismo, sin duplicar la lógica en dos lugares distintos.
+    function buildReportText(){
+      const circulacionTexto = circulacion === "puede" ? "✅ Puede circular" : circulacion === "no" ? "🚫 No circula" : "";
+      const llaveTexto = llave === "tablero" ? `🗂️ Tablero ${campoLabel}` : llave === "vehiculo" ? "🔑 Llave dentro del vehículo" : "";
+      // WhatsApp (y la mayoría de apps de chat) interpretan un texto entre
+      // asteriscos como negrita — así la placa queda como un título bien
+      // destacado arriba de todo, y cada etiqueta se lee más rápido de un
+      // vistazo que en texto plano parejo. Orden: primero lo que identifica
+      // al vehículo (modelo, color, asesor), después dónde está (zona y
+      // campo juntos), y la fecha al final de todo.
+      const lineas = [
+        modelo ? `*Modelo:* ${modelo}` : "",
+        color ? `*Color:* ${color}` : "",
+        aseguradora ? `*Asesor:* ${aseguradora}` : "",
+        `*Zona:* ${zoneLabel}`,
+        `*Campo:* ${campoLabel}`,
+        `*Fecha:* ${fecha}`,
+        circulacionTexto,
+        llaveTexto
+      ].filter(Boolean);
+      return `*${plate.toUpperCase()}*\n\n${lineas.join("\n")}`;
+    }
+    // Intenta compartir con el selector nativo del celular — el mismo
+    // camino sirve tanto para "Compartir" como para "WhatsApp", ya que
+    // los dos quieren lo mismo: mandar el texto y las fotos elegidas por
+    // donde la persona elija (WhatsApp aparece ahí como una opción más,
+    // con las fotos incluidas — no hay forma de saltarse ese paso y
+    // mandarlas directo a WhatsApp desde una página web, eso lo decide
+    // el sistema operativo, no la app). Devuelve true si se compartió
+    // con éxito, "aborted" si la persona cerró el selector sin elegir
+    // nada, o false si este navegador no tiene compartir nativo.
+    async function tryNativeShare(text){
+      if(!navigator.share) return false;
+      let files;
+      if(file1 && file2){
+        // Dos fotos: se combinan en una sola imagen (collage), para
+        // compartir un solo archivo prolijo en vez de dos sueltas.
+        try{
+          const blob = await createPhotoCollage(file1, file2);
+          files = [new File([blob], `${plate}.jpg`, { type: "image/jpeg" })];
+        }catch(collageError){
+          console.error("No se pudo armar el collage, se comparten las 2 fotos sueltas", collageError);
+          files = [file1, file2];
+        }
+      } else {
+        files = [file1, file2].filter(Boolean);
+      }
+      const shareData = { title: `Vehículo ${plate}`, text };
+      if(files.length && navigator.canShare && navigator.canShare({ files })){
+        shareData.files = files;
+      }
+      try{
+        await navigator.share(shareData);
+        return true;
+      }catch(e){
+        if(e && e.name === "AbortError") return "aborted"; // cerró el selector sin elegir nada: no es un error real
+        throw e;
+      }
+    }
     async function onShare(){
       if(shareBtn.disabled) return; // ya está compartiendo, evita el doble toque
       const textoOriginalBtn = shareBtn.textContent;
       shareBtn.disabled = true;
       shareBtn.textContent = "Compartiendo…";
-      const circulacionTexto = circulacion === "puede" ? "✅ Puede circular" : circulacion === "no" ? "🚫 No circula" : "";
-      const llaveTexto = llave === "tablero" ? `🗂️ Tablero ${campoLabel}` : llave === "vehiculo" ? "🔑 Llave dentro del vehículo" : "";
-      const text = `Placa: ${plate}\nZona: ${zoneLabel}\nCampo: ${campoLabel}\nFecha: ${fecha}${modelo ? `\nModelo: ${modelo}` : ""}${color ? `\nColor: ${color}` : ""}${aseguradora ? `\nAsesor: ${aseguradora}` : ""}${circulacionTexto ? `\n${circulacionTexto}` : ""}${llaveTexto ? `\n${llaveTexto}` : ""}`;
+      const text = buildReportText();
       if(!navigator.share){
         showToast("Tu navegador no puede compartir fotos directamente. Guardalas y compartilas manualmente junto con este texto.", 5000);
         shareBtn.disabled = false;
@@ -4863,35 +5051,19 @@
         return;
       }
       try{
-        let files;
-        if(file1 && file2){
-          // Dos fotos: se combinan en una sola imagen (collage), para
-          // compartir un solo archivo prolijo en vez de dos sueltas.
-          try{
-            const blob = await createPhotoCollage(file1, file2);
-            files = [new File([blob], `${plate}.jpg`, { type: "image/jpeg" })];
-          }catch(collageError){
-            console.error("No se pudo armar el collage, se comparten las 2 fotos sueltas", collageError);
-            files = [file1, file2];
-          }
-        } else {
-          files = [file1, file2].filter(Boolean);
+        const resultado = await tryNativeShare(text);
+        if(resultado === true){
+          // Se comparte con éxito: se limpian las casillas de foto para
+          // dejar todo listo por si hace falta reportar de nuevo — sin
+          // cerrar el modal, para no perder el lugar donde estabas.
+          resetSlots();
+          showToast("Compartido");
         }
-        const shareData = { title: `Vehículo ${plate}`, text };
-        if(files.length && navigator.canShare && navigator.canShare({ files })){
-          shareData.files = files;
-        }
-        await navigator.share(shareData);
-        // Se comparte con éxito: se limpian las casillas de foto para
-        // dejar todo listo por si hace falta reportar de nuevo — sin
-        // cerrar el modal, para no perder el lugar donde estabas.
-        resetSlots();
-        showToast("Compartido");
+        // si resultado === "aborted", no se hace nada: la persona cerró
+        // el selector sin elegir nada, no es un error que haya que avisar.
       }catch(e){
-        if(e && e.name !== "AbortError"){ // cerró el menú sin elegir nada: no es un error real
-          console.error("Error al compartir el reporte con fotos", e);
-          showToast("No se pudo compartir.");
-        }
+        console.error("Error al compartir el reporte con fotos", e);
+        showToast("No se pudo compartir.");
       }finally{
         updateShareState();
         shareBtn.textContent = textoOriginalBtn;
@@ -5766,11 +5938,14 @@
         });
         pushUndo(snap, `Agregar ${plate} en ${info.label} · ${campoObj.campo}${areaObj ? " · "+areaObj.area : ""}${filaObj ? " · "+filaObj.fila : ""}`);
         const guardado = await saveState(true);
-        if(!guardado){
-          // No se guardó de verdad (por ejemplo, choque con otra sesión) —
-          // se deshace la mutación local para no dejar el vehículo
-          // "agregado" solo en pantalla sin estar guardado en el
-          // servidor, y se avisa (saveState ya mostró su propio aviso).
+        if(guardado === "conflict"){
+          // Choque real con otra sesión — ahí sí se deshace la mutación
+          // local, para no dejar el vehículo "agregado" solo en pantalla
+          // sin estar guardado en el servidor (saveState ya mostró su
+          // propio aviso). Si en cambio fue "offline" (sin conexión, con
+          // reintento automático de fondo), NO se revierte — el cambio
+          // se queda en memoria para que el reintento lo termine de
+          // guardar solo.
           contenedor.plates.shift();
           undoStack.pop();
           updateUndoBtn();
@@ -8179,23 +8354,34 @@
     }
   }
 
+  // El historial es un registro secundario ("quién hizo qué") — nunca
+  // debería poder trabar la acción PRINCIPAL (agregar, mover un
+  // vehículo) si la señal está realmente colgada, no solo fallando. Con
+  // este límite de 2.5 segundos, si no hay respuesta a tiempo se sigue
+  // igual sin guardar ese registro puntual — perder una línea del
+  // historial es mucho menos grave que dejar a la persona esperando
+  // sin poder terminar de agregar un vehículo.
+  function conLimiteDeTiempo(promesa, ms){
+    const timeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout")), ms));
+    return Promise.race([promesa, timeoutPromise]);
+  }
   async function appendLog(key, entry, limit){
     let list = [];
     try{
-      const res = await window.storage.get(key, true);
+      const res = await conLimiteDeTiempo(window.storage.get(key, true), 2500);
       if(res && res.value) list = JSON.parse(res.value);
-    }catch(e){ /* la clave todavía no existe: arrancamos con lista vacía */ }
+    }catch(e){ /* la clave todavía no existe, o no hubo respuesta a tiempo: arrancamos con lista vacía */ }
     list.push(entry);
     if(list.length > limit) list = list.slice(list.length - limit);
     try{
-      await window.storage.set(key, JSON.stringify(list), true);
+      await conLimiteDeTiempo(window.storage.set(key, JSON.stringify(list), true), 2500);
     }catch(e){ /* el registro de historial nunca debe romper la acción principal */ }
   }
   async function readLog(key){
     try{
-      const res = await window.storage.get(key, true);
+      const res = await conLimiteDeTiempo(window.storage.get(key, true), 2500);
       if(res && res.value) return JSON.parse(res.value);
-    }catch(e){ /* sin historial todavía */ }
+    }catch(e){ /* sin historial todavía, o no hubo respuesta a tiempo */ }
     return [];
   }
 
@@ -10970,7 +11156,7 @@
           sinUbicCampo.plates.push(item.p);
           pushUndo(snap, `Quitar ${item.p.plate} de ${zoneInfo(updSpaceZone).label} · ${campoLabel} · ${item.ubicacion}`);
           const guardado = await saveState(true);
-          if(!guardado){ state.zones = snap; return; }
+          if(guardado === "conflict"){ state.zones = snap; return; }
           showToast(`${item.p.plate} se movió a Sin ubicación`);
           drawSpaceInfo();
         });
@@ -11434,10 +11620,14 @@
     // sesión), esto no se revisaba — la pantalla seguía como si hubiera
     // guardado bien (formulario se cerraba, aparecía "Listo") aunque el
     // vehículo nunca se hubiera guardado de verdad en el servidor. Ahora
-    // se revisa: si no se guardó, se avisa que falló en vez de fingir que
-    // funcionó.
+    // se revisa — pero OJO: solo se trata como fallo real un choque
+    // ("conflict"). Si es "offline" (sin conexión, reintentando solo de
+    // fondo), la mutación se queda en memoria a propósito — si acá se
+    // revirtiera igual que en un choque, el reintento automático no
+    // tendría ya nada que guardar, y el vehículo se perdería en silencio
+    // apenas se cortara la señal un instante.
     const guardado = await saveState(true);
-    if(!guardado) return false;
+    if(guardado === "conflict") return false;
     await logUpdate(normalizePlate(plateRaw), null, null, zoneKey, campo);
     return true;
   }
@@ -11537,7 +11727,14 @@
   function updateOfflineBanner(){
     const el = document.getElementById("offlineBanner");
     if(!el) return;
-    el.style.display = navigator.onLine === false ? "block" : "none";
+    const visible = navigator.onLine === false;
+    el.style.display = visible ? "block" : "none";
+    // Al quedar fijo arriba de todo (para verse en cualquier pantalla, no
+    // solo en el login), empuja el resto del contenido hacia abajo lo
+    // que mida — si no, taparía la primera fila de lo que sea que esté
+    // en pantalla en ese momento, incluido el banner de "Actualizar"
+    // cuando también está visible.
+    document.body.style.paddingTop = visible ? el.offsetHeight + "px" : "";
   }
   updateOfflineBanner();
 
@@ -11561,7 +11758,15 @@
     const current = document.documentElement.getAttribute("data-theme");
     applyTheme(current === "dark" ? "light" : "dark");
   });
-  window.addEventListener("online", updateOfflineBanner);
+  window.addEventListener("online", ()=>{
+    updateOfflineBanner();
+    // El navegador avisa apenas vuelve a haber señal — se aprovecha para
+    // reintentar guardar YA, en vez de esperar hasta el próximo tick del
+    // reintento automático (que corre cada 6 segundos): la persona
+    // recupera su vehículo guardado más rápido, sin ese margen de espera
+    // de más.
+    if(pendingSaveRetry) saveState(false);
+  });
 
   // Avisa antes de cerrar/recargar si quedó una placa escrita en algún
   // formulario de "agregar" sin confirmar todavía, para no perderla por un
