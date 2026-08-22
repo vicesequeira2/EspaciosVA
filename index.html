@@ -96,6 +96,16 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
+  .kioskModeBtn{
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+  .kioskModeBtn:active{ background: var(--surface-2); }
   header{
     background: linear-gradient(180deg, var(--asphalt) 0%, var(--asphalt-2) 100%);
     color: var(--paper);
@@ -386,6 +396,21 @@
     font-size:0.68rem;
     color:var(--muted);
     font-weight:600;
+    margin:2px 0 6px;
+  }
+  .plateRowsLegendToggle{
+    background:none;
+    border:none;
+    padding:0;
+    color:var(--muted);
+    font-weight:600;
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-style:dotted;
+  }
+  .plateRowsLegendCollapsed{
+    display:block;
+    font-size:0.7rem;
     margin:2px 0 6px;
   }
   .similarWarn button{
@@ -1112,6 +1137,12 @@
     from{ opacity:0; transform: scale(0.94) translateY(6px); }
     to{ opacity:1; transform: scale(1) translateY(0); }
   }
+  .primaryBtn, .secondaryBtn{
+    border:none; border-radius: var(--radius);
+    padding:11px 14px; font-weight:700; font-size:0.88rem; cursor:pointer;
+  }
+  .primaryBtn{ background: var(--ink); color:white; }
+  .secondaryBtn{ background:var(--surface-3); color:var(--ink); }
   .modalCard h3{margin:0 0 8px; font-size:1rem;}
   .modalCard p{margin:0 0 16px; font-size:0.88rem; color:var(--muted); line-height:1.4;}
   .modalCard .modalActions{display:flex; gap:8px; flex-direction:column;}
@@ -1595,12 +1626,14 @@
   }
   .photoReportSlots{
     display:flex; gap:10px;
-    margin-top:4px;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--border-soft);
   }
   .photoReportSlot{
     flex:1 1 0;
     aspect-ratio: 4 / 3;
-    border:2px dashed var(--border);
+    border:2.5px dashed #a8adb3;
     border-radius: var(--radius);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:3px;
@@ -1917,6 +1950,7 @@
   .updaterAllListRow.updatedToday{ background:#e3f3ea; }
   .updaterAllListRow.updatedToday:active{ background:#d3ebdc; }
   .updaterAllListMeta{ font-size:0.72rem; color:var(--muted); }
+  .updaterAllListPlate{ font-weight:800; font-size:0.92rem; }
   .updaterZoneFilterRow{
     display:flex; gap:6px; flex-wrap:wrap;
     margin-top:14px;
@@ -2150,6 +2184,12 @@
     padding:2px 8px; border-radius:999px;
   }
   .spaceCapBadge.full{ background: var(--danger); color:white; }
+  .spaceFreeSpotsHint{
+    font-size:0.72rem;
+    color: var(--ok);
+    font-weight:700;
+    margin-top:2px;
+  }
   .spacePlateRow{
     display:flex; align-items:center; gap:8px;
     font-size:0.85rem;
@@ -2176,10 +2216,17 @@
     border-top:1px dotted var(--border-soft);
     color:var(--muted);
   }
-  .lastMovedLabel.recency-fresh{ color:#4a5561; }
-  .lastMovedLabel.recency-recent{ color:#8b9198; }
-  .lastMovedLabel.recency-stale{ color:#b0b5ba; }
+  .lastMovedLabel.recency-fresh{ color:#2e7d4f; font-weight:700; }
+  .lastMovedLabel.recency-recent{ color:#8a6a1c; font-weight:700; }
+  .lastMovedLabel.recency-stale{ color:#a13d33; font-weight:700; }
   .lastMovedLabel.recency-none{ color:#b0b5ba; font-style:italic; }
+  .spaceMoveBtn, .spaceEditBtn, .spaceRemoveBtn{
+    padding:6px 8px;
+    margin-left:2px;
+    font-size:1rem;
+    border-radius:6px;
+  }
+  .spaceMoveBtn:active, .spaceEditBtn:active, .spaceRemoveBtn:active{ background:var(--surface-2); }
   .refreshNeededBanner{
     position:sticky;
     top:0;
@@ -2328,14 +2375,23 @@
     margin-top:6px;
     opacity:0.8;
   }
+  #photoReportShareHint, #photoReportWhatsappHint{
+    font-size:0.68rem;
+    opacity:0.6;
+    line-height:1.4;
+  }
   .formProgressIndicator{
     display:flex;
     align-items:center;
     gap:6px;
-    margin-bottom:10px;
+    margin:8px 0 12px;
+    padding:6px 10px;
+    background: var(--surface-2);
+    border-radius: 999px;
     font-size:0.72rem;
     color: var(--muted);
   }
+  .formProgressIndicator:empty{ display:none; }
   .formProgressDots{
     display:flex;
     gap:3px;
@@ -2414,7 +2470,7 @@
   }
   .tiempoAquiTag-fresh{ background:#eaf5ee; color:#2e7d4f; }
   .tiempoAquiTag-recent{ background:#fff6e0; color:#8a5a1c; }
-  .tiempoAquiTag-stale{ background:#fbeae8; color:#a13d33; }
+  .tiempoAquiTag-stale{ background:#fbeae8; color:#a13d33; border:1.5px solid #e0958c; font-weight:800; }
   .colorPreviewDot{
     display:inline-block;
     width:18px; height:18px;
@@ -2431,7 +2487,7 @@
     display:inline-block;
     width:9px; height:9px;
     border-radius:50%;
-    border:1px solid rgba(0,0,0,0.15);
+    border:1.5px solid rgba(0,0,0,0.35);
     vertical-align:middle;
     margin-left:2px;
   }
@@ -3458,6 +3514,11 @@
   // operativo — para eso hace falta configurar el modo kiosco del propio
   // dispositivo Android, algo que ya queda fuera de lo que la app controla.
   let kioskModeActive = false;
+  // Si ya se vio la ayuda de "Mover/Editar/Quitar" una vez en esta
+  // sesión, queda colapsada por defecto — no hace falta repetirla cada
+  // vez que se entra a un campo distinto, solo un ❓ para volver a verla
+  // si hace falta.
+  let plateRowsLegendExpanded = false;
   let wakeLockSentinel = null;
 
   function updateKioskButtonLabel(){
@@ -3732,6 +3793,34 @@
     document.getElementById("allAreasModal").classList.remove("show");
   });
 
+  // Mismo criterio que usa la cuadrícula de campos para pintar cada
+  // cuadrito según qué tan lleno está — se reutiliza acá para los
+  // botones de "campo anterior/siguiente", así se sabe si vale la pena
+  // saltar ahí antes de tocarlos.
+  // Arma el texto de ayuda de "Mover/Editar/Quitar" — colapsado por
+  // defecto en un ❓ chico, para no ocupar espacio todo el tiempo una vez
+  // que alguien ya sabe qué hace cada ícono. El toggle recuerda su
+  // estado durante la sesión (no hay que re-expandirlo cada vez que se
+  // cambia de campo).
+  function plateRowsLegendHtml(){
+    if(plateRowsLegendExpanded){
+      return `<div class="plateRowsLegend">🔀 Mover　✏️ Editar　✕ Quitar　·　el numerito es el orden de llegada　<button type="button" class="plateRowsLegendToggle" title="Ocultar la ayuda">✕</button></div>`;
+    }
+    return `<button type="button" class="plateRowsLegendToggle plateRowsLegendCollapsed" title="Ver qué hace cada ícono">❓ ¿Qué hace cada ícono?</button>`;
+  }
+  function wirePlateRowsLegendToggle(container, redraw){
+    const btn = container.querySelector(".plateRowsLegendToggle");
+    if(btn) btn.addEventListener("click", ()=>{ plateRowsLegendExpanded = !plateRowsLegendExpanded; redraw(); });
+  }
+  function campoFillHex(campoObj){
+    const cap = campoObj.capacidad;
+    const occ = campoObj.plates.length;
+    if(!cap) return null;
+    if(occ > cap) return "#a13d33"; // sobrecargado
+    if(occ === cap) return "#c9a227"; // lleno
+    if(occ > 0) return "#4f8fd1"; // parcial
+    return "#4caf7d"; // vacío
+  }
   function zoneInfo(key){
     if(key === SIN_UBICACION_KEY) return SIN_UBICACION_INFO;
     return ZONES.find(z => z.key === key);
@@ -3752,13 +3841,25 @@
   // jsDelivr, no de cdnjs — cdnjs nunca llegó a publicar las versiones
   // recientes de tesseract.js (se quedó en una versión de hace años), así
   // que apuntar ahí hacía que la carga fallara siempre.
+  //
+  // Se fija una versión exacta del script principal (no "@5" suelto,
+  // que puede cambiar de un día para otro) — así, si alguna vez hay que
+  // revisar por qué algo no anduvo, se sabe con certeza qué versión
+  // estaba en uso. Las rutas del worker/motor internos se dejan que
+  // Tesseract las calcule solas (no se fuerzan a mano): sus paquetes
+  // auxiliares no siempre publican el mismo número de versión que el
+  // script principal, así que fijarlas a mano podía terminar apuntando
+  // a una versión que no existe — el verdadero resguardo contra
+  // quedarse colgado es el límite de tiempo que se agrega más abajo,
+  // no el pineo de rutas.
+  const TESSERACT_VERSION = "5.0.5";
   let tesseractScriptPromise = null;
   function loadTesseractScriptIfNeeded(){
     if(window.Tesseract) return Promise.resolve();
     if(tesseractScriptPromise) return tesseractScriptPromise;
     tesseractScriptPromise = new Promise((resolve, reject)=>{
       const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      script.src = `https://cdn.jsdelivr.net/npm/tesseract.js@${TESSERACT_VERSION}/dist/tesseract.min.js`;
       script.onload = () => resolve();
       script.onerror = () => { tesseractScriptPromise = null; reject(new Error("No se pudo cargar el lector de placas")); };
       document.head.appendChild(script);
@@ -3839,8 +3940,24 @@
       scanBtn.disabled = true;
       scanBtn.textContent = "⏳";
       try{
-        const worker = await getTesseractWorker();
-        const resultado = await worker.recognize(file);
+        // Tesseract.js tiene un problema conocido y reconocido por sus
+        // propios creadores: si algo falla mientras arma el worker (una
+        // pieza que no cargó, una descarga que se cortó a medias), a
+        // veces esa falla nunca llega a rechazar la promesa — se queda
+        // esperando para siempre, sin avisar ni romper nada, dejando el
+        // botón trabado en "⏳". Por eso el límite de tiempo de acá NO es
+        // opcional: es la única forma de garantizar que esto siempre
+        // termine, pase lo que pase puertas adentro de la librería. 25
+        // segundos alcanza de sobra incluso la primera vez (cuando de
+        // paso hay que descargar el modelo de idioma).
+        const timeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout leyendo la placa")), 25000));
+        const resultado = await Promise.race([
+          (async ()=>{
+            const worker = await getTesseractWorker();
+            return await worker.recognize(file);
+          })(),
+          timeoutPromise
+        ]);
         const textoLeido = (resultado && resultado.data && resultado.data.text) || "";
         const placaEncontrada = extraerPlacaDeTextoOcr(textoLeido);
         if(placaEncontrada){
@@ -3853,7 +3970,16 @@
         }
       }catch(e){
         console.error("Error leyendo la placa con la cámara", e);
-        showToast("No se pudo leer la placa — escribila a mano.", 3500);
+        // Si fue el límite de tiempo el que cortó esto, el worker puede
+        // haber quedado en un estado raro a medio armar — se descarta,
+        // así el próximo toque arranca de cero en vez de heredar algo
+        // roto.
+        if(String(e && e.message) === "timeout leyendo la placa"){
+          tesseractWorkerPromise = null;
+          showToast("El lector de placas tardó demasiado — escribila a mano, o probá de nuevo.", 4000);
+        } else {
+          showToast("No se pudo leer la placa — escribila a mano.", 3500);
+        }
       }finally{
         scanBtn.disabled = false;
         scanBtn.textContent = textoOriginalBtn;
@@ -4923,7 +5049,7 @@
         ? `<span class="circulacionSummaryTag llaveSummaryTagVehiculo">🔑 Llave dentro del vehículo</span>`
         : "";
     const tiempoAquiTag = tiempoAqui ? `<div class="tiempoAquiTag tiempoAquiTag-${tiempoAqui.recency}">🕒 ${tiempoAqui.diasTexto}</div>` : "";
-    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${escapeHtml(plate)}</strong>${circulacionTag}${llaveTag}<div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${tiempoAquiTag}`;
+    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${iconoParaModelo(modelo)} ${escapeHtml(plate)}</strong>${circulacionTag}${llaveTag}<div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${tiempoAquiTag}`;
 
     // Si el modal se vuelve a abrir sin haberse cerrado antes (ej. compartir
     // y enseguida tocar otra placa), esto evita que se acumulen listeners
@@ -4986,16 +5112,19 @@
       // WhatsApp (y la mayoría de apps de chat) interpretan un texto entre
       // asteriscos como negrita — así la placa queda como un título bien
       // destacado arriba de todo, y cada etiqueta se lee más rápido de un
-      // vistazo que en texto plano parejo. Orden: primero lo que identifica
-      // al vehículo (modelo, color, asesor), después dónde está (zona y
-      // campo juntos), y la fecha al final de todo.
+      // vistazo que en texto plano parejo. Un emoji por campo ayuda a
+      // diferenciar cada línea sin tener que leer la palabra completa.
+      // Zona y Campo van juntos en una sola línea (es un solo dato: dónde
+      // está), y una rayita separa "los datos del vehículo" del "estado
+      // actual" (circulación y llave) para que no se sientan como una
+      // sola lista corrida.
       const lineas = [
-        modelo ? `*Modelo:* ${modelo}` : "",
-        color ? `*Color:* ${color}` : "",
-        aseguradora ? `*Asesor:* ${aseguradora}` : "",
-        `*Zona:* ${zoneLabel}`,
-        `*Campo:* ${campoLabel}`,
-        `*Fecha:* ${fecha}`,
+        modelo ? `🚘 *Modelo:* ${modelo}` : "",
+        color ? `🎨 *Color:* ${color}` : "",
+        aseguradora ? `🧑‍💼 *Asesor:* ${aseguradora}` : "",
+        `📍 *Zona:* ${zoneLabel} · *Campo:* ${campoLabel}`,
+        `📅 *Fecha:* ${fecha}`,
+        (circulacionTexto || llaveTexto) ? "▬▬▬▬▬▬▬▬" : "",
         circulacionTexto,
         llaveTexto
       ].filter(Boolean);
@@ -5053,11 +5182,13 @@
       try{
         const resultado = await tryNativeShare(text);
         if(resultado === true){
-          // Se comparte con éxito: se limpian las casillas de foto para
-          // dejar todo listo por si hace falta reportar de nuevo — sin
-          // cerrar el modal, para no perder el lugar donde estabas.
-          resetSlots();
+          // Se comparte con éxito: se cierra el modal solo, para volver
+          // directo a la zona/campo donde está el vehículo — antes se
+          // quedaba en la pantalla de fotos con las casillas vacías,
+          // como si hiciera falta sacar más fotos de una.
           showToast("Compartido");
+          onClose();
+          return;
         }
         // si resultado === "aborted", no se hace nada: la persona cerró
         // el selector sin elegir nada, no es un error que haya que avisar.
@@ -5804,7 +5935,7 @@
           </div>
           <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
             <button type="button" class="primaryBtn" id="nestedAddConfirmBtn_${abbr}" style="flex:1;">Agregar acá</button>
-            <button type="button" class="secondaryBtn" id="nestedAddCancelBtn_${abbr}">Cancelar</button>
+            <button type="button" class="secondaryBtn" id="nestedAddCancelBtn_${abbr}" style="flex:1;">Cancelar</button>
           </div>
         </div>
         ${hijosGridHtml}
@@ -6188,7 +6319,7 @@
         </div>
         ${full ? `<div class="similarWarn spaceFullWarn"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
         ${c.plates.length > 5 ? `<input type="text" id="zonePlateFilterInput_${abbr}" class="plate" placeholder="Filtrar los vehículos de este espacio…" style="margin-bottom:8px;">` : ``}
-        ${c.plates.length > 0 ? `<div class="plateRowsLegend">🔀 Mover　✏️ Editar　✕ Quitar　·　el numerito es el orden de llegada</div>` : ``}
+        ${c.plates.length > 0 ? plateRowsLegendHtml() : ``}
         ${plateRowsHtml}
         <button type="button" class="linkBackBtn" id="zoneAddToggle_${abbr}" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
         <div id="zoneAddBox_${abbr}" style="display:none;">
@@ -6244,7 +6375,7 @@
           </div>
           <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
             <button type="button" class="primaryBtn authBtn" id="zoneNewAddBtn_${abbr}" style="flex:1;">Agregar en este espacio</button>
-            <button type="button" class="secondaryBtn" id="zoneNewCancelBtn_${abbr}" style="flex:0 0 auto;">Cancelar</button>
+            <button type="button" class="secondaryBtn" id="zoneNewCancelBtn_${abbr}" style="flex:1;">Cancelar</button>
           </div>
         </div>
         <button type="button" class="dangerBtn" id="zoneDeleteCampoBtn_${abbr}" style="width:100%; margin-top:16px;">Eliminar este ${labelLower} por completo</button>
@@ -6502,6 +6633,7 @@
       detailBox.querySelectorAll(".spaceRemoveBtn").forEach(b=>{
         b.addEventListener("click", ()=> removeZonePlate(parseInt(b.getAttribute("data-idx"),10)));
       });
+      wirePlateRowsLegendToggle(detailBox, drawZoneDetail);
       detailBox.querySelectorAll(".orderMoveBtn").forEach(b=>{
         b.addEventListener("click", async ()=>{
           const idx = parseInt(b.getAttribute("data-idx"),10);
@@ -10078,11 +10210,11 @@
           <h2 style="margin:0;">Actualizar ubicación</h2>
           <div style="display:flex; gap:8px;">
             ${avaluoModo ? `` : `<button type="button" id="updAllAreasBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🗂️ Ver todas mis áreas</button>`}
-            <button type="button" id="kioskToggleBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🖥️ Modo kiosco</button>
+            <button type="button" id="kioskToggleBtn" class="kioskModeBtn" style="flex:0 0 auto;">🖥️ Modo kiosco</button>
           </div>
         </div>
         <div id="updBrowseSection">
-          <input type="text" id="updSearchInput" class="plate" placeholder="Buscar por placa, asesor o modelo…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
+          <input type="text" id="updSearchInput" placeholder="Buscar por placa, asesor o modelo…" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d7d8d3;">
           <div id="updSearchResults"></div>
           ${avaluoModo ? `
           <div id="updAllAreasFixed" style="margin-top:14px;"></div>
@@ -10171,9 +10303,10 @@
         : `Todos los vehículos (${totalCount}) — tocá uno para ir a su espacio`;
 
       function rowHtml(r){
+        const colorHex = r.vehicleColor ? guessColorHex(r.vehicleColor) : null;
         return `
           <div class="updaterAllListRow${wasUpdatedToday(r) ? ' updatedToday' : ''}" data-plate="${escapeAttrLike(r.placa)}">
-            <span class="plate">${highlightMatch(r.placa, q)} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+            <span class="plate updaterAllListPlate">${highlightMatch(r.placa, q)}${colorHex ? ` <span class="plateColorDot" style="background:${colorHex}"></span>` : ""} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
             <span class="updaterAllListMeta">${highlightMatch(r.zoneLabel, q)} · campo ${highlightMatch(r.campo, q)}${r.aseguradora ? ` · ${highlightMatch(r.aseguradora, q)}` : ""}${r.modelo ? ` · ${highlightMatch(r.modelo, q)}` : ""}</span>
           </div>
         `;
@@ -10717,16 +10850,17 @@
       spaceInfoBox.innerHTML = `
         <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">${esSinUbicacion ? "← Volver / cambiar de zona" : "← Volver a la lista de espacios"}</button>
         ${esSinUbicacion ? "" : `<div class="spaceNavRow">
-          <button type="button" id="spacePrevBtn" ${anterior ? "" : "disabled"}>← ${anterior ? escapeHtml(anterior.campo) : "—"}</button>
-          <button type="button" id="spaceNextBtn" ${siguiente ? "" : "disabled"}>${siguiente ? escapeHtml(siguiente.campo) : "—"} →</button>
+          <button type="button" id="spacePrevBtn" ${anterior ? "" : "disabled"}>← ${anterior ? escapeHtml(anterior.campo) : "—"}${anterior && campoFillHex(anterior) ? ` <span class="plateColorDot" style="background:${campoFillHex(anterior)}"></span>` : ""}</button>
+          <button type="button" id="spaceNextBtn" ${siguiente ? "" : "disabled"}>${siguiente && campoFillHex(siguiente) ? `<span class="plateColorDot" style="background:${campoFillHex(siguiente)}"></span> ` : ""}${siguiente ? escapeHtml(siguiente.campo) : "—"} →</button>
         </div>`}
         <div class="spaceInfoHeader">
           <strong>${zoneInfo(updSpaceZone).label} · ${escapeHtml(campoLabel)}</strong>
-          ${cap ? `<span class="spaceCapBadge${full ? " full" : ""}">${occ}/${cap}</span>` : ``}
+          ${cap ? `<span class="spaceCapBadge${full ? " full" : ""}" title="${occ} de ${cap} lugares ocupados en este ${labelLower}">${occ}/${cap} vehículos</span>` : ``}
         </div>
+        ${cap && cap > 1 && !full ? `<div class="spaceFreeSpotsHint">${cap-occ} lugar${cap-occ===1?"":"es"} libre${cap-occ===1?"":"s"} acá</div>` : ``}
         ${full ? `<div class="similarWarn spaceFullWarn"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
         ${entry.plates.length > 5 ? `<input type="text" id="spacePlateFilterInput" class="plate" placeholder="Filtrar los vehículos de este espacio…" style="margin-bottom:8px;">` : ``}
-        ${entry.plates.length > 0 ? `<div class="plateRowsLegend">🔀 Mover　✏️ Editar　✕ Quitar　·　el numerito es el orden de llegada</div>` : ``}
+        ${entry.plates.length > 0 ? plateRowsLegendHtml() : ``}
         ${plateRowsHtml}
         ${nestedRowsHtml}
         <button type="button" class="linkBackBtn" id="updSpaceAddToggle" style="text-decoration:none; font-weight:700; margin-top:8px;">+ Agregar o mover una placa acá</button>
@@ -10785,7 +10919,7 @@
           </div>
           <div class="modalActions" style="margin-top:8px; flex-direction:row; gap:8px;">
             <button type="button" class="primaryBtn authBtn" id="updSpaceAddBtn" style="flex:1;">Agregar en este espacio</button>
-            <button type="button" class="secondaryBtn" id="updSpaceAddCancelBtn" style="flex:0 0 auto;">Cancelar</button>
+            <button type="button" class="secondaryBtn" id="updSpaceAddCancelBtn" style="flex:1;">Cancelar</button>
           </div>
         </div>
       `;
@@ -11104,6 +11238,7 @@
       spaceInfoBox.querySelectorAll(".spaceRemoveBtn").forEach(b=>{
         b.addEventListener("click", (e)=> removePlateFromSpace(parseInt(b.getAttribute("data-idx"),10), e.currentTarget));
       });
+      wirePlateRowsLegendToggle(spaceInfoBox, drawSpaceInfo);
       spaceInfoBox.querySelectorAll(".orderMoveBtn").forEach(b=>{
         b.addEventListener("click", async ()=>{
           const idx = parseInt(b.getAttribute("data-idx"),10);
