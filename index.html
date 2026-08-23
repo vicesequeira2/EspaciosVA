@@ -1923,7 +1923,7 @@
   }
   .updaterAllListScroll{
     max-height:260px; overflow-y:auto;
-    display:flex; flex-direction:column; gap:6px;
+    display:flex; flex-direction:column; gap:9px;
   }
   #updSearchResults{
     display:none;
@@ -1943,7 +1943,7 @@
   .updSearchResultMeta{ font-size:0.72rem; color:var(--muted); }
   .updaterAllListRow{
     display:flex; justify-content:space-between; align-items:center;
-    background:var(--surface-2); border-radius:8px; padding:8px 10px;
+    background:var(--surface-2); border-radius:8px; padding:10px 10px;
     font-size:0.85rem; cursor:pointer;
   }
   .updaterAllListRow:active{ background:var(--surface-3); }
@@ -3834,159 +3834,6 @@
   // guión de más o de menos.
   function normalizePlate(v){ return String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
 
-  // Escanear placa con la cámara (OCR). Tesseract.js es pesado (~2MB) —
-  // en vez de cargarlo siempre para todos, se trae solo la primera vez
-  // que alguien realmente toca "Escanear", y de ahí en más queda en
-  // caché para el resto de la sesión. Importante: la librería se trae de
-  // jsDelivr, no de cdnjs — cdnjs nunca llegó a publicar las versiones
-  // recientes de tesseract.js (se quedó en una versión de hace años), así
-  // que apuntar ahí hacía que la carga fallara siempre.
-  //
-  // Se fija una versión exacta del script principal (no "@5" suelto,
-  // que puede cambiar de un día para otro) — así, si alguna vez hay que
-  // revisar por qué algo no anduvo, se sabe con certeza qué versión
-  // estaba en uso. Las rutas del worker/motor internos se dejan que
-  // Tesseract las calcule solas (no se fuerzan a mano): sus paquetes
-  // auxiliares no siempre publican el mismo número de versión que el
-  // script principal, así que fijarlas a mano podía terminar apuntando
-  // a una versión que no existe — el verdadero resguardo contra
-  // quedarse colgado es el límite de tiempo que se agrega más abajo,
-  // no el pineo de rutas.
-  const TESSERACT_VERSION = "5.0.5";
-  let tesseractScriptPromise = null;
-  function loadTesseractScriptIfNeeded(){
-    if(window.Tesseract) return Promise.resolve();
-    if(tesseractScriptPromise) return tesseractScriptPromise;
-    tesseractScriptPromise = new Promise((resolve, reject)=>{
-      const script = document.createElement("script");
-      script.src = `https://cdn.jsdelivr.net/npm/tesseract.js@${TESSERACT_VERSION}/dist/tesseract.min.js`;
-      script.onload = () => resolve();
-      script.onerror = () => { tesseractScriptPromise = null; reject(new Error("No se pudo cargar el lector de placas")); };
-      document.head.appendChild(script);
-    });
-    return tesseractScriptPromise;
-  }
-  // Desde la versión 5 de Tesseract.js, la forma correcta de usarla es
-  // crear un "worker" una vez (que internamente carga el modelo de
-  // idioma) y reutilizarlo — la función vieja "Tesseract.recognize(...)"
-  // directa quedó obsoleta y ya no es la vía documentada. Se guarda el
-  // worker ya listo para no tener que recrearlo en cada foto — solo la
-  // primera vez tarda un poco más.
-  let tesseractWorkerPromise = null;
-  function getTesseractWorker(){
-    if(tesseractWorkerPromise) return tesseractWorkerPromise;
-    tesseractWorkerPromise = loadTesseractScriptIfNeeded().then(()=> window.Tesseract.createWorker("eng"));
-    tesseractWorkerPromise.catch(()=>{ tesseractWorkerPromise = null; }); // si falla, se puede reintentar en el próximo toque
-    return tesseractWorkerPromise;
-  }
-
-  // De todo el texto que el OCR alcanzó a leer en la foto (que puede traer
-  // basura: el marco de la placa, texto del parachoques, etc.), se busca
-  // el tramo que más se parece a una placa real: letras y números
-  // pegados, de tamaño razonable (entre 4 y 8 caracteres). Si hay varios
-  // candidatos, se prefiere el más largo — las placas de Costa Rica rara
-  // vez son cortas, así que un tramo cortito suele ser ruido del OCR.
-  function extraerPlacaDeTextoOcr(textoCrudo){
-    const limpio = String(textoCrudo || "").toUpperCase();
-    // Se separa por espacios/saltos de línea reales (esos sí marcan
-    // palabras distintas), pero DENTRO de cada palabra se quitan guiones
-    // y símbolos sueltos antes de medir el largo — muchas placas de Costa
-    // Rica se escriben con guion (ej. "PE-61392"), y sin este paso el
-    // guion partía la placa en dos pedazos y se perdía la parte de letras.
-    const palabras = limpio.split(/\s+/).map(w => w.replace(/[^A-Z0-9]/g, "")).filter(Boolean);
-    const tieneLetraYNumero = (s) => /[A-Z]/.test(s) && /[0-9]/.test(s);
-    const largoRazonable = (s) => s.length >= 4 && s.length <= 8;
-
-    // Se prefiere una palabra que tenga LETRAS Y NÚMEROS a la vez — así
-    // no se confunde con texto decorativo de la foto ("COSTA", "RICA")
-    // que por casualidad cae en un largo parecido al de una placa.
-    const conAmbos = palabras.filter(w => largoRazonable(w) && tieneLetraYNumero(w));
-    if(conAmbos.length){
-      conAmbos.sort((a,b)=> b.length - a.length);
-      return conAmbos[0];
-    }
-    // Si ninguna palabra sola alcanza eso, puede ser que el OCR haya
-    // leído la placa separada en dos por el espacio físico real del
-    // diseño (ej. "BZL 006") — se prueba uniendo pares de palabras
-    // consecutivas, exigiendo igual que el resultado tenga letras y
-    // números (para no unir dos palabras de ruido al azar).
-    for(let i=0; i<palabras.length-1; i++){
-      const unido = palabras[i] + palabras[i+1];
-      if(largoRazonable(unido) && tieneLetraYNumero(unido)) return unido;
-    }
-    // Último recurso: cualquier palabra del largo esperado, aunque no
-    // tenga números (por si el OCR falló en leer algún dígito) — mejor
-    // sugerir algo revisable que no sugerir nada.
-    const candidatos = palabras.filter(largoRazonable);
-    if(candidatos.length){
-      candidatos.sort((a,b)=> b.length - a.length);
-      return candidatos[0];
-    }
-    return "";
-  }
-
-  // Conecta el botón de cámara junto a un campo de Placa: abre la cámara,
-  // corre el OCR sobre la foto, y si encuentra algo que parece una placa,
-  // lo pone en el campo (la persona igual lo puede corregir a mano antes
-  // de guardar — el OCR nunca guarda solo, solo sugiere).
-  function wirePlateOcrButton(scanBtn, plateInput, fileInput){
-    if(!scanBtn || !plateInput || !fileInput) return;
-    scanBtn.addEventListener("click", ()=> fileInput.click());
-    fileInput.addEventListener("change", async ()=>{
-      const file = fileInput.files && fileInput.files[0];
-      fileInput.value = "";
-      if(!file) return;
-      const textoOriginalBtn = scanBtn.textContent;
-      scanBtn.disabled = true;
-      scanBtn.textContent = "⏳";
-      try{
-        // Tesseract.js tiene un problema conocido y reconocido por sus
-        // propios creadores: si algo falla mientras arma el worker (una
-        // pieza que no cargó, una descarga que se cortó a medias), a
-        // veces esa falla nunca llega a rechazar la promesa — se queda
-        // esperando para siempre, sin avisar ni romper nada, dejando el
-        // botón trabado en "⏳". Por eso el límite de tiempo de acá NO es
-        // opcional: es la única forma de garantizar que esto siempre
-        // termine, pase lo que pase puertas adentro de la librería. 25
-        // segundos alcanza de sobra incluso la primera vez (cuando de
-        // paso hay que descargar el modelo de idioma).
-        const timeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout leyendo la placa")), 25000));
-        const resultado = await Promise.race([
-          (async ()=>{
-            const worker = await getTesseractWorker();
-            return await worker.recognize(file);
-          })(),
-          timeoutPromise
-        ]);
-        const textoLeido = (resultado && resultado.data && resultado.data.text) || "";
-        const placaEncontrada = extraerPlacaDeTextoOcr(textoLeido);
-        if(placaEncontrada){
-          plateInput.value = placaEncontrada;
-          plateInput.dispatchEvent(new Event("input", { bubbles: true }));
-          plateInput.focus();
-          showToast(`Se leyó "${placaEncontrada}" — revisá que esté bien antes de guardar.`, 4000);
-        } else {
-          showToast("No se pudo leer la placa en esa foto — probá de nuevo más de cerca, o escribila a mano.", 4000);
-        }
-      }catch(e){
-        console.error("Error leyendo la placa con la cámara", e);
-        // Si fue el límite de tiempo el que cortó esto, el worker puede
-        // haber quedado en un estado raro a medio armar — se descarta,
-        // así el próximo toque arranca de cero en vez de heredar algo
-        // roto.
-        if(String(e && e.message) === "timeout leyendo la placa"){
-          tesseractWorkerPromise = null;
-          showToast("El lector de placas tardó demasiado — escribila a mano, o probá de nuevo.", 4000);
-        } else {
-          showToast("No se pudo leer la placa — escribila a mano.", 3500);
-        }
-      }finally{
-        scanBtn.disabled = false;
-        scanBtn.textContent = textoOriginalBtn;
-      }
-    });
-  }
-
   // ¿Se actualizó (movió, editó o registró) este vehículo hoy? Sirve para
   // resaltar en la interfaz "ya pasé por esta placa" durante una ronda.
   function wasUpdatedToday(entry){
@@ -4368,6 +4215,7 @@
         if(shared && shared.value){
           lastKnownServerStateRaw = shared.value;
           state = JSON.parse(shared.value);
+          invalidateResumenRowsCache(); // datos frescos del servidor — el caché de una carga anterior ya no sirve
           if(!state.capacities) state.capacities = {};
           let needsResave = migrateStateToBlocksIfNeeded(state);
           needsResave = migrateSinAsignarToLineas(state) || needsResave;
@@ -4490,6 +4338,7 @@
       lastKnownServerStateRaw = JSON.stringify(state);
       importantToastUntil = 0; // el guardado funciono: ya no hace falta proteger un aviso viejo de choque/sin-conexion
       hideRefreshNeededBanner();
+      invalidateResumenRowsCache(); // el inventario cambió de verdad — lo que había en caché ya no sirve
       if(!silent) showToast("Guardado");
       if(pendingSaveRetry){
         pendingSaveRetry = false;
@@ -4538,6 +4387,7 @@
           lastKnownServerStateRaw = JSON.stringify(state);
           importantToastUntil = 0; // el guardado funciono: ya no hace falta proteger un aviso viejo de choque/sin-conexion
           hideRefreshNeededBanner();
+          invalidateResumenRowsCache(); // el inventario cambió de verdad — lo que había en caché ya no sirve
           pendingSaveRetry = false;
           clearInterval(saveRetryTimer);
           saveRetryTimer = null;
@@ -5898,11 +5748,7 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <input type="text" id="nestedNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text" style="flex:1;">
-                <button type="button" id="nestedNewPlacaScanBtn_${abbr}" class="secondaryBtn" title="Escanear placa con la cámara" style="flex:0 0 auto; padding:8px 10px;">📷</button>
-                <input type="file" accept="image/*" capture="environment" id="nestedNewPlacaScanInput_${abbr}" style="display:none;">
-              </div>
+              <input type="text" id="nestedNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
             </label>
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">Asesor</span>
@@ -6012,7 +5858,6 @@
         nestedRefrescarProgreso();
       });
       wireColorDot(detailBox.querySelector(`#nestedNewColor_${abbr}`), detailBox.querySelector(`#nestedNewColorDot_${abbr}`));
-      wirePlateOcrButton(detailBox.querySelector(`#nestedNewPlacaScanBtn_${abbr}`), detailBox.querySelector(`#nestedNewPlaca_${abbr}`), detailBox.querySelector(`#nestedNewPlacaScanInput_${abbr}`));
       wireLlaveToggle(detailBox.querySelector(`#nestedNewLlaveToggle_${abbr}`), detailBox.querySelector(`#nestedNewLlave_${abbr}`), detailBox.querySelector(`#nestedNewLlaveError_${abbr}`));
       const nestedProgressBox = detailBox.querySelector(`#nestedAddProgress_${abbr}`);
       const nestedCamposProgreso = () => [
@@ -6258,12 +6103,13 @@
                 </div>
               </div>
               <div class="circulacionField">
-                <span class="labeledFieldLabel">¿Puede circular?</span>
+                <span class="labeledFieldLabel">¿Puede circular?<span class="labeledFieldReq">*</span></span>
                 <div class="circulacionToggle" id="zoneEditCirculacionToggle_${abbr}" data-selected="${escapeAttrLike(p.circulacion || "")}">
                   <button type="button" class="circulacionBtn circulacionBtnOk${p.circulacion==="puede" ? " active" : ""}" data-value="puede">✅ Puede circular</button>
                   <button type="button" class="circulacionBtn circulacionBtnNo${p.circulacion==="no" ? " active" : ""}" data-value="no">🚫 No circula</button>
                 </div>
                 <input type="hidden" id="zoneEditCirculacion_${abbr}" value="${escapeAttrLike(p.circulacion || "")}">
+                <p class="authError" id="zoneEditCirculacionError_${abbr}" style="display:none; margin-top:4px;">Marcá si puede circular o no.</p>
               </div>
               <div class="circulacionField">
                 <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
@@ -6327,11 +6173,7 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text" style="flex:1;">
-                <button type="button" id="zoneNewPlacaScanBtn_${abbr}" class="secondaryBtn" title="Escanear placa con la cámara" style="flex:0 0 auto; padding:8px 10px;">📷</button>
-                <input type="file" accept="image/*" capture="environment" id="zoneNewPlacaScanInput_${abbr}" style="display:none;">
-              </div>
+              <input type="text" id="zoneNewPlaca_${abbr}" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
             </label>
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">Asesor</span>
@@ -6357,12 +6199,13 @@
           <div class="similarWarn" id="zoneNewAsesorWarn_${abbr}" style="display:none;"></div>
           <div class="reqFieldHint"><span class="labeledFieldReq">*</span> obligatorio</div>
           <div class="circulacionField">
-            <span class="labeledFieldLabel">¿Puede circular?</span>
+            <span class="labeledFieldLabel">¿Puede circular?<span class="labeledFieldReq">*</span></span>
             <div class="circulacionToggle" id="zoneNewCirculacionToggle_${abbr}">
               <button type="button" class="circulacionBtn circulacionBtnOk" data-value="puede">✅ Puede circular</button>
               <button type="button" class="circulacionBtn circulacionBtnNo" data-value="no">🚫 No circula</button>
             </div>
             <input type="hidden" id="zoneNewCirculacion_${abbr}" value="">
+            <p class="authError" id="zoneNewCirculacionError_${abbr}" style="display:none; margin-top:4px;">Marcá si puede circular o no.</p>
           </div>
           <div class="circulacionField">
             <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
@@ -6503,7 +6346,7 @@
         `).join("");
         const editCampoInputAdmin = detailBox.querySelector(`#zoneEditCampo_${abbr}`);
         wireColorDot(detailBox.querySelector(`#zoneEditColor_${abbr}`), detailBox.querySelector(`#zoneEditColorDot_${abbr}`));
-        wireCirculacionToggle(detailBox.querySelector(`#zoneEditCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneEditCirculacion_${abbr}`));
+        wireCirculacionToggle(detailBox.querySelector(`#zoneEditCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneEditCirculacion_${abbr}`), detailBox.querySelector(`#zoneEditCirculacionError_${abbr}`));
         wireLlaveToggle(detailBox.querySelector(`#zoneEditLlaveToggle_${abbr}`), detailBox.querySelector(`#zoneEditLlave_${abbr}`), detailBox.querySelector(`#zoneEditLlaveError_${abbr}`));
         const zoneAsegInputEdit = detailBox.querySelector(`#zoneEditAseg_${abbr}`);
         const zoneAsegWarnEdit = detailBox.querySelector(`#zoneEditAsesorWarn_${abbr}`);
@@ -6563,6 +6406,12 @@
           const newCampo = normalizeCampo(detailBox.querySelector(`#zoneEditCampo_${abbr}`).value);
           if(!newCampo){ showToast("Ingresá un campo válido"); return; }
           if(!normalizePlate(newPlate)){ showToast("Ingresá una placa válida"); return; }
+          if(!newCirculacion){
+            const err = detailBox.querySelector(`#zoneEditCirculacionError_${abbr}`);
+            if(err) err.style.display = "block";
+            showToast("Marcá si puede circular o no");
+            return;
+          }
           if(!newLlave){
             const err = detailBox.querySelector(`#zoneEditLlaveError_${abbr}`);
             if(err) err.style.display = "block";
@@ -6743,7 +6592,7 @@
         zoneModeloInputForWarn.addEventListener("input", ()=>{ zoneModelWarn.style.display = "none"; });
       }
       wireColorDot(detailBox.querySelector(`#zoneNewColor_${abbr}`), detailBox.querySelector(`#zoneNewColorDot_${abbr}`));
-      wireCirculacionToggle(detailBox.querySelector(`#zoneNewCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneNewCirculacion_${abbr}`));
+      wireCirculacionToggle(detailBox.querySelector(`#zoneNewCirculacionToggle_${abbr}`), detailBox.querySelector(`#zoneNewCirculacion_${abbr}`), detailBox.querySelector(`#zoneNewCirculacionError_${abbr}`));
       wireLlaveToggle(detailBox.querySelector(`#zoneNewLlaveToggle_${abbr}`), detailBox.querySelector(`#zoneNewLlave_${abbr}`), detailBox.querySelector(`#zoneNewLlaveError_${abbr}`));
       const zoneProgressBox = detailBox.querySelector(`#zoneAddProgress_${abbr}`);
       const zoneCamposProgreso = () => [
@@ -6799,7 +6648,6 @@
       const newDupWarn = detailBox.querySelector(`#zoneNewDupWarn_${abbr}`);
       const newSimilarWarn = detailBox.querySelector(`#zoneNewSimilarWarn_${abbr}`);
       const newAddBtn = detailBox.querySelector(`#zoneNewAddBtn_${abbr}`);
-      wirePlateOcrButton(detailBox.querySelector(`#zoneNewPlacaScanBtn_${abbr}`), newPlacaInput, detailBox.querySelector(`#zoneNewPlacaScanInput_${abbr}`));
 
       function checkNewDup(){
         const v = normalizePlate(newPlacaInput.value);
@@ -6868,6 +6716,12 @@
         const circulacionInput = detailBox.querySelector(`#zoneNewCirculacion_${abbr}`);
         const llaveInput = detailBox.querySelector(`#zoneNewLlave_${abbr}`);
         if(!modeloInput.value.trim()){ showToast("Ingresá el modelo del vehículo"); modeloInput.focus(); return; }
+        if(!circulacionInput.value){
+          const err = detailBox.querySelector(`#zoneNewCirculacionError_${abbr}`);
+          if(err) err.style.display = "block";
+          showToast("Marcá si puede circular o no");
+          return;
+        }
         if(!llaveInput.value){
           const err = detailBox.querySelector(`#zoneNewLlaveError_${abbr}`);
           if(err) err.style.display = "block";
@@ -7006,7 +6860,26 @@
     return wrap;
   }
 
+  // La lista completa de vehículos (aplanada, con zona/campo/área/fila ya
+  // resueltos) se pide desde muchos lugares distintos: Resumen, el
+  // Dashboard, "Todos los vehículos", el Excel exportado, y varios más.
+  // Antes, cada uno de esos lugares volvía a recorrer TODO el inventario
+  // de cero — y en Resumen en particular, esto pasaba en CADA tecla que
+  // se escribía en el buscador, aunque los datos no hubieran cambiado
+  // para nada entre una tecla y la siguiente.
+  //
+  // Ahora se guarda en caché, y solo se recalcula cuando el inventario
+  // realmente cambió — se invalida en los puntos donde eso pasa de
+  // verdad: justo después de un guardado exitoso (moverse, agregar,
+  // editar, todo termina ahí) y justo después de cargar datos frescos
+  // del servidor. Un rollback (deshacer un guardado que falló) no hace
+  // falta invalidarlo aparte: al volver el estado a como estaba antes,
+  // la versión en caché de ANTES del intento fallido sigue siendo
+  // exactamente correcta.
+  let resumenRowsCache = null;
+  function invalidateResumenRowsCache(){ resumenRowsCache = null; }
   function buildResumenRows(){
+    if(resumenRowsCache) return resumenRowsCache;
     const rows = [];
     visibleZonesForCurrentUser().forEach(z=>{
       (state.zones[z.key]||[]).forEach((c, ci)=>{
@@ -7030,6 +6903,7 @@
         });
       });
     });
+    resumenRowsCache = rows;
     return rows;
   }
 
@@ -8435,19 +8309,18 @@
   // Conecta los 2 botones de "¿Puede circular?" — tocar uno lo marca y
   // guarda el valor en el input oculto; tocarlo de nuevo lo desmarca
   // (vuelve a "sin indicar"), para no obligar a elegir uno.
-  function wireCirculacionToggle(container, hiddenInput){
+  // Antes se podía desmarcar tocando de nuevo la opción activa (dejando
+  // el campo vacío) — pero ahora que "¿Puede circular?" es obligatorio,
+  // igual que la llave, ya no tiene sentido permitir vaciarlo: una vez
+  // elegida una opción, tocarla de nuevo solo cambia a la otra.
+  function wireCirculacionToggle(container, hiddenInput, errorEl){
     if(!container || !hiddenInput) return;
     container.querySelectorAll(".circulacionBtn").forEach(btn=>{
       btn.addEventListener("click", ()=>{
-        const val = btn.getAttribute("data-value");
-        const yaActivo = btn.classList.contains("active");
         container.querySelectorAll(".circulacionBtn").forEach(b=>b.classList.remove("active"));
-        if(!yaActivo){
-          btn.classList.add("active");
-          hiddenInput.value = val;
-        } else {
-          hiddenInput.value = "";
-        }
+        btn.classList.add("active");
+        hiddenInput.value = btn.getAttribute("data-value");
+        if(errorEl) errorEl.style.display = "none";
       });
     });
   }
@@ -10306,7 +10179,7 @@
         const colorHex = r.vehicleColor ? guessColorHex(r.vehicleColor) : null;
         return `
           <div class="updaterAllListRow${wasUpdatedToday(r) ? ' updatedToday' : ''}" data-plate="${escapeAttrLike(r.placa)}">
-            <span class="plate updaterAllListPlate">${highlightMatch(r.placa, q)}${colorHex ? ` <span class="plateColorDot" style="background:${colorHex}"></span>` : ""} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
+            <span class="plate updaterAllListPlate">${highlightMatch(r.placa, q)}${colorHex ? `&nbsp;<span class="plateColorDot" style="background:${colorHex}"></span>` : ""} ${wasUpdatedToday(r) ? '<span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}</span>
             <span class="updaterAllListMeta">${highlightMatch(r.zoneLabel, q)} · campo ${highlightMatch(r.campo, q)}${r.aseguradora ? ` · ${highlightMatch(r.aseguradora, q)}` : ""}${r.modelo ? ` · ${highlightMatch(r.modelo, q)}` : ""}</span>
           </div>
         `;
@@ -10326,7 +10199,7 @@
           const zoneRows = rowsRecortadas.filter(r => r.zoneKey === z.key);
           if(zoneRows.length === 0) return "";
           return `
-            <div class="updaterZoneGroupHeader"><span class="dot" style="background:${z.color}"></span>${z.label} <span class="count">${zoneRows.length}</span></div>
+            <div class="updaterZoneGroupHeader"><span class="dot" style="background:${z.color}"></span>${z.label} <span class="count">${zoneRows.length} vehículo${zoneRows.length===1?"":"s"}</span></div>
             ${zoneRows.map(rowHtml).join("")}
           `;
         }).join("");
@@ -10335,7 +10208,7 @@
           const zoneRows = rows.filter(r => r.zoneKey === z.key);
           if(zoneRows.length === 0) return "";
           return `
-            <div class="updaterZoneGroupHeader"><span class="dot" style="background:${z.color}"></span>${z.label} <span class="count">${zoneRows.length}</span></div>
+            <div class="updaterZoneGroupHeader"><span class="dot" style="background:${z.color}"></span>${z.label} <span class="count">${zoneRows.length} vehículo${zoneRows.length===1?"":"s"}</span></div>
             ${zoneRows.map(rowHtml).join("")}
           `;
         }).join("");
@@ -10763,12 +10636,13 @@
                 </div>
               </div>
               <div class="circulacionField">
-                <span class="labeledFieldLabel">¿Puede circular?</span>
+                <span class="labeledFieldLabel">¿Puede circular?<span class="labeledFieldReq">*</span></span>
                 <div class="circulacionToggle" id="spaceEditCirculacionToggle" data-selected="${escapeAttrLike(p.circulacion || "")}">
                   <button type="button" class="circulacionBtn circulacionBtnOk${p.circulacion==="puede" ? " active" : ""}" data-value="puede">✅ Puede circular</button>
                   <button type="button" class="circulacionBtn circulacionBtnNo${p.circulacion==="no" ? " active" : ""}" data-value="no">🚫 No circula</button>
                 </div>
                 <input type="hidden" id="spaceEditCirculacion" value="${escapeAttrLike(p.circulacion || "")}">
+                <p class="authError" id="spaceEditCirculacionError" style="display:none; margin-top:4px;">Marcá si puede circular o no.</p>
               </div>
               <div class="circulacionField">
                 <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
@@ -10869,11 +10743,7 @@
           <div class="labeledFieldRow">
             <label class="labeledFieldBox" style="flex:1.3;">
               <span class="labeledFieldLabel">Placa<span class="labeledFieldReq">*</span></span>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text" style="flex:1;">
-                <button type="button" id="updSpaceNewPlacaScanBtn" class="secondaryBtn" title="Escanear placa con la cámara" style="flex:0 0 auto; padding:8px 10px;">📷</button>
-                <input type="file" accept="image/*" capture="environment" id="updSpaceNewPlacaScanInput" style="display:none;">
-              </div>
+              <input type="text" id="updSpaceNewPlaca" class="plate reqField plateUpperField" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
             </label>
             ${currentUser.showMovedBy ? `` : `
             <label class="labeledFieldBox" style="flex:1;">
@@ -10901,12 +10771,13 @@
           <div class="similarWarn" id="updSpaceAsesorWarn" style="display:none;"></div>
           <div class="reqFieldHint"><span class="labeledFieldReq">*</span> obligatorio</div>
           <div class="circulacionField" id="updCirculacionSection"${isAvaluoUser() ? ` style="display:none;"` : ``}>
-            <span class="labeledFieldLabel">¿Puede circular?</span>
+            <span class="labeledFieldLabel">¿Puede circular?<span class="labeledFieldReq">*</span></span>
             <div class="circulacionToggle" id="updSpaceNewCirculacionToggle">
               <button type="button" class="circulacionBtn circulacionBtnOk" data-value="puede">✅ Puede circular</button>
               <button type="button" class="circulacionBtn circulacionBtnNo" data-value="no">🚫 No circula</button>
             </div>
             <input type="hidden" id="updSpaceNewCirculacion" value="">
+            <p class="authError" id="updSpaceNewCirculacionError" style="display:none; margin-top:4px;">Marcá si puede circular o no.</p>
           </div>
           <div class="circulacionField" id="updLlaveSection"${isAvaluoUser() ? ` style="display:none;"` : ``}>
             <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
@@ -10941,7 +10812,7 @@
         updModeloInputForWarn.addEventListener("input", ()=>{ updModelWarn.style.display = "none"; });
       }
       wireColorDot(spaceInfoBox.querySelector("#updSpaceNewColor"), spaceInfoBox.querySelector("#updSpaceNewColorDot"));
-      wireCirculacionToggle(spaceInfoBox.querySelector("#updSpaceNewCirculacionToggle"), spaceInfoBox.querySelector("#updSpaceNewCirculacion"));
+      wireCirculacionToggle(spaceInfoBox.querySelector("#updSpaceNewCirculacionToggle"), spaceInfoBox.querySelector("#updSpaceNewCirculacion"), spaceInfoBox.querySelector("#updSpaceNewCirculacionError"));
       wireLlaveToggle(spaceInfoBox.querySelector("#updSpaceNewLlaveToggle"), spaceInfoBox.querySelector("#updSpaceNewLlave"), spaceInfoBox.querySelector("#updSpaceNewLlaveError"));
       // Indicador de progreso: se recalcula solo con cualquier tecleo o
       // toque dentro del formulario (delegado en addBox, así cubre todos
@@ -11089,7 +10960,7 @@
         const editModeloInput = spaceInfoBox.querySelector("#spaceEditModelo");
         const editCampoInput = spaceInfoBox.querySelector("#spaceEditCampo");
         wireColorDot(spaceInfoBox.querySelector("#spaceEditColor"), spaceInfoBox.querySelector("#spaceEditColorDot"));
-        wireCirculacionToggle(spaceInfoBox.querySelector("#spaceEditCirculacionToggle"), spaceInfoBox.querySelector("#spaceEditCirculacion"));
+        wireCirculacionToggle(spaceInfoBox.querySelector("#spaceEditCirculacionToggle"), spaceInfoBox.querySelector("#spaceEditCirculacion"), spaceInfoBox.querySelector("#spaceEditCirculacionError"));
         wireLlaveToggle(spaceInfoBox.querySelector("#spaceEditLlaveToggle"), spaceInfoBox.querySelector("#spaceEditLlave"), spaceInfoBox.querySelector("#spaceEditLlaveError"));
         const editAsegWarn = spaceInfoBox.querySelector("#spaceEditAsesorWarn");
         if(editAsegInput){
@@ -11186,6 +11057,12 @@
           if(isAvaluoUser() && !newAseguradora){
             showToast("Ingresá el nombre del asesor");
             if(editAsegInput) editAsegInput.focus();
+            return;
+          }
+          if(!newCirculacion){
+            const err = spaceInfoBox.querySelector("#spaceEditCirculacionError");
+            if(err) err.style.display = "block";
+            showToast("Marcá si puede circular o no");
             return;
           }
           if(!newLlave){
@@ -11405,7 +11282,6 @@
       const spaceDupWarn = spaceInfoBox.querySelector("#updSpaceDupWarn");
       const spaceSimilarWarn = spaceInfoBox.querySelector("#updSpaceSimilarWarn");
       const spaceAddBtn = spaceInfoBox.querySelector("#updSpaceAddBtn");
-      wirePlateOcrButton(spaceInfoBox.querySelector("#updSpaceNewPlacaScanBtn"), spacePlacaInput, spaceInfoBox.querySelector("#updSpaceNewPlacaScanInput"));
 
       function checkSpacePlateInfo(){
         const v = normalizePlate(spacePlacaInput.value);
@@ -11489,22 +11365,28 @@
           if(asegField) asegField.focus();
           return;
         }
+        if(!circulacion){
+          const err = spaceInfoBox.querySelector("#updSpaceNewCirculacionError");
+          if(err) err.style.display = "block";
+          showToast("Marcá si puede circular o no");
+          return;
+        }
         if(!llave){
           const err = spaceInfoBox.querySelector("#updSpaceNewLlaveError");
           if(err) err.style.display = "block";
           showToast("Marcá dónde está la llave");
           return;
         }
-        // No son obligatorios como Placa/Modelo/Llave (ni Asesor, para la
-        // cuenta AVALUO donde ya se bloqueó arriba), pero para que no se
-        // les pasen por alto sin querer, se pregunta puntualmente por
-        // cada uno que haya quedado vacío antes de guardar — así la
-        // persona decide a propósito si falta ese dato o si de verdad no
-        // aplica, en vez de que quede en blanco por distracción.
+        // No son obligatorios como Placa/Modelo/Circulación/Llave (ni
+        // Asesor, para la cuenta AVALUO donde ya se bloqueó arriba), pero
+        // para que no se les pasen por alto sin querer, se pregunta
+        // puntualmente por cada uno que haya quedado vacío antes de
+        // guardar — así la persona decide a propósito si falta ese dato
+        // o si de verdad no aplica, en vez de que quede en blanco por
+        // distracción.
         const faltantes = [];
         if(!isAvaluoUser() && !aseguradora.trim()) faltantes.push("el Asesor");
         if(!color.trim()) faltantes.push("el Color");
-        if(!circulacion) faltantes.push("si puede circular");
         if(faltantes.length){
           const lista = faltantes.length === 1 ? faltantes[0] : faltantes.slice(0,-1).join(", ") + " y " + faltantes[faltantes.length-1];
           if(!confirm(`No completaste ${lista}. ¿Guardar igual sin ese dato?`)) return;
