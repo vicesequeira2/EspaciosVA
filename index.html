@@ -1153,6 +1153,18 @@
   .ccRecentItem{ display:block; width:100%; text-align:left; padding:10px 12px; margin-bottom:6px; border-radius:10px; border:1px solid #d7d8d3; background:var(--surface); color:inherit; cursor:pointer; font:inherit; }
   .ccRecentItem.ok{ border-left:5px solid #2e9d5f; }
   .ccRecentItem.bad{ border-left:5px solid #d6453a; }
+  #netModal, #mergeModal{ z-index:90; align-items:flex-start; overflow-y:auto; }
+  #netModal .modalCard, #mergeModal .modalCard{ max-width:400px; width:100%; }
+  .netBtn{ font-weight:800; }
+  .netBtn.netWarn{ background:#fff4d6 !important; color:#7a5a00 !important; }
+  .netBtn.netBad{ background:#fde7e4 !important; color:#a1281f !important; }
+  .netItem{ padding:8px 10px; border-radius:10px; border:1px solid #d7d8d3; margin-bottom:6px; font-size:0.88rem; }
+  .mergeBulk{ display:flex; gap:8px; margin-bottom:10px; }
+  .mergeBulk button{ flex:1; padding:9px 6px; border-radius:10px; border:1px solid #b9bbb4; background:var(--surface-3,#f3f3f0); color:inherit; font-weight:700; font-size:0.85rem; cursor:pointer; }
+  .mergeRow{ border:1px solid #d7d8d3; border-radius:12px; padding:10px; margin-bottom:8px; }
+  .mergeRow strong{ display:block; margin-bottom:6px; }
+  .mergeRow button{ display:block; width:100%; text-align:left; margin-top:6px; padding:9px 10px; border-radius:10px; border:2px solid #b9bbb4; background:#f3f3f0; color:#1b1e21; font:inherit; font-size:0.85rem; cursor:pointer; }
+  .mergeRow button.sel{ border-color:#1b6b3f; background:#e3f5ea; color:#1b6b3f; font-weight:700; }
   #avaAddModal{ z-index:68; align-items:flex-start; overflow-y:auto; }
   #avaAddModal .modalCard{ max-width:380px; width:100%; }
   .avaIn{ width:100%; box-sizing:border-box; padding:11px; border-radius:10px; border:1px solid #b9bbb4; font:inherit; background:var(--surface); color:inherit; }
@@ -1289,6 +1301,19 @@
     padding:20px;
   }
   .modalOverlay.show{display:flex;}
+  /* Confirmación grande de "mover de lugar" (todos los usuarios) */
+  #dupModal{ z-index:95; }
+  #dupModal .modalCard{ text-align:center; padding:26px 20px 20px; }
+  #dupModal h3{ font-size:1.45rem; line-height:1.25; margin:0 0 12px; }
+  #dupModal .bigPlate{ display:inline-block; font-size:2.1rem; font-weight:800; letter-spacing:.08em; padding:6px 18px; border:3px solid currentColor; border-radius:12px; margin:4px 0 14px; }
+  #dupModal .bigMoveBox{ border-radius:14px; padding:12px 14px; background:rgba(127,127,127,.14); }
+  #dupModal .bigMoveBox small{ display:block; font-size:.78rem; letter-spacing:.1em; opacity:.7; font-weight:700; }
+  #dupModal .bigMoveBox b{ display:block; font-size:1.35rem; margin-top:2px; }
+  #dupModal .bigMoveBox.to{ background:rgba(46,160,67,.2); }
+  #dupModal .bigArrow{ font-size:1.9rem; line-height:1.3; }
+  #dupModal .bigHint{ font-size:1rem; margin-top:12px; opacity:.85; }
+  #dupModal .modalActions{ margin-top:18px; }
+  #dupModal .modalActions button{ font-size:1.15rem; padding:15px 10px; }
   #refPasilloModal{ z-index:80; }
   #refPasilloInput{ width:100%; box-sizing:border-box; margin-top:6px; }
   .refPasilloSugs{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 4px; }
@@ -1900,6 +1925,44 @@
   }
   .updaterCard h2{ margin:0 0 12px; font-size:1rem; }
   .updaterInfoRow{ display:flex; justify-content:space-between; font-size:0.85rem; padding:6px 0; border-bottom:1px solid var(--border-soft); }
+  #viewDetailModal .modalCard{ max-width:440px; }
+  .cvHero{ position:relative; overflow:hidden; border-radius:16px 16px 0 0; padding:18px 18px 46px;
+    background:linear-gradient(120deg,#1e2326 0%,#1e2326 52%,var(--cv) 165%); color:#fff; }
+  .cvHeroIcon{ position:absolute; right:14px; top:8px; font-size:4.2rem; opacity:0.9; line-height:1; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+  .cvHeroTag{ font-size:0.66rem; letter-spacing:0.18em; opacity:0.7; font-weight:700; }
+  .cvHeroModel{ font-size:1.5rem; font-weight:800; margin-top:4px; line-height:1.1; max-width:62%; }
+  .cvHeroSub{ margin-top:6px; font-size:0.85rem; opacity:0.9; display:flex; align-items:center; gap:6px; }
+  .cvPlateRow{ display:flex; align-items:flex-end; gap:12px; margin:-34px 0 10px 12px; position:relative; }
+  .cvPlate{ background:#4fcfa8; border:3px solid #1d8a68; border-radius:12px; padding:6px 14px 5px; text-align:center; box-shadow:0 4px 10px rgba(0,0,0,0.25); min-width:148px; }
+  .cvPlateTop{ display:flex; align-items:center; justify-content:center; gap:6px; font-size:0.58rem; letter-spacing:0.22em; font-weight:800; color:#0f4a3a; }
+  .cvFlag{ display:inline-block; width:20px; height:12px; border-radius:2px; background:linear-gradient(#002b7f 0 20%,#fff 20% 40%,#ce1126 40% 60%,#fff 60% 80%,#002b7f 80%); }
+  .cvPlateNum{ font-size:2rem; font-weight:900; letter-spacing:0.08em; color:#0f4a3a; line-height:1.05; font-family:"Arial Black",Arial,sans-serif; }
+  .cvPlateBottom{ font-size:0.5rem; letter-spacing:0.3em; font-weight:800; color:#0f4a3a; }
+  .cvSince{ font-size:0.82rem; font-weight:800; padding:6px 10px; border-radius:10px; margin-bottom:4px; }
+  .cvSince small{ display:block; font-weight:600; opacity:0.8; }
+  .cvSince.recency-fresh{ background:#eaf5ee; color:#2e7d4f; }
+  .cvSince.recency-recent{ background:#fff6e0; color:#8a6a1c; }
+  .cvSince.recency-stale{ background:#fbeae8; color:#a13d33; }
+  .cvSince.recency-none{ background:var(--surface-2); color:var(--muted); }
+  .cvChips{ display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 4px; }
+  .cvChip{ display:inline-block; padding:6px 10px; border-radius:8px; font-size:0.8rem; font-weight:800; border:1px solid transparent; }
+  .cvGood{ background:#e3f5ea; color:#1b6b3f; border-color:#bfe3cd; }
+  .cvBad{ background:#fde7e4; color:#a1281f; border-color:#f3c0ba; }
+  .cvInfo{ background:var(--surface-2); color:var(--ink); border-color:var(--border-soft); }
+  .cvSectionTitle{ margin:16px 0 6px; font-size:0.7rem; letter-spacing:0.2em; font-weight:800; color:var(--muted); }
+  .cvBlock{ border:1px solid var(--border-soft); border-left:5px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--surface); }
+  .cvBlockMain{ font-size:1.05rem; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px; }
+  .cvBlockMain .dot{ width:9px; height:9px; border-radius:50%; flex:none; }
+  .cvBlockSub{ font-size:0.85rem; color:var(--muted); font-weight:600; margin-top:2px; }
+  .cvAsesor{ display:flex; align-items:center; gap:10px; }
+  .cvAvatar{ width:30px !important; height:30px !important; font-size:0.9rem !important; margin:0 !important; }
+  .cvHist{ display:flex; flex-direction:column; gap:6px; }
+  .cvHistItem{ border:1px solid var(--border-soft); border-radius:10px; padding:8px 12px; background:var(--surface); }
+  .cvHistFirst{ border-left:5px solid #2b4cc7; }
+  .cvHistBadge{ display:block; font-size:0.62rem; letter-spacing:0.14em; color:var(--muted); font-weight:800; }
+  .cvHistMain{ font-weight:800; font-size:0.9rem; color:var(--ink); }
+  .cvHistItem small{ color:var(--muted); font-weight:600; }
+  .cvHistEmpty{ color:var(--muted); font-size:0.85rem; padding:6px 2px; }
   .vehicleDetailHeader{
     display:flex; align-items:center; gap:12px;
     background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface) 100%);
@@ -2871,6 +2934,7 @@
     </div>
     <div class="headerBtns">
       <button id="qrScanBtn" class="qrHeaderBtn" title="Recorrido con QR">🔳 QR</button>
+      <button id="netBtn" class="netBtn" title="Estado de la conexión">🟢</button>
       <button id="refreshBtn" title="Actualizar">🔄</button>
       <button id="themeToggleBtn" title="Cambiar tema">🌙</button>
       <div class="adminMenuWrap" id="adminMenuWrap" style="display:none;">
@@ -3016,16 +3080,44 @@
 <div id="qrPrintSheet"></div>
 
 
+<div class="modalOverlay" id="netModal">
+  <div class="modalCard">
+    <h3 id="netTitle">Estado de la conexión</h3>
+    <p id="netStatusTxt" class="ccSub"></p>
+    <div id="netList"></div>
+    <div class="modalActions" style="flex-direction:column; gap:8px;">
+      <button class="primaryBtn" id="netRetryBtn">Reintentar ahora</button>
+      <button class="secondaryBtn" id="netCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalOverlay" id="mergeModal">
+  <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
+    <h3>⚠️ Cambios que chocaron</h3>
+    <p class="ccSub">Vos y otra persona cambiaron estos vehículos distinto mientras no había conexión. Elegí cuál queda en cada uno. Todo lo demás ya se unió solo.</p>
+    <div class="mergeBulk">
+      <button type="button" id="mergeAllMine">Todos los míos</button>
+      <button type="button" id="mergeAllTheirs">Todos los del otro</button>
+    </div>
+    <div id="mergeList"></div>
+    <div class="modalActions" style="flex-direction:column; gap:8px;">
+      <button class="primaryBtn" id="mergeApply" disabled>Aplicar</button>
+      <button class="secondaryBtn" id="mergeCancel">Resolver después</button>
+    </div>
+  </div>
+</div>
+
 <div class="modalOverlay" id="avaAddModal">
   <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
     <h3>➕ Vehículo nuevo</h3>
     <div id="avaAddPlate" class="historyItem"></div>
     <p class="ccSub" style="margin:6px 0;">Esta placa no está en el inventario. Completá los datos y después elegís el campo.</p>
-    <label class="ccLbl" for="avaAsesor">🧑‍💼 Asesor *</label>
+    <label class="ccLbl" for="avaAsesor" id="avaAsesorLbl">🧑‍💼 Asesor *</label>
     <input type="text" id="avaAsesor" class="avaIn" list="asesorSuggestions" maxlength="60" autocomplete="off">
     <label class="ccLbl" for="avaModelo">🚘 Modelo *</label>
     <input type="text" id="avaModelo" class="avaIn" list="modelSuggestions" maxlength="60" autocomplete="off">
-    <label class="ccLbl" for="avaColor">🎨 Color</label>
+    <label class="ccLbl" for="avaColor" id="avaColorLbl">🎨 Color</label>
     <input type="text" id="avaColor" class="avaIn" list="colorSuggestions" maxlength="40" autocomplete="off">
     <label class="ccLbl">¿Puede circular? *</label>
     <div class="ccChoice" id="avaCirc">
@@ -3090,10 +3182,10 @@
 
 <div class="modalOverlay" id="dupModal">
   <div class="modalCard">
-    <h3 id="dupModalTitle">Placa ya registrada</h3>
-    <p id="dupModalMsg"></p>
+    <h3 id="dupModalTitle">⚠️ ¿Seguro que querés mover esta placa de lugar?</h3>
+    <div id="dupModalMsg"></div>
     <div class="modalActions">
-      <button class="primaryBtn" id="dupModalMove">Mover aquí</button>
+      <button class="primaryBtn" id="dupModalMove">Sí, mover</button>
       <button class="secondaryBtn" id="dupModalCancel">Cancelar</button>
     </div>
   </div>
@@ -4066,6 +4158,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   function puedeUsarQr(){
     return !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion"));
   }
+  // Búsqueda puede escanear solo para AGREGAR un vehículo nuevo (nunca mover/borrar).
+  function esBusquedaAgrega(){ return !!(currentUser && currentUser.role === "consulta"); }
   function esHoy(iso){
     if(!iso) return false;
     const d = new Date(iso);
@@ -4543,7 +4637,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(video) video.srcObject = null;
   }
   function abrirRecorridoQr(modo){
-    if(!puedeUsarQr() && !((modo === "buscar" || modo === "cc") && puedeCC())) return;
+    if(!puedeUsarQr() && !((modo === "buscar" || modo === "cc") && puedeCC()) && !(modo === "ava" && esBusquedaAgrega())) return;
     qrModo = modo === "buscar" ? "buscar" : (modo === "cc" ? "cc" : (modo === "ava" ? "ava" : "recorrido"));
     const sinRecorrido = qrModo !== "recorrido";
     const ov = document.getElementById("qrScanModal");
@@ -4652,6 +4746,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     try{ localStorage.setItem("qr_preguntar_mover", e.target.checked ? "1" : "0"); }catch(err){}
   });
   function qrZonasDestino(){
+    if(esBusquedaAgrega()) return visibleZonesForCurrentUser();
     return (currentUser.allowedZones && currentUser.allowedZones.length)
       ? allowedZonesForCurrentUser()
       : [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO];
@@ -4729,7 +4824,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     qrPausa = false;
   }
   async function qrMoverVehiculo(found, destZone, destCampo){
-    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))) return false;
+    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin" || currentUser.role === "consulta"))) return false;
     if(currentUser.role === "actualizacion" && destZone !== SIN_UBICACION_KEY){
       const permitidas = allowedZonesForCurrentUser();
       if(permitidas.length && !permitidas.some(z => z.key === destZone)){
@@ -4798,7 +4893,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(destino && destino.capacidad && destino.plates.length >= destino.capacidad){
       if(!confirm(`${zoneInfo(z).label} · ${c} ya está lleno (${destino.plates.length}/${destino.capacidad}). ¿Mover ${e.plate} igual?`)) return;
     }
-    await runGuarded(ev.currentTarget, "Moviendo…", async ()=>{
+    // Confirmación grande antes de mover de lugar (todos los usuarios)
+    const btnMover = ev.currentTarget; // currentTarget se pierde después de un await
+    const desdeCampo = state.zones[found.zoneKey][found.campoIdx].campo;
+    if((await askMoveOrCancel(e.plate, zoneInfo(found.zoneKey).label, desdeCampo, zoneInfo(z).label, c, true)) !== "move") return;
+    await runGuarded(btnMover, "Moviendo…", async ()=>{
       const ok = await qrMoverVehiculo(found, z, c);
       const placa = e.plate;
       qrCerrarMover();
@@ -5445,6 +5544,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           needsResave = mergeRecepcionSalidaIfNeeded(state) || needsResave;
           needsResave = migrateRecepcionToCampos(state) || needsResave;
           needsResave = migrateAtrasPasilloIfNeeded(state) || needsResave;
+          // cambios hechos sin señal que quedaron en este celular: se unen con lo del servidor
+          if(await aplicarPendientesAlCargar(shared.value, state)) needsResave = true;
           if(needsResave) await saveState(true);
           return;
         }
@@ -5518,6 +5619,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
     if(!storageAvailable){
       if(!storageWarned){ storageWarned = true; showStorageBanner(); }
+      persistirPendientes();
       renderMeta();
       return "offline";
     }
@@ -5546,9 +5648,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         const timeoutPromise = new Promise((resolve)=> setTimeout(()=> resolve(null), 2500));
         const actual = await Promise.race([window.storage.get(STORAGE_KEY, true).catch(()=>null), timeoutPromise]);
         if(actual && actual.value && actual.value !== lastKnownServerStateRaw){
-          showRefreshNeededBanner("⚠️ Alguien más guardó un cambio justo antes que vos — tu cambio NO se guardó.");
-          renderMeta();
-          return "conflict";
+          // Otra sesión guardó en el medio: en vez de rechazar el cambio, se
+          // unen los dos (por vehículo). Solo se pregunta lo que chocó de verdad.
+          const unido = await fusionarConServidor(lastKnownServerStateRaw, actual.value);
+          if(!unido){
+            showRefreshNeededBanner("⚠️ Alguien más guardó un cambio justo antes que vos — tu cambio NO se guardó.");
+            persistirPendientes();
+            renderMeta();
+            return "conflict";
+          }
         }
       }
       // El guardado real también necesita un límite — si no, sin señal
@@ -5561,6 +5669,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         throw new Error("Unexpected response type");
       }
       lastKnownServerStateRaw = JSON.stringify(state);
+      limpiarPendientes();
       importantToastUntil = 0; // el guardado funciono: ya no hace falta proteger un aviso viejo de choque/sin-conexion
       hideRefreshNeededBanner();
       invalidateResumenRowsCache(); // el inventario cambió de verdad — lo que había en caché ya no sirve
@@ -5580,6 +5689,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       // revierte, no queda nada que el reintento automático pueda llegar
       // a guardar más tarde.
       console.error("Error guardando, se reintentará automáticamente", e);
+      persistirPendientes();
       if(!pendingSaveRetry){
         pendingSaveRetry = true;
         showToast("Sin conexión con el guardado — reintentando solo...", 4000, true);
@@ -5591,6 +5701,289 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     renderMeta();
     return true;
   }
+
+
+  // =====================================================================
+  //  Sin conexión: cola de cambios pendientes + unión automática + estado
+  // =====================================================================
+  // Cuando un guardado falla por falta de señal, el estado completo con los
+  // cambios de esta persona se guarda en el celular (localStorage), junto con
+  // la última versión del servidor que se había visto ("base"). Así los
+  // cambios sobreviven aunque se cierre la app. Al haber señal se comparan
+  // 3 versiones por vehículo (base · mía · del servidor): si nadie más tocó
+  // ese vehículo, mi cambio se aplica; si lo tocaron los dos igual, no pasa
+  // nada; y solo si lo cambiaron DISTINTO se le pregunta a la persona.
+  const PEND_KEY = "inv_pend_v1";
+  const PEND_META_KEY = "inv_pend_meta_v1";
+  let netConflicto = false;
+  let fusionEnCurso = false;
+
+  function fsMeta(e){ return e ? JSON.stringify({ s: e.lastSeen || "", q: !!e.qrImpresa }) : ""; }
+  function fsCore(e){
+    if(!e) return "";
+    const c = Object.assign({}, e); delete c.lastSeen; delete c.qrImpresa;
+    return JSON.stringify(c);
+  }
+  function fsIndexar(st){
+    const idx = new Map();
+    Object.keys((st && st.zones) || {}).forEach(zk=>{
+      (st.zones[zk] || []).forEach(c=>{
+        const reg = (arr, area, fila)=> (arr || []).forEach(p=>{
+          if(p && p.plate) idx.set(normalizePlate(p.plate) || String(p.plate), { zk, campo: c.campo, area: area || "", fila: fila || "", e: p });
+        });
+        reg(c.plates);
+        (c.areas || []).forEach(a=>{ reg(a.plates, a.area); (a.filas || []).forEach(f=> reg(f.plates, a.area, f.fila)); });
+      });
+    });
+    return idx;
+  }
+  function fsSame(a, b){
+    if(!a && !b) return true;
+    if(!a || !b) return false;
+    return a.zk === b.zk && String(a.campo) === String(b.campo) && a.area === b.area && a.fila === b.fila && fsCore(a.e) === fsCore(b.e);
+  }
+  function fsDesc(info){
+    if(!info) return "fuera del inventario";
+    return `${zoneInfo(info.zk).label} · ${info.campo}${info.area ? " · " + info.area : ""}${info.fila ? " · " + info.fila : ""}`;
+  }
+  function fsContenedor(st, loc, crear){
+    if(!st.zones) st.zones = {};
+    let arr = st.zones[loc.zk];
+    if(!arr){ if(!crear) return null; arr = st.zones[loc.zk] = []; }
+    let c = arr.find(x => String(x.campo) === String(loc.campo));
+    if(!c){ if(!crear) return null; c = { campo: loc.campo, plates: [] }; arr.push(c); }
+    if(!loc.area){ c.plates = c.plates || []; return c.plates; }
+    c.areas = c.areas || [];
+    let a = c.areas.find(x => x.area === loc.area);
+    if(!a){ if(!crear) return null; a = { area: loc.area, plates: [], filas: [] }; c.areas.push(a); }
+    if(!loc.fila){ a.plates = a.plates || []; return a.plates; }
+    a.filas = a.filas || [];
+    let f = a.filas.find(x => x.fila === loc.fila);
+    if(!f){ if(!crear) return null; f = { fila: loc.fila, plates: [] }; a.filas.push(f); }
+    f.plates = f.plates || [];
+    return f.plates;
+  }
+  function fsQuitar(st, clave, info){
+    const arr = info && fsContenedor(st, info, false);
+    if(!arr) return;
+    const i = arr.findIndex(p => (normalizePlate(p.plate) || String(p.plate)) === clave);
+    if(i >= 0) arr.splice(i, 1);
+  }
+  function fsPoner(st, info, entry){
+    fsContenedor(st, info, true).unshift(JSON.parse(JSON.stringify(entry)));
+  }
+  function fsAplicar(merged, clave, t, m){
+    if(t) fsQuitar(merged, clave, t);
+    if(m) fsPoner(merged, m, m.e);
+  }
+  // Lista legible de lo que cambió entre la base y "mine" (para el contador).
+  function fsDiff(baseObj, mineObj){
+    const B = fsIndexar(baseObj), M = fsIndexar(mineObj), items = [];
+    new Set([...B.keys(), ...M.keys()]).forEach(k=>{
+      const b = B.get(k), m = M.get(k);
+      if(!fsSame(b, m)){
+        items.push({ plate: k, desc: !m ? `${k} · quitada` : (!b ? `${k} · agregada en ${fsDesc(m)}` : `${k} → ${fsDesc(m)}`) });
+      } else if(b && m && fsMeta(b.e) !== fsMeta(m.e)){
+        items.push({ plate: k, desc: `${k} · visto` });
+      }
+    });
+    return items;
+  }
+  function fusionarEstados(baseObj, mineObj, theirsObj){
+    const B = fsIndexar(baseObj), M = fsIndexar(mineObj), T = fsIndexar(theirsObj);
+    const merged = JSON.parse(JSON.stringify(theirsObj));
+    const conflictos = [];
+    new Set([...B.keys(), ...M.keys(), ...T.keys()]).forEach(k=>{
+      const b = B.get(k), m = M.get(k), t = T.get(k);
+      if(fsSame(b, m)){
+        // Solo cambió información de "visto hoy" / etiqueta impresa: se suma sin chocar con nada
+        if(b && m && t && fsMeta(b.e) !== fsMeta(m.e)){
+          const dest = fsContenedor(merged, t, false);
+          const ent = dest && dest.find(p => (normalizePlate(p.plate) || String(p.plate)) === k);
+          if(ent){
+            if(m.e.lastSeen && (!ent.lastSeen || new Date(m.e.lastSeen) > new Date(ent.lastSeen))) ent.lastSeen = m.e.lastSeen;
+            if(m.e.qrImpresa) ent.qrImpresa = m.e.qrImpresa;
+          }
+        }
+        return;
+      }
+      if(fsSame(b, t)){ fsAplicar(merged, k, t, m); return; } // nadie más lo tocó
+      if(fsSame(m, t)) return;                                 // los dos hicieron lo mismo
+      conflictos.push({ k, b, m, t });
+    });
+    // capacidades de campos: se suman las que cambié yo si nadie más las cambió
+    const cb = baseObj.capacities || {}, cm = mineObj.capacities || {}, ct = theirsObj.capacities || {};
+    Object.keys(cm).forEach(z=>{
+      if(JSON.stringify(cm[z]) !== JSON.stringify(cb[z]) && JSON.stringify(ct[z]) === JSON.stringify(cb[z])){
+        if(!merged.capacities) merged.capacities = {};
+        merged.capacities[z] = cm[z];
+      }
+    });
+    merged.updatedAt = new Date().toISOString();
+    return { merged, conflictos };
+  }
+  function resolverConflictos(conflictos){
+    return new Promise((resolve)=>{
+      const modal = document.getElementById("mergeModal");
+      const list = document.getElementById("mergeList");
+      const apply = document.getElementById("mergeApply");
+      const elecc = new Map();
+      list.innerHTML = conflictos.map(c=>`
+        <div class="mergeRow" data-k="${escapeAttrLike(c.k)}">
+          <strong>🚗 ${escapeHtml(c.k)}</strong>
+          <button type="button" data-v="mine">Mi cambio: ${escapeHtml(c.m ? fsDesc(c.m) : "lo quité del inventario")}</button>
+          <button type="button" data-v="theirs">El otro: ${escapeHtml(c.t ? fsDesc(c.t) : "lo quitó del inventario")}</button>
+        </div>`).join("");
+      function pintar(){
+        list.querySelectorAll(".mergeRow").forEach(r=>{
+          const v = elecc.get(r.dataset.k);
+          r.querySelectorAll("button").forEach(b=> b.classList.toggle("sel", b.dataset.v === v));
+        });
+        apply.disabled = elecc.size < conflictos.length;
+      }
+      function onList(ev){ const b = ev.target.closest("button[data-v]"); if(!b) return; elecc.set(b.closest(".mergeRow").dataset.k, b.dataset.v); pintar(); }
+      function todos(v){ conflictos.forEach(c => elecc.set(c.k, v)); pintar(); }
+      const aM = ()=> todos("mine"), aT = ()=> todos("theirs");
+      function cerrar(v){
+        modal.classList.remove("show");
+        list.removeEventListener("click", onList);
+        document.getElementById("mergeAllMine").removeEventListener("click", aM);
+        document.getElementById("mergeAllTheirs").removeEventListener("click", aT);
+        apply.removeEventListener("click", onApply);
+        document.getElementById("mergeCancel").removeEventListener("click", onCancel);
+        resolve(v);
+      }
+      function onApply(){ cerrar(elecc); }
+      function onCancel(){ cerrar(null); }
+      list.addEventListener("click", onList);
+      document.getElementById("mergeAllMine").addEventListener("click", aM);
+      document.getElementById("mergeAllTheirs").addEventListener("click", aT);
+      apply.addEventListener("click", onApply);
+      document.getElementById("mergeCancel").addEventListener("click", onCancel);
+      pintar();
+      modal.classList.add("show");
+    });
+  }
+  // Une "mine" con "theirs" y deja el resultado en el objeto `destino`.
+  // Devuelve true si quedó unido, false si la persona dejó choques sin resolver.
+  async function unirEn(destino, baseObj, mineObj, theirsObj){
+    const res = fusionarEstados(baseObj, mineObj, theirsObj);
+    if(res.conflictos.length){
+      const elecc = await resolverConflictos(res.conflictos);
+      if(!elecc) return false;
+      res.conflictos.forEach(c=>{ if(elecc.get(c.k) === "mine") fsAplicar(res.merged, c.k, c.t, c.m); });
+    }
+    Object.keys(destino).forEach(k => delete destino[k]);
+    Object.assign(destino, res.merged);
+    return true;
+  }
+  async function fusionarConServidor(baseRaw, theirsRaw){
+    if(fusionEnCurso) return false;
+    fusionEnCurso = true;
+    try{
+      const mineObj = JSON.parse(JSON.stringify(state));
+      const ok = await unirEn(state, JSON.parse(baseRaw), mineObj, JSON.parse(theirsRaw));
+      if(!ok){ netConflicto = true; netActualizar(); return false; }
+      lastKnownServerStateRaw = theirsRaw;
+      netConflicto = false;
+      invalidateResumenRowsCache();
+      showToast("🔀 Se unieron tus cambios con los de otra persona.", 4500, true);
+      setTimeout(()=>{ try{ if(currentUser && currentUser.role === "actualizacion") renderUpdaterPanel(); else renderAll(); }catch(e){} }, 400);
+      return true;
+    }catch(e){
+      console.error("No se pudo unir", e);
+      return false;
+    }finally{
+      fusionEnCurso = false;
+    }
+  }
+  function persistirPendientes(){
+    try{
+      if(lastKnownServerStateRaw === null || !state) return;
+      const baseObj = JSON.parse(lastKnownServerStateRaw);
+      let items = fsDiff(baseObj, state);
+      if(!items.length){
+        const a = Object.assign({}, state, { updatedAt: "" }), b2 = Object.assign({}, baseObj, { updatedAt: "" });
+        if(JSON.stringify(a) !== JSON.stringify(b2)) items = [{ plate: "", desc: "Ajustes de campos o capacidades" }];
+      }
+      if(!items.length){ limpiarPendientes(); return; }
+      localStorage.setItem(PEND_KEY, JSON.stringify({ base: lastKnownServerStateRaw, mine: JSON.stringify(state), ts: Date.now() }));
+      localStorage.setItem(PEND_META_KEY, JSON.stringify({ count: items.length, items: items.slice(0, 40), ts: Date.now() }));
+    }catch(e){ /* sin espacio o bloqueado: igual queda el reintento en memoria */ }
+    netActualizar();
+  }
+  function limpiarPendientes(){
+    try{ localStorage.removeItem(PEND_KEY); localStorage.removeItem(PEND_META_KEY); }catch(e){}
+    netConflicto = false;
+    netActualizar();
+  }
+  function leerPendientes(){
+    try{ const r = localStorage.getItem(PEND_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; }
+  }
+  function leerPendMeta(){
+    try{ const r = localStorage.getItem(PEND_META_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; }
+  }
+  // Al cargar datos del servidor: si quedaron cambios sin enviar de antes, se unen.
+  async function aplicarPendientesAlCargar(theirsRaw, theirsObj){
+    const pend = leerPendientes();
+    if(!pend) return false;
+    try{
+      const mineObj = JSON.parse(pend.mine);
+      if(pend.base === theirsRaw){
+        Object.keys(theirsObj).forEach(k => delete theirsObj[k]);
+        Object.assign(theirsObj, mineObj);
+        return true;
+      }
+      const ok = await unirEn(theirsObj, JSON.parse(pend.base), mineObj, JSON.parse(JSON.stringify(theirsObj)));
+      if(!ok){ netConflicto = true; netActualizar(); showToast("Quedaron cambios pendientes sin resolver.", 5000, true); return false; }
+      showToast("🔀 Tus cambios pendientes se unieron con los de otra persona.", 4500, true);
+      return true;
+    }catch(e){ console.error("Pendientes ilegibles", e); return false; }
+  }
+  function netActualizar(){
+    const b = document.getElementById("netBtn");
+    if(!b) return;
+    const meta = leerPendMeta();
+    const n = meta ? meta.count : 0;
+    const enLinea = navigator.onLine !== false;
+    let icono = "🟢", clase = "", titulo = "En línea · todo guardado";
+    if(netConflicto){ icono = "🔴"; clase = "netBad"; titulo = `${n} cambio(s) sin resolver`; }
+    else if(n){ icono = "🟠"; clase = "netWarn"; titulo = enLinea ? `${n} cambio(s) por enviar` : `Sin señal · ${n} cambio(s) guardados en este celular`; }
+    else if(!enLinea){ icono = "🟠"; clase = "netWarn"; titulo = "Sin señal"; }
+    b.textContent = n ? `${icono} ${n}` : icono;
+    b.className = "netBtn" + (clase ? " " + clase : "");
+    b.title = titulo;
+  }
+  function netAbrir(){
+    const meta = leerPendMeta();
+    const enLinea = navigator.onLine !== false;
+    const t = document.getElementById("netStatusTxt");
+    const list = document.getElementById("netList");
+    if(netConflicto) t.textContent = "🔴 Hay cambios que chocaron con los de otra persona y falta resolverlos. Tocá \"Reintentar ahora\" para elegir cuál queda.";
+    else if(meta && meta.count) t.textContent = enLinea ? "🟠 Hay cambios hechos en este celular que todavía no se enviaron. Se envían solos; podés forzarlo abajo." : "🟠 Sin señal. Estos cambios están guardados en este celular y se envían solos cuando vuelva la conexión.";
+    else t.textContent = enLinea ? "🟢 En línea. Todo lo que hiciste ya está guardado." : "🟠 Sin señal. Podés seguir trabajando: los cambios quedan guardados en este celular.";
+    list.innerHTML = (meta && meta.items || []).map(i=>`<div class="netItem">${escapeHtml(i.desc)}</div>`).join("");
+    document.getElementById("netModal").classList.add("show");
+  }
+  document.getElementById("netBtn").addEventListener("click", netAbrir);
+  document.getElementById("netCloseBtn").addEventListener("click", ()=> document.getElementById("netModal").classList.remove("show"));
+  document.getElementById("netRetryBtn").addEventListener("click", async (ev)=>{
+    const btn = ev.currentTarget; btn.disabled = true;
+    try{
+      const pend = leerPendientes();
+      if(pend && !netConflicto){
+        const r = await saveState(false);
+        if(r === true) showToast("✓ Todo enviado");
+      } else if(pend && netConflicto){
+        // se vuelve a cargar del servidor: ahí se vuelven a unir los pendientes y se pregunta lo que choca
+        await refreshDataFromStorage(false);
+      } else {
+        await refreshDataFromStorage(false);
+      }
+    } finally { btn.disabled = false; netActualizar(); document.getElementById("netModal").classList.remove("show"); }
+  });
+  window.addEventListener("online", ()=>{ netActualizar(); if(leerPendMeta() && !pendingSaveRetry) saveState(false); });
+  window.addEventListener("offline", netActualizar);
 
   let saveRetryAttemptEnCurso = false; // evita que se solapen 2 intentos si uno tarda más que los 6 seg del ciclo
   function scheduleSaveRetry(){
@@ -5606,18 +5999,17 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       if(saveRetryAttemptEnCurso) return; // el intento anterior todavía no terminó (señal muy lenta) — se espera al próximo ciclo
       saveRetryAttemptEnCurso = true;
       try{
-        const setTimeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout")), 8000));
-        const result = await Promise.race([window.storage.set(STORAGE_KEY, JSON.stringify(state), true), setTimeoutPromise]);
-        if(result && typeof result === "object"){
-          lastKnownServerStateRaw = JSON.stringify(state);
-          importantToastUntil = 0; // el guardado funciono: ya no hace falta proteger un aviso viejo de choque/sin-conexion
-          hideRefreshNeededBanner();
-          invalidateResumenRowsCache(); // el inventario cambió de verdad — lo que había en caché ya no sirve
+        // Pasa por saveState (y no por un set directo) para que revise si otra
+        // persona guardó en el medio y una los cambios en vez de pisarlos.
+        const r = await saveState(true);
+        if(r === true){
+          // saveState ya limpió el reintento y avisó "Conexión recuperada"
+        } else if(r === "conflict"){
           pendingSaveRetry = false;
           clearInterval(saveRetryTimer);
           saveRetryTimer = null;
-          showToast("Conexión recuperada: los cambios pendientes ya se guardaron.", 4000);
-          renderMeta();
+        } else {
+          throw new Error("sin conexión");
         }
       }catch(e){
         saveRetryAttempts++;
@@ -5656,6 +6048,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     });
     const d = new Date(state.updatedAt);
     document.getElementById("metaLine").textContent = `${totalVeh} vehículos · ${totalCampos} campos · ${relativeTimeShort(d)}`;
+    netActualizar();
   }
 
   function renderTabs(){
@@ -5968,11 +6361,20 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   // ---- Pantalla principal de la cuenta Avaluo: Agregar vehículo / Búsqueda ----
   let avaVista = "agregar";
+  let avaVistaRol = "";
   function avaSetVista(v){
     avaVista = v;
     const ag = v === "agregar";
     document.getElementById("avaPanel").style.display = ag ? "block" : "none";
-    document.getElementById("updaterPanel").style.display = ag ? "none" : "block";
+    if(esBusquedaAgrega()){
+      // Búsqueda: la pestaña "Búsqueda" es la pantalla normal (Resumen + buscador)
+      document.getElementById("updaterPanel").style.display = "none";
+      document.getElementById("tabs").style.display = ag ? "none" : "";
+      document.getElementById("mainArea").style.display = ag ? "none" : "";
+      document.getElementById("searchWrap").style.display = ag ? "none" : "";
+    } else {
+      document.getElementById("updaterPanel").style.display = ag ? "none" : "block";
+    }
     document.getElementById("avaTabAgregar").classList.toggle("active", ag);
     document.getElementById("avaTabBusqueda").classList.toggle("active", !ag);
     if(ag) avaRenderPanel(true);
@@ -5985,7 +6387,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const valor = previo ? previo.value : "";
     box.innerHTML = `
       <h2>➕ Agregar vehículo</h2>
-      <div class="ccSub">Escribí la placa o escaneá el QR. Si ya está registrada, elegís el campo; si no, la agregás a mano.</div>
+      <div class="ccSub">${esBusquedaAgrega() ? "Escribí la placa o escaneá el QR. Si no está registrada, la agregás eligiendo zona y campo. Si ya está registrada, podés moverla a otro campo (se te pide confirmar). No se pueden borrar vehículos." : "Escribí la placa o escaneá el QR. Si ya está registrada, elegís el campo; si no, la agregás a mano." + (isAvaluoUser() ? "" : " Para recorrer una zona, usá «Por zona».")}</div>
       <div class="ccPlateRow">
         <input type="text" id="avaPanelPlaca" placeholder="PLACA" maxlength="12" autocomplete="off" autocapitalize="characters" value="${escapeAttrLike(valor)}">
         <button type="button" id="avaPanelGo">Continuar</button>
@@ -5998,7 +6400,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     inp.addEventListener("keydown", (ev)=>{ if(ev.key === "Enter"){ ev.preventDefault(); ir(); } });
   }
   function avaContinuar(plateRaw){
-    if(!(currentUser && currentUser.role === "actualizacion")) return;
+    if(!(currentUser && (currentUser.role === "actualizacion" || esBusquedaAgrega()))) return;
     const plate = normalizePlate(plateRaw);
     if(!plate){ showToast("Escribí una placa válida"); return; }
     const found = findPlate(plate);
@@ -6011,20 +6413,25 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const nextBtn = document.getElementById("avaAddNext"), cancelBtn = document.getElementById("avaAddCancel");
     const circ = document.getElementById("avaCirc"), llaveBox = document.getElementById("avaLlave");
     let circulacion = "", llave = "";
+    const asesorReq = !currentUser.showMovedBy;
+    const colorReq = !isAvaluoUser();
+    document.getElementById("avaAsesorLbl").style.display = asesor.style.display = currentUser.showMovedBy ? "none" : "";
+    document.getElementById("avaAsesorLbl").textContent = "🧑‍💼 Asesor *";
+    document.getElementById("avaColorLbl").textContent = colorReq ? "🎨 Color *" : "🎨 Color";
     const reg = (typeof lookupPlateInfo === "function") ? lookupPlateInfo(plate) : null;
     asesor.value = (reg && reg.aseguradora) || ""; modelo.value = (reg && reg.modelo) || ""; color.value = (reg && reg.color) || "";
     document.getElementById("avaAddPlate").innerHTML = `<strong>🚗 ${escapeHtml(plate)}</strong>`;
     function pintar(){
       circ.querySelectorAll(".ccOpt").forEach(b=> b.className = "ccOpt" + (b.dataset.v === circulacion ? (circulacion === "no" ? " sel bad" : " sel ok") : ""));
       llaveBox.querySelectorAll(".ccOpt").forEach(b=> b.className = "ccOpt" + (b.dataset.v === llave ? " sel ok" : ""));
-      nextBtn.disabled = !(asesor.value.trim() && modelo.value.trim() && circulacion && llave);
+      nextBtn.disabled = !((!asesorReq || asesor.value.trim()) && modelo.value.trim() && (!colorReq || color.value.trim()) && circulacion && llave);
     }
     function onCirc(ev){ const b = ev.target.closest(".ccOpt"); if(b){ circulacion = b.dataset.v; pintar(); } }
     function onLlave(ev){ const b = ev.target.closest(".ccOpt"); if(b){ llave = b.dataset.v; pintar(); } }
     function cerrar(){
       modal.classList.remove("show");
       circ.removeEventListener("click", onCirc); llaveBox.removeEventListener("click", onLlave);
-      asesor.removeEventListener("input", pintar); modelo.removeEventListener("input", pintar);
+      asesor.removeEventListener("input", pintar); modelo.removeEventListener("input", pintar); color.removeEventListener("input", pintar);
       nextBtn.removeEventListener("click", onNext); cancelBtn.removeEventListener("click", cerrar);
     }
     function onNext(){
@@ -6033,7 +6440,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       qrAbrirMover({ nuevo: datos });
     }
     circ.addEventListener("click", onCirc); llaveBox.addEventListener("click", onLlave);
-    asesor.addEventListener("input", pintar); modelo.addEventListener("input", pintar);
+    asesor.addEventListener("input", pintar); modelo.addEventListener("input", pintar); color.addEventListener("input", pintar);
     nextBtn.addEventListener("click", onNext); cancelBtn.addEventListener("click", cerrar);
     pintar();
     modal.classList.add("show");
@@ -6149,7 +6556,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     });
   }
 
-  function askMoveOrCancel(plate, fromZoneLabel, fromCampo, toZoneLabel, toCampo){
+  function askMoveOrCancel(plate, fromZoneLabel, fromCampo, toZoneLabel, toCampo, simple){
     return new Promise((resolve)=>{
       // Cierra el teclado del celular antes de mostrar el diálogo, para que
       // los botones "Mover"/"Cancelar" queden visibles y tocables de una,
@@ -6159,7 +6566,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
       const overlay = document.getElementById("dupModal");
       const msg = document.getElementById("dupModalMsg");
-      msg.textContent = `${plate} ya está registrada en ${fromZoneLabel}, campo ${fromCampo}. ¿Se movió a ${toZoneLabel} (campo ${toCampo}), o fue un error al escribir la placa?`;
+      msg.innerHTML = `<div class="bigPlate">${escapeHtml(plate)}</div>
+        <div class="bigMoveBox"><small>UBICACIÓN ACTUAL</small><b>${escapeHtml(fromZoneLabel)} · ${escapeHtml(String(fromCampo))}</b></div>
+        <div class="bigArrow">⬇</div>
+        <div class="bigMoveBox to"><small>NUEVA UBICACIÓN</small><b>${escapeHtml(toZoneLabel)} · ${escapeHtml(String(toCampo))}</b></div>
+        ${simple ? "" : `<div class="bigHint">Esta placa ya estaba registrada. Si no se movió y fue un error al escribirla, tocá Cancelar.</div>`}`;
       overlay.classList.add("show");
       const moveBtn = document.getElementById("dupModalMove");
       const cancelBtn = document.getElementById("dupModalCancel");
@@ -6305,45 +6716,68 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
     const overlay = document.getElementById("viewDetailModal");
     const body = document.getElementById("viewDetailBody");
+    const ccEstado = entry.circulacion === "no"
+      ? `<span class="cvChip cvBad">🚫 Se recomienda que no circule</span>`
+      : (entry.circulacion === "puede" ? `<span class="cvChip cvGood">✅ Puede circular</span>` : "");
+    const llaveChip = entry.llave === "tablero"
+      ? `<span class="cvChip cvInfo">🗂️ Llave en tablero${esPasillo(campoObj.campo) ? "" : " " + escapeHtml(campoObj.campo)}</span>`
+      : (entry.llave === "vehiculo" ? `<span class="cvChip cvInfo">🔑 Llave en el vehículo</span>` : "");
+    const visto = (typeof vistoHoy === "function" && vistoHoy(entry)) ? `<span class="cvChip cvGood">👁️ Visto hoy</span>` : "";
     body.innerHTML = `
-      <div class="vehicleDetailHeader" style="border-left-color:${acento};">
-        <span class="vehicleDetailIconBadge" style="background:${acento}22;"><span class="vehicleDetailIcon">${icono}</span></span>
-        <div>
-          <div class="vehicleDetailPlate">${escapeHtml(entry.plate)}</div>
-          <div class="vehicleDetailZone"><span class="dot" style="background:${zi.color}"></span>${zi.label} · campo ${escapeHtml(campoObj.campo)}</div>
-          ${(esPasillo(campoObj.campo) && entry.referencia) ? `<div><span class="refTag">📍 ${escapeHtml(entry.referencia)}</span></div>` : ""}
+      <div class="cvHero" style="--cv:${acento};">
+        <div class="cvHeroIcon">${icono}</div>
+        <div class="cvHeroTag">VEHÍCULO EN PARQUEO</div>
+        <div class="cvHeroModel">${entry.modelo ? escapeHtml(entry.modelo) : "Sin modelo"}</div>
+        <div class="cvHeroSub">${colorReal ? `<span class="plateColorDot" style="background:${colorReal}"></span> ` : ""}${entry.color ? escapeHtml(entry.color) : "Color sin registrar"}</div>
+      </div>
+      <div class="cvPlateRow">
+        <div class="cvPlate">
+          <div class="cvPlateTop"><span>COSTA RICA</span><i class="cvFlag"></i></div>
+          <div class="cvPlateNum">${escapeHtml(entry.plate)}</div>
+          <div class="cvPlateBottom">CENTROAMERICA</div>
+        </div>
+        <div class="cvSince recency-${tiempoAca.recency}">
+          <div>🕒 ${escapeHtml(tiempoAca.diasTexto || "Sin registro")}</div>
+          <small>desde el ${escapeHtml(tiempoAca.fecha)}</small>
         </div>
       </div>
-      <div class="lastMovedBanner recency-${tiempoAca.recency}">🕒 ${escapeHtml(tiempoAca.diasTexto)} · desde el ${escapeHtml(tiempoAca.fecha)}</div>
+      <div class="cvChips">${ccEstado}${llaveChip}${visto}</div>
       ${ccTagHtml(entry)}${puedeCC() ? `<button type="button" class="ccMiniBtn" data-cc-plate="${escapeAttrLike(entry.plate)}">🛡️ Control de calidad</button>` : ""}
-      <div class="vehicleDetailCard">
-        <div class="vehicleDetailRow">
-          <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🧑‍💼</span>Asesor</span>
-          <strong class="vehicleDetailRowValue">
-            ${asesorInicial ? `<span class="vehicleDetailAvatar" style="background:${avatarColorForName(entry.aseguradora)};">${escapeHtml(asesorInicial)}</span> ` : ""}${entry.aseguradora ? escapeHtml(entry.aseguradora) : "—"}
-          </strong>
-        </div>
-        <div class="vehicleDetailRow">
-          <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🚘</span>Modelo</span>
-          <strong class="vehicleDetailRowValue">${entry.modelo ? escapeHtml(entry.modelo) : "—"}</strong>
-        </div>
-        <div class="vehicleDetailRow">
-          <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🎨</span>Color</span>
-          <strong class="vehicleDetailRowValue">${entry.color ? escapeHtml(entry.color) : "—"}${colorReal ? ` <span class="plateColorDot" style="background:${colorReal}"></span>` : ""}</strong>
-        </div>
-        <div class="vehicleDetailRow">
-          <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🕒</span>Última actualización</span>
-          <strong class="vehicleDetailRowValue">${tiempoAca.fecha}</strong>
-        </div>
+      <div class="cvSectionTitle">UBICACIÓN ACTUAL</div>
+      <div class="cvBlock" style="border-left-color:${zi.color};">
+        <div class="cvBlockMain"><span class="dot" style="background:${zi.color}"></span>${escapeHtml(zonaConSector(zi.label, campoObj.campo))}</div>
+        <div class="cvBlockSub">Campo ${escapeHtml(campoObj.campo)}</div>
+        ${(esPasillo(campoObj.campo) && entry.referencia) ? `<div><span class="refTag">📍 ${escapeHtml(entry.referencia)}</span></div>` : ""}
       </div>
+      <div class="cvSectionTitle">ASESOR</div>
+      <div class="cvBlock cvAsesor">
+        ${asesorInicial ? `<span class="vehicleDetailAvatar cvAvatar" style="background:${avatarColorForName(entry.aseguradora)};">${escapeHtml(asesorInicial)}</span>` : ""}
+        <div class="cvBlockMain">${entry.aseguradora ? escapeHtml(entry.aseguradora) : "Sin asesor registrado"}</div>
+      </div>
+      <div class="cvSectionTitle" id="cvHistTitle">HISTORIAL DE MOVIMIENTOS</div>
+      <div id="cvHist" class="cvHist"><div class="cvHistEmpty">Cargando…</div></div>
     `;
+    (async ()=>{
+      const clave = normalizePlate(entry.plate);
+      const todo = await readLog(HISTORY_KEY);
+      const mios = todo.filter(h => normalizePlate(h.placa) === clave).slice(-6).reverse();
+      const box = document.getElementById("cvHist");
+      if(!box || !overlay.classList.contains("show")) return;
+      document.getElementById("cvHistTitle").textContent = `HISTORIAL DE MOVIMIENTOS · ${mios.length} REGISTRO${mios.length === 1 ? "" : "S"}`;
+      box.innerHTML = mios.length ? mios.map((h, i)=>`
+        <div class="cvHistItem${i === 0 ? " cvHistFirst" : ""}">
+          ${i === 0 ? `<small class="cvHistBadge">★ MÁS RECIENTE</small>` : ""}
+          <div class="cvHistMain">${h.desde === "Vehículo nuevo" ? "➕ Agregado en " + escapeHtml(h.hasta) : escapeHtml(h.desde) + " → " + escapeHtml(h.hasta)}</div>
+          <small>${escapeHtml(h.username || "")} · ${escapeHtml(h.ts || "")}</small>
+        </div>`).join("") : `<div class="cvHistEmpty">Sin movimientos registrados todavía.</div>`;
+    })();
     overlay.classList.add("show");
 
     const copyBtn = document.getElementById("viewDetailCopyBtn");
     const closeBtn = document.getElementById("viewDetailCloseBtn");
     const copyBtnOriginalText = copyBtn.textContent;
     async function onCopy(){
-      const text = `Placa: ${entry.plate}\nZona: ${zonaConSector(zi.label, campoObj.campo)}\nCampo: ${campoObj.campo}${(esPasillo(campoObj.campo) && entry.referencia) ? `\nReferencia: ${entry.referencia}` : ""}\nAsesor: ${entry.aseguradora || "—"}\nModelo: ${entry.modelo || "—"}\nColor: ${entry.color || "—"}`;
+      const text = `Placa: ${entry.plate}\nZona: ${zonaConSector(zi.label, campoObj.campo)}\nCampo: ${campoObj.campo}${(esPasillo(campoObj.campo) && entry.referencia) ? `\nReferencia: ${entry.referencia}` : ""}\nAsesor: ${entry.aseguradora || "—"}\nModelo: ${entry.modelo || "—"}\nColor: ${entry.color || "—"}${entry.circulacion === "no" ? "\nSe recomienda que el vehículo no circule" : ""}${entry.llave === "tablero" ? `\nLlave en tablero${esPasillo(campoObj.campo) ? "" : " " + campoObj.campo}` : (entry.llave === "vehiculo" ? "\nLlave en el vehículo" : "")}`;
       try{
         if(navigator.clipboard && navigator.clipboard.writeText){
           await navigator.clipboard.writeText(text);
@@ -9274,8 +9708,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     // suma las columnas de Check-in y Notas, ninguna otra zona las tiene.
     const esCheckinZone = z.key === CHECKIN_ZONE_KEY;
     const headerCols = esCheckinZone
-      ? ["Campo","Placa","Asesor","Modelo","Color","Llave","Última actualización","Check-in","Notas del check-in"]
-      : ["Campo","Placa","Asesor","Modelo","Color","Llave","Última actualización"];
+      ? ["Campo","Placa","Asesor","Modelo","Color","Última actualización","Check-in","Notas del check-in"]
+      : ["Campo","Placa","Asesor","Modelo","Color","Última actualización"];
     const lastCol = headerCols.length - 1;
 
     const data = [
@@ -9284,9 +9718,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       [],
       headerCols
     ];
-    const llaveTexto = (p)=> p.llave === "tablero" ? "Llave en tablero" : p.llave === "vehiculo" ? "Dentro del vehículo" : "";
     function agregarFila(campoLabel, p){
-      const row = [campoLabel, p.plate, p.aseguradora || "", p.modelo || "", p.color || "", llaveTexto(p), fechaCortaExcel(p)];
+      const row = [campoLabel, p.plate, p.aseguradora || "", p.modelo || "", p.color || "", fechaCortaExcel(p)];
       if(esCheckinZone){
         const info = checkinExcelInfo(p);
         row.push(info.status, info.notes);
@@ -9313,8 +9746,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       { s:{r:1,c:0}, e:{r:1,c:lastCol} }
     ];
     ws["!cols"] = esCheckinZone
-      ? [{ wch: 20 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 32 }, { wch: 26 }]
-      : [{ wch: 20 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 18 }];
+      ? [{ wch: 20 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 32 }, { wch: 26 }]
+      : [{ wch: 20 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 18 }];
     if(data.length > 4){
       const lastColLetter = String.fromCharCode(65 + lastCol);
       ws["!autofilter"] = { ref: `A4:${lastColLetter}${data.length}` };
@@ -9331,6 +9764,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const zonasAExportar = zoneKeysFilter ? ZONES.filter(z => zoneKeysFilter.includes(z.key)) : ZONES;
 
     zonasAExportar.forEach(z=> addZoneSheet(wb, z, fechaLarga, horaLarga));
+    // "Sin ubicación" no está en ZONES a propósito, pero sus placas SÍ existen en
+    // la app: si no se exportaban, parecía que "faltaban placas" en el Excel.
+    // Se agrega su hoja (solo si tiene vehículos) cuando se exporta todo.
+    const sinUbicPlacas = (state.zones[SIN_UBICACION_KEY] || []).reduce((n, c)=> n + (c.plates || []).length, 0);
+    if(sinUbicPlacas && (!zoneKeysFilter || zoneKeysFilter.length >= ZONES.length)){
+      addZoneSheet(wb, SIN_UBICACION_INFO, fechaLarga, horaLarga);
+    }
 
     const resumenRows = buildResumenRows().filter(r => !zoneKeysFilter || zoneKeysFilter.includes(r.zoneKey));
     const resumenData = [
@@ -10419,10 +10859,22 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       updaterPanel.style.display = "none";
     }
     const avaBar = document.getElementById("avaTabsBar");
-    if(role === "actualizacion" && isAvaluoUser()){
+    if(role === "consulta"){
+      if(avaVistaRol !== "consulta"){ avaVistaRol = "consulta"; avaVista = "busqueda"; }
       avaBar.style.display = "flex";
+      document.getElementById("avaTabBusqueda").textContent = "🔎 Búsqueda";
+      document.getElementById("avaTabBusqueda").style.order = "1";
+      document.getElementById("avaTabAgregar").style.order = "2";
+      avaSetVista(avaVista);
+    } else if(role === "actualizacion" && (isAvaluoUser() || !currentUser.searchFocused)){
+      if(avaVistaRol === "consulta"){ avaVistaRol = ""; avaVista = "agregar"; }
+      document.getElementById("avaTabBusqueda").style.order = "";
+      document.getElementById("avaTabAgregar").style.order = "";
+      avaBar.style.display = "flex";
+      document.getElementById("avaTabBusqueda").textContent = isAvaluoUser() ? "🔎 Búsqueda" : "🗺️ Por zona";
       avaSetVista(avaVista);
     } else {
+      if(avaVistaRol === "consulta") avaVistaRol = "";
       avaBar.style.display = "none";
       document.getElementById("avaPanel").style.display = "none";
     }
@@ -13335,7 +13787,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
 
   async function updaterAddNew(zoneKey, campoRaw, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw){
-    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin"))){
+    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin" || currentUser.role === "consulta"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
     }
