@@ -1246,6 +1246,11 @@
     padding:20px;
   }
   .modalOverlay.show{display:flex;}
+  #refPasilloModal{ z-index:80; }
+  #refPasilloInput{ width:100%; box-sizing:border-box; margin-top:6px; }
+  .refPasilloSugs{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 4px; }
+  .refPasilloSugs button{ border:1px solid var(--border,#ccc); background:var(--surface); color:inherit; border-radius:999px; padding:5px 10px; font-size:13px; cursor:pointer; }
+  .refTag{ display:inline-block; margin-top:4px; padding:3px 9px; border-radius:999px; background:#fff4d6; color:#7a5a00; font-size:13px; font-weight:600; }
   .modalCard{
     background:var(--surface);
     border-radius: 14px;
@@ -2947,6 +2952,19 @@
 <div id="qrPrintSheet"></div>
 
 
+<div class="modalOverlay" id="refPasilloModal">
+  <div class="modalCard">
+    <h3>📍 ¿Dónde en el pasillo?</h3>
+    <p id="refPasilloMsg"></p>
+    <input type="text" id="refPasilloInput" maxlength="60" placeholder="Ej: cerca de la soda, frente al espacio 42" autocomplete="off">
+    <div id="refPasilloSugs" class="refPasilloSugs"></div>
+    <div class="modalActions">
+      <button class="primaryBtn" id="refPasilloOk">Guardar</button>
+      <button class="secondaryBtn" id="refPasilloCancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modalOverlay" id="dupModal">
   <div class="modalCard">
     <h3 id="dupModalTitle">Placa ya registrada</h3>
@@ -3515,7 +3533,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // vehículos propios además de filas). Cada campo/área que use esto
   // agrega un arreglo "areas"/"filas" opcional, sin tocar el modelo de
   // datos de las demás zonas (que siguen exactamente igual que siempre).
-  const NESTED_ZONES = new Set(["Recepcion", "TallerPintura"]);
+  const NESTED_ZONES = new Set(["TallerPintura"]);
   // Orden pedido puntualmente para la cuenta AVALUO: Atrás, Maya, Avalúo
   // Puff, y Avalúo al final — distinto del orden general de ZONES. Solo
   // reordena las zonas a las que esa cuenta ya tiene acceso; no cambia a
@@ -4553,9 +4571,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const e = found.platesArray[found.plateIdx];
     const desde = state.zones[found.zoneKey][found.campoIdx];
     const fromZone = found.zoneKey, fromCampo = desde.campo;
+    let refQr = "";
+    if(esPasillo(destCampo) && !(destZone === fromZone && esPasillo(fromCampo))){
+      refQr = await pedirReferenciaPasillo(e.plate, "");
+      if(refQr === null) return false;
+    }
     const snap = snapshotZones();
     removePlateEntryByRef(fromZone, found.platesArray, e);
     e.lastUpdated = new Date().toISOString();
+    if(refQr) e.referencia = refQr; else if(!esPasillo(destCampo)) delete e.referencia;
     insertPlateAtPosition(getOrCreateCampo(destZone, destCampo), e, "first");
     pushUndo(snap, `Mover ${e.plate} a ${zoneInfo(destZone).label} campo ${destCampo}`);
     invalidateResumenRowsCache();
@@ -4816,7 +4840,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // Estas 3 zonas no tienen campos numerados nunca: todo su contenido vive
   // bajo "Sin asignar", así que su ocupación se mide por vehículos totales,
   // no por cantidad de campos numerados (que siempre sería cero).
-  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "Neon Nieto", "Parqueo Gash Externo", "SinUbicacion", "Recepcion", "TallerPintura"]);
+  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "Neon Nieto", "Parqueo Gash Externo", "SinUbicacion", "TallerPintura"]);
   function occupancyCountForZone(zoneKey){
     const campos = state.zones[zoneKey] || [];
     if(UNNUMBERED_ONLY_ZONES.has(zoneKey)){
@@ -5133,6 +5157,68 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     return true;
   }
 
+  // Recepción / Salida pasa a ser una zona de campos planos, igual que las
+  // demás: campos del 1 al 20 y un espacio "Pasillo". Se corre una sola vez
+  // y NO pierde ningún vehículo: los que estaban en un campo numerado 1–20
+  // se quedan en ese mismo número (con lo que hubiera en sus áreas/filas), y
+  // todo lo demás (líneas, "General", otros nombres) pasa a "Pasillo".
+  const RECEPCION_CAMPOS_VERSION = 1;
+  function migrateRecepcionToCampos(st){
+    if((st.recepcionCamposVersion || 0) >= RECEPCION_CAMPOS_VERSION) return false;
+    if(!st.zones) return false;
+    const viejos = st.zones.Recepcion || [];
+    const nuevo = [];
+    const get = (label)=>{
+      let c = nuevo.find(x => x.campo === label);
+      if(!c){ c = { campo: label, plates: [] }; nuevo.push(c); }
+      return c;
+    };
+    for(let i = 1; i <= 20; i++) get(String(i));
+    get("Pasillo");
+    const todasLasPlacas = (c)=>{
+      const out = [...(c.plates || [])];
+      (c.areas || []).forEach(ar=>{
+        out.push(...(ar.plates || []));
+        (ar.filas || []).forEach(f => out.push(...(f.plates || [])));
+      });
+      return out;
+    };
+    let aPasillo = 0;
+    viejos.forEach(c=>{
+      const nombre = String(c.campo).trim();
+      const n = /^\d+$/.test(nombre) ? parseInt(nombre, 10) : 0;
+      const destino = (n >= 1 && n <= 20) ? String(n) : "Pasillo";
+      const placas = todasLasPlacas(c);
+      const objetivo = get(destino);
+      if(destino !== "Pasillo" && c.capacidad && !objetivo.capacidad) objetivo.capacidad = c.capacidad;
+      if(destino === "Pasillo") aPasillo += placas.length;
+      objetivo.plates.push(...placas);
+    });
+    sortCampos(nuevo);
+    st.zones.Recepcion = nuevo;
+    st.recepcionCamposVersion = RECEPCION_CAMPOS_VERSION;
+    if(aPasillo > 0){
+      setTimeout(()=> showToast(`Recepción / Salida ahora usa campos 1–20 y Pasillo: ${aPasillo} vehículo${aPasillo===1?"":"s"} pasaron a Pasillo. Revisalos y ubicalos.`, 8000, true), 3000);
+    }
+    return true;
+  }
+
+  // Atrás: se agrega el espacio "Pasillo" (donde se dejan los vehículos
+  // cuando no hay lugar). Se crea una sola vez, vacío y sin límite; si
+  // después se borra, no se vuelve a crear solo.
+  const ATRAS_PASILLO_VERSION = 1;
+  function migrateAtrasPasilloIfNeeded(st){
+    if((st.atrasPasilloVersion || 0) >= ATRAS_PASILLO_VERSION) return false;
+    if(!st.zones) return false;
+    if(!st.zones.Atras) st.zones.Atras = [];
+    if(!st.zones.Atras.some(c => c.campo === "Pasillo")){
+      st.zones.Atras.push({ campo: "Pasillo", plates: [] });
+      sortCampos(st.zones.Atras);
+    }
+    st.atrasPasilloVersion = ATRAS_PASILLO_VERSION;
+    return true;
+  }
+
   async function loadState(){
     // storageAvailable ya fue calculado por runAuthGate() al arrancar la app,
     // antes de que revealApp() invoque esta función; se reutiliza en vez de
@@ -5154,6 +5240,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           needsResave = mergeAtrasZonesIfNeeded(state) || needsResave;
           needsResave = mergeMayaZonesIfNeeded(state) || needsResave;
           needsResave = mergeRecepcionSalidaIfNeeded(state) || needsResave;
+          needsResave = migrateRecepcionToCampos(state) || needsResave;
+          needsResave = migrateAtrasPasilloIfNeeded(state) || needsResave;
           if(needsResave) await saveState(true);
           return;
         }
@@ -5176,6 +5264,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           mergeAtrasZonesIfNeeded(state);
           mergeMayaZonesIfNeeded(state);
           mergeRecepcionSalidaIfNeeded(state);
+          migrateRecepcionToCampos(state);
+          migrateAtrasPasilloIfNeeded(state);
           await saveState(true);
           return;
         }
@@ -5210,6 +5300,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     mergeAtrasZonesIfNeeded(state);
     mergeMayaZonesIfNeeded(state);
     mergeRecepcionSalidaIfNeeded(state);
+    migrateRecepcionToCampos(state);
+    migrateAtrasPasilloIfNeeded(state);
     await saveState(true);
   }
 
@@ -5520,6 +5612,60 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     return results.slice(0, 3);
   }
 
+  // ---- Referencia en Pasillo ----
+  // Cuando un vehículo se deja en el campo "Pasillo" se pide una referencia
+  // cercana ("cerca de la soda", "frente al espacio 42") para poder
+  // encontrarlo después. Devuelve el texto, o null si se cancela.
+  function esPasillo(campo){ return String(campo || "").trim().toLowerCase() === "pasillo"; }
+  function referenciasConocidas(){
+    const vistas = new Map();
+    Object.keys(state.zones || {}).forEach(zk=>{
+      (state.zones[zk] || []).forEach(c=>{
+        if(!esPasillo(c.campo)) return;
+        (c.plates || []).forEach(p=>{
+          const r = (p.referencia || "").trim();
+          if(r && !vistas.has(r.toLowerCase())) vistas.set(r.toLowerCase(), r);
+        });
+      });
+    });
+    return Array.from(vistas.values()).slice(0, 6);
+  }
+  function pedirReferenciaPasillo(plate, inicial){
+    return new Promise((resolve)=>{
+      if(document.activeElement && typeof document.activeElement.blur === "function") document.activeElement.blur();
+      const overlay = document.getElementById("refPasilloModal");
+      const input = document.getElementById("refPasilloInput");
+      const sugs = document.getElementById("refPasilloSugs");
+      const okBtn = document.getElementById("refPasilloOk");
+      const cancelBtn = document.getElementById("refPasilloCancel");
+      document.getElementById("refPasilloMsg").textContent = `${plate} se deja en el pasillo. Escribí una referencia cercana para encontrarlo después.`;
+      input.value = inicial || "";
+      sugs.innerHTML = referenciasConocidas().map(r=>`<button type="button" data-ref="${escapeAttrLike(r)}">${escapeHtml(r)}</button>`).join("");
+      overlay.classList.add("show");
+      setTimeout(()=>{ try{ input.focus(); }catch(e){} }, 50);
+      function cleanup(v){
+        overlay.classList.remove("show");
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        sugs.removeEventListener("click", onSug);
+        input.removeEventListener("keydown", onKey);
+        resolve(v);
+      }
+      function onOk(){
+        const v = input.value.trim().replace(/\s+/g, " ");
+        if(!v){ showToast("Escribí una referencia (ej: cerca de la soda)"); input.focus(); return; }
+        cleanup(v);
+      }
+      function onCancel(){ cleanup(null); }
+      function onSug(ev){ const b = ev.target.closest("button[data-ref]"); if(b){ input.value = b.dataset.ref; input.focus(); } }
+      function onKey(ev){ if(ev.key === "Enter"){ ev.preventDefault(); onOk(); } }
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      sugs.addEventListener("click", onSug);
+      input.addEventListener("keydown", onKey);
+    });
+  }
+
   function askMoveOrCancel(plate, fromZoneLabel, fromCampo, toZoneLabel, toCampo){
     return new Promise((resolve)=>{
       // Cierra el teclado del celular antes de mostrar el diálogo, para que
@@ -5682,6 +5828,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <div>
           <div class="vehicleDetailPlate">${escapeHtml(entry.plate)}</div>
           <div class="vehicleDetailZone"><span class="dot" style="background:${zi.color}"></span>${zi.label} · campo ${escapeHtml(campoObj.campo)}</div>
+          ${(esPasillo(campoObj.campo) && entry.referencia) ? `<div><span class="refTag">📍 ${escapeHtml(entry.referencia)}</span></div>` : ""}
         </div>
       </div>
       <div class="lastMovedBanner recency-${tiempoAca.recency}">🕒 ${escapeHtml(tiempoAca.diasTexto)} · desde el ${escapeHtml(tiempoAca.fecha)}</div>
@@ -5712,7 +5859,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const closeBtn = document.getElementById("viewDetailCloseBtn");
     const copyBtnOriginalText = copyBtn.textContent;
     async function onCopy(){
-      const text = `Placa: ${entry.plate}\nZona: ${zi.label}\nCampo: ${campoObj.campo}\nAsesor: ${entry.aseguradora || "—"}\nModelo: ${entry.modelo || "—"}\nColor: ${entry.color || "—"}`;
+      const text = `Placa: ${entry.plate}\nZona: ${zonaConSector(zi.label, campoObj.campo)}\nCampo: ${campoObj.campo}${(esPasillo(campoObj.campo) && entry.referencia) ? `\nReferencia: ${entry.referencia}` : ""}\nAsesor: ${entry.aseguradora || "—"}\nModelo: ${entry.modelo || "—"}\nColor: ${entry.color || "—"}`;
       try{
         if(navigator.clipboard && navigator.clipboard.writeText){
           await navigator.clipboard.writeText(text);
@@ -5782,6 +5929,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // así, se avisa ANTES de que alguien invierta tiempo sacando fotos con
   // datos que podrían estar viejos (la llave puede ya no estar donde dice
   // la pantalla, por ejemplo).
+  // Algunos lugares viven dentro de una zona pero son un sector distinto
+  // (ej. las "Línea N" de Atrás son los sólidos). En lo que se comparte y
+  // se muestra, se aclara el sector para que no quede solo "Atrás · Línea 1".
+  function zonaConSector(zoneLabel, campoLabel){
+    const esLinea = /^L[ií]nea\s+\d+$/i.test(String(campoLabel).trim());
+    if(esLinea && zoneLabel === "Atrás") return "Atrás sólido";
+    if(esLinea && zoneLabel === "Maya") return "Maya sin numeración";
+    return zoneLabel;
+  }
   async function openPhotoReportModal(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated){
     if(isTest || isAutoPrompt){
       // Modo prueba: no hay nada que guardar. Recién agregado: los datos
@@ -5821,15 +5977,18 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const circulacionTag = circulacion === "puede"
       ? `<span class="circulacionSummaryTag circulacionSummaryTagOk">✅ Puede circular</span>`
       : circulacion === "no"
-        ? `<span class="circulacionSummaryTag circulacionSummaryTagNo">🚫 No circula</span>`
+        ? `<span class="circulacionSummaryTag circulacionSummaryTagNo">🚫 Se recomienda que el vehículo no circule</span>`
         : "";
     const llaveTag = llave === "tablero"
-      ? `<span class="circulacionSummaryTag llaveSummaryTagTablero">🗂️ Tablero ${escapeHtml(campoLabel)}</span>`
+      ? `<span class="circulacionSummaryTag llaveSummaryTagTablero">🗂️ Llave en tablero ${esPasillo(campoLabel) ? "" : escapeHtml(campoLabel)}</span>`
       : llave === "vehiculo"
         ? `<span class="circulacionSummaryTag llaveSummaryTagVehiculo">🔑 Llave dentro del vehículo</span>`
         : "";
+    const _fp = (!isTest && typeof findPlate === "function") ? findPlate(plate) : null;
+    const referencia = (_fp && esPasillo(campoLabel)) ? ((_fp.platesArray[_fp.plateIdx].referencia) || "") : "";
+    const refTag = referencia ? `<div><span class="refTag">📍 ${escapeHtml(referencia)}</span></div>` : "";
     const tiempoAquiTag = tiempoAqui ? `<div class="tiempoAquiTag tiempoAquiTag-${tiempoAqui.recency}">🕒 ${tiempoAqui.diasTexto}</div>` : "";
-    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${iconoParaModelo(modelo)} ${escapeHtml(plate)}</strong>${circulacionTag}${llaveTag}<div class="historyMeta">${escapeHtml(zoneLabel)} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${tiempoAquiTag}${(!isTest && puedeUsarQr()) ? `<div>${isAutoPrompt ? `<button type="button" class="qrPrintNowBtn" data-qr-print-plate="${escapeAttrLike(plate)}">🖨️ Imprimir etiqueta QR</button>` : ""}<button type="button" class="qrMiniBtn" data-qr-plate="${escapeAttrLike(plate)}">🔳 Ver código QR</button></div>` : ""}`;
+    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${iconoParaModelo(modelo)} ${escapeHtml(plate)}</strong>${circulacionTag}${llaveTag}<div class="historyMeta">${escapeHtml(zonaConSector(zoneLabel, campoLabel))} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${refTag}${tiempoAquiTag}${(!isTest && puedeUsarQr()) ? `<div><button type="button" class="qrMiniBtn" data-qr-plate="${escapeAttrLike(plate)}">🔳 Ver código QR</button></div>` : ""}`;
 
     // Si el modal se vuelve a abrir sin haberse cerrado antes (ej. compartir
     // y enseguida tocar otra placa), esto evita que se acumulen listeners
@@ -5887,8 +6046,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     // función aparte para que el botón de WhatsApp use exactamente lo
     // mismo, sin duplicar la lógica en dos lugares distintos.
     function buildReportText(){
-      const circulacionTexto = circulacion === "puede" ? "✅ Puede circular" : circulacion === "no" ? "🚫 No circula" : "";
-      const llaveTexto = llave === "tablero" ? `🗂️ Tablero ${campoLabel}` : llave === "vehiculo" ? "🔑 Llave dentro del vehículo" : "";
+      const circulacionTexto = circulacion === "puede" ? "✅ Puede circular" : circulacion === "no" ? "🚫 Se recomienda que el vehículo no circule" : "";
+      const llaveTexto = llave === "tablero" ? `🗂️ Llave en tablero${esPasillo(campoLabel) ? "" : " " + campoLabel}` : llave === "vehiculo" ? "🔑 Llave dentro del vehículo" : "";
       // WhatsApp (y la mayoría de apps de chat) interpretan un texto entre
       // asteriscos como negrita — así la placa queda como un título bien
       // destacado arriba de todo, y cada etiqueta se lee más rápido de un
@@ -5902,7 +6061,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         modelo ? `🚘 *Modelo:* ${modelo}` : "",
         color ? `🎨 *Color:* ${color}` : "",
         aseguradora ? `🧑‍💼 *Asesor:* ${aseguradora}` : "",
-        `📍 *Zona:* ${zoneLabel} · *Campo:* ${campoLabel}`,
+        `📍 *Zona:* ${zonaConSector(zoneLabel, campoLabel)} · *Campo:* ${campoLabel}`,
+        referencia ? `🧭 *Referencia:* ${referencia}` : "",
         `📅 *Fecha:* ${fecha}`,
         (circulacionTexto || llaveTexto) ? "▬▬▬▬▬▬▬▬" : "",
         circulacionTexto,
@@ -6051,6 +6211,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
       const sameLocation = (newZone === zoneKey && newCampo === currentCampo);
       const samePlate = (newPlate === normalizePlate(plate));
+      let refNueva = "";
+      if(!sameLocation && esPasillo(newCampo)){
+        refNueva = await pedirReferenciaPasillo(newPlate, "");
+        if(refNueva === null) return;
+      } else if(sameLocation && esPasillo(newCampo)){
+        refNueva = targetEntry.referencia || "";
+      }
 
       // Caso simple: no cambia ni la ubicación ni la placa -> solo actualizar
       // la aseguradora en el mismo lugar, sin tocar el orden de llegada.
@@ -6081,7 +6248,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           const snap = snapshotZones();
           removePlateEntryByRef(dup.zoneKey, dup.platesArray, dupEntry);
           removePlateEntryByRef(zoneKey, targetCampoObj.plates, targetEntry);
-          getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() });
+          getOrCreateCampo(newZone, newCampo).plates.push(Object.assign({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() }, refNueva ? { referencia: refNueva } : {}));
           pushUndo(snap, `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`);
           cleanup();
           await saveState();
@@ -6103,7 +6270,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
       const snap = snapshotZones();
       removePlateEntryByRef(zoneKey, targetCampoObj.plates, targetEntry);
-      getOrCreateCampo(newZone, newCampo).plates.push({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() });
+      getOrCreateCampo(newZone, newCampo).plates.push(Object.assign({ plate: newPlate, aseguradora: newAseguradora, modelo: newModelo, lastUpdated: new Date().toISOString() }, refNueva ? { referencia: refNueva } : {}));
       pushUndo(snap, `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`);
       cleanup();
       await saveState();
@@ -6187,7 +6354,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
   // Intenta agregar `plate` al `campoLabel` de `zoneKey`. Maneja duplicados
   // preguntando si se debe mover. Devuelve true si finalmente se agregó.
-  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw){
+  async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw, referenciaRaw){
     const plate = normalizePlate(plateRaw);
     if(!plate) return false;
     let aseguradora = (aseguradoraRaw || "").trim();
@@ -6236,6 +6403,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
     }
 
+    let referencia = "";
+    if(esPasillo(campo)){
+      referencia = referenciaRaw || "";
+      if(!referencia) referencia = await pedirReferenciaPasillo(plate, "");
+      if(referencia === null) return false;
+    }
     const campoObj = getOrCreateCampo(zoneKey, campo);
     // Campos pensados para un solo vehículo (capacidad = 1): si ya tiene
     // uno y llega un vehículo DISTINTO, el que estaba se manda a "Sin
@@ -6249,7 +6422,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const sinUbicCampo = getOrCreateCampo(SIN_UBICACION_KEY, SIN_UBICACION_CAMPO);
       desplazados.forEach(entry => sinUbicCampo.plates.push(entry));
     }
-    insertPlateAtPosition(campoObj, { plate, aseguradora, modelo, color, circulacion, llave, lastUpdated: new Date().toISOString() }, position || "first");
+    const nuevaEntrada = { plate, aseguradora, modelo, color, circulacion, llave, lastUpdated: new Date().toISOString() };
+    if(referencia) nuevaEntrada.referencia = referencia;
+    insertPlateAtPosition(campoObj, nuevaEntrada, position || "first");
     rememberPlateInfo(plate, aseguradora, modelo, color).catch(()=>{}); // en segundo plano, no bloquea el guardado principal
     return true;
   }
@@ -6474,7 +6649,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
             ${hechoHoy ? `<span class="spaceGridDoneTag" title="Actualizado hoy">✓</span>` : ``}
             ${fillClass === "overloaded" ? `<span class="spaceGridOverloadTag" title="Tiene más vehículos que el límite definido">⚠️</span>` : ``}
             <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
-            ${cap ? `<span class="spaceGridCount">${occ}/${cap}</span>` : `<span class="spaceGridCount spaceGridNoCapText">sin límite</span>`}
+            ${cap ? `<span class="spaceGridCount">${occ}/${cap}</span>` : `<span class="spaceGridCount spaceGridNoCapText">${occ > 0 ? occ + (occ === 1 ? " vehículo" : " vehículos") : "sin límite"}</span>`}
             ${cap ? `<span class="spaceGridBar"><span class="spaceGridBarFill" style="width:${pct}%"></span></span>` : ``}
           </button>
         `;
@@ -11328,7 +11503,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
             ${hechoHoy ? `<span class="spaceGridDoneTag" title="Ya trabajado hoy">✓</span>` : ``}
             ${fillClass === "overloaded" ? `<span class="spaceGridOverloadTag" title="Tiene más vehículos que el límite definido">⚠️</span>` : ``}
             <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
-            ${cap ? `<span class="spaceGridCount">${occ}/${cap}</span>` : `<span class="spaceGridCount spaceGridNoCapText">sin límite</span>`}
+            ${cap ? `<span class="spaceGridCount">${occ}/${cap}</span>` : `<span class="spaceGridCount spaceGridNoCapText">${occ > 0 ? occ + (occ === 1 ? " vehículo" : " vehículos") : "sin límite"}</span>`}
             ${cap ? `<span class="spaceGridBar"><span class="spaceGridBarFill" style="width:${pct}%"></span></span>` : ``}
           </button>
         `;
@@ -12579,6 +12754,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
 
     const locationChanged = !(newZone === zoneKey && newCampo === fromCampo);
+    let nuevaReferencia;
+    if(locationChanged && esPasillo(newCampo)){
+      nuevaReferencia = await pedirReferenciaPasillo(newPlate, "");
+      if(nuevaReferencia === null) return false;
+    }
     const aseguradoraChanged = newAseguradora !== (entry.aseguradora || "");
     const modeloChanged = newModelo !== (entry.modelo || "");
     const colorChanged = newColor !== undefined && newColor !== (entry.color || "");
@@ -12597,7 +12777,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     // lugar — si solo se le corrigió el asesor o el modelo sin cambiar de
     // zona/campo, no debería reiniciar ese contador como si fuera un
     // movimiento real.
-    if(locationChanged) entry.lastUpdated = new Date().toISOString();
+    if(locationChanged){
+      entry.lastUpdated = new Date().toISOString();
+      if(nuevaReferencia) entry.referencia = nuevaReferencia; else delete entry.referencia;
+    }
 
     if(locationChanged){
       removePlateEntryByRef(zoneKey, campoObj.plates, entry);
