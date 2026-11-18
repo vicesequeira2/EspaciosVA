@@ -1138,6 +1138,22 @@
   .ccPhotoSlot{ display:flex; align-items:center; justify-content:center; height:120px; border:2px dashed #b9bbb4; border-radius:12px; margin-top:6px; cursor:pointer; background-size:cover; background-position:center; font-size:0.9rem; color:#6b6f73; text-align:center; }
   .ccPhotoSlot.hasPhoto{ border-style:solid; color:transparent; }
   .ccPhotoSlot input{ display:none; }
+  .ccTabsBar{ display:flex; gap:8px; padding:10px 16px 0; }
+  .ccTabsBar button{ flex:1; padding:11px 8px; border-radius:12px; border:2px solid #d7d8d3; background:var(--surface); color:inherit; font-weight:800; font-size:0.95rem; cursor:pointer; }
+  .ccTabsBar button.active{ border-color:#1b6b3f; background:#e3f5ea; color:#1b6b3f; }
+  .ccPanel{ padding:16px; max-width:640px; margin:0 auto; }
+  .ccPanel h2{ margin:4px 0 4px; font-size:1.25rem; }
+  .ccPanel .ccSub{ color:var(--muted); font-size:0.88rem; margin-bottom:12px; }
+  .ccPlateRow{ display:flex; gap:8px; }
+  .ccPlateRow input{ flex:1; font-size:1.3rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; padding:12px; border-radius:12px; border:2px solid #b9bbb4; box-sizing:border-box; min-width:0; }
+  .ccPlateRow button{ padding:0 18px; border:none; border-radius:12px; background:#1b6b3f; color:#fff; font-weight:800; cursor:pointer; }
+  .ccRecent{ margin-top:18px; }
+  .ccRecent h3{ font-size:0.95rem; margin:0 0 8px; }
+  .ccRecentItem{ display:block; width:100%; text-align:left; padding:10px 12px; margin-bottom:6px; border-radius:10px; border:1px solid #d7d8d3; background:var(--surface); color:inherit; cursor:pointer; font:inherit; }
+  .ccRecentItem.ok{ border-left:5px solid #2e9d5f; }
+  .ccRecentItem.bad{ border-left:5px solid #d6453a; }
+  .ccNoReg{ background:#fff4d6; color:#7a5a00; border-radius:10px; padding:8px 10px; font-size:0.85rem; font-weight:600; margin-bottom:8px; }
+  #ccDestTipo, #ccDestNombre{ width:100%; box-sizing:border-box; margin-bottom:8px; padding:10px; border-radius:10px; border:1px solid #d7d8d3; font:inherit; background:var(--surface); color:inherit; }
   .ccTag{ display:block; margin-top:6px; padding:6px 10px; border-radius:10px; font-size:0.85rem; font-weight:700; }
   .ccTagOk{ background:#e3f5ea; color:#1b6b3f; }
   .ccTagBad{ background:#fde7e4; color:#a1281f; }
@@ -2886,11 +2902,18 @@
   </div>
 </header>
 
+<div id="ccTabsBar" class="ccTabsBar" style="display:none;">
+  <button type="button" id="ccTabCC" class="active">🛡️ Control de calidad</button>
+  <button type="button" id="ccTabBusqueda">🔎 Búsqueda</button>
+</div>
+
 <nav id="tabs"></nav>
 
 <main id="mainArea"></main>
 
 <div id="updaterPanel" style="display:none;"></div>
+
+<div id="ccPanel" class="ccPanel" style="display:none;"></div>
 
 </div>
 
@@ -2983,6 +3006,16 @@
   <div class="modalCard">
     <h3>🛡️ Control de calidad</h3>
     <div id="ccPlate" class="historyItem"></div>
+    <div id="ccDestBox" style="display:none;">
+      <div class="ccNoReg">⚠️ Esta placa no está registrada en el inventario. Indicá a quién se reporta.</div>
+      <select id="ccDestTipo">
+        <option value="">¿A quién reportar?</option>
+        <option value="Asesor">Reportar a un asesor</option>
+        <option value="Supervisor">Reportar a un supervisor</option>
+      </select>
+      <input type="text" id="ccDestNombre" list="ccDestList" maxlength="60" placeholder="Nombre" autocomplete="off" style="display:none;">
+      <datalist id="ccDestList"></datalist>
+    </div>
     <div class="ccChoice">
       <button type="button" class="ccOpt" id="ccOkBtn">✅ Todo perfecto</button>
       <button type="button" class="ccOpt" id="ccBadBtn">🚨 Tiene problema</button>
@@ -5700,11 +5733,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   function ccAbrir(plate){
     if(!puedeCC()) return;
     const found = findPlate(plate);
-    if(!found){ showToast("Esa placa ya no está en el inventario"); return; }
-    const e = found.platesArray[found.plateIdx];
-    const campoObj = state.zones[found.zoneKey][found.campoIdx];
-    const zl = zoneInfo(found.zoneKey).label;
+    const noReg = !found;
+    const plateN = normalizePlate(plate);
+    if(noReg && !plateN){ showToast("Escribí una placa válida"); return; }
+    const e = noReg ? { plate: plateN, modelo: "", color: "" } : found.platesArray[found.plateIdx];
+    const campoObj = noReg ? null : state.zones[found.zoneKey][found.campoIdx];
+    const zl = noReg ? "" : zoneInfo(found.zoneKey).label;
     const modal = document.getElementById("ccModal");
+    const destBox = document.getElementById("ccDestBox"), destTipo = document.getElementById("ccDestTipo"), destNombre = document.getElementById("ccDestNombre"), destList = document.getElementById("ccDestList");
     const okBtn = document.getElementById("ccOkBtn"), badBtn = document.getElementById("ccBadBtn");
     const badBox = document.getElementById("ccBadBox"), chips = document.getElementById("ccChips");
     const notes = document.getElementById("ccNotes");
@@ -5713,7 +5749,30 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const oldInput = document.getElementById("ccPhotoInput");
     const input = oldInput.cloneNode(true); oldInput.parentNode.replaceChild(input, oldInput);
     let estado = "", foto = null; const marcadas = new Set();
-    document.getElementById("ccPlate").innerHTML = `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">📍 ${escapeHtml(zonaConSector(zl, campoObj.campo))} · campo ${escapeHtml(campoObj.campo)}${(esPasillo(campoObj.campo) && e.referencia) ? " · " + escapeHtml(e.referencia) : ""}</div>${ccTagHtml(e)}`;
+    document.getElementById("ccPlate").innerHTML = noReg
+      ? `<strong>🚗 ${escapeHtml(e.plate)}</strong>`
+      : `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">📍 ${escapeHtml(zonaConSector(zl, campoObj.campo))} · campo ${escapeHtml(campoObj.campo)}${(esPasillo(campoObj.campo) && e.referencia) ? " · " + escapeHtml(e.referencia) : ""}</div>${ccTagHtml(e)}`;
+    destBox.style.display = noReg ? "block" : "none";
+    saveBtn.style.display = noReg ? "none" : "";
+    destTipo.value = ""; destNombre.value = ""; destNombre.style.display = "none";
+    function nombresSugeridos(){
+      const out = new Set();
+      if(destTipo.value === "Asesor"){
+        const visit = (arr)=> (arr || []).forEach(x=>{ if(x.aseguradora) out.add(String(x.aseguradora).trim()); });
+        Object.keys(state.zones || {}).forEach(zk=> (state.zones[zk] || []).forEach(c=>{
+          visit(c.plates); (c.areas || []).forEach(a=>{ visit(a.plates); (a.filas || []).forEach(f=> visit(f.plates)); });
+        }));
+      } else if(destTipo.value === "Supervisor"){
+        try{ JSON.parse(localStorage.getItem("cc_supervisores") || "[]").forEach(n=> out.add(n)); }catch(err){}
+      }
+      return Array.from(out).sort((a,b)=> a.localeCompare(b, "es"));
+    }
+    function onDestTipo(){
+      destNombre.style.display = destTipo.value ? "block" : "none";
+      destNombre.placeholder = destTipo.value === "Asesor" ? "Nombre del asesor" : "Nombre del supervisor";
+      destList.innerHTML = nombresSugeridos().map(n=>`<option value="${escapeAttrLike(n)}"></option>`).join("");
+      refrescar();
+    }
     notes.value = ""; input.value = "";
     slot.classList.remove("hasPhoto"); slot.style.backgroundImage = "";
     chips.innerHTML = CC_OPCIONES.map(o=>`<button type="button" data-o="${escapeAttrLike(o)}">${escapeHtml(o)}</button>`).join("");
@@ -5721,7 +5780,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       okBtn.className = "ccOpt" + (estado === "ok" ? " sel ok" : "");
       badBtn.className = "ccOpt" + (estado === "problema" ? " sel bad" : "");
       badBox.style.display = estado === "problema" ? "block" : "none";
-      const listo = estado === "ok" || (estado === "problema" && (marcadas.size || notes.value.trim()));
+      let listo = estado === "ok" || (estado === "problema" && (marcadas.size || notes.value.trim()));
+      if(noReg && !(destTipo.value && destNombre.value.trim())) listo = false;
       shareBtn.disabled = !listo; saveBtn.disabled = !listo;
     }
     function onOk(){ estado = "ok"; refrescar(); }
@@ -5739,17 +5799,28 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       slot.classList.add("hasPhoto");
     }
     function texto(){
-      const ubic = `${zonaConSector(zl, campoObj.campo)} · Campo: ${campoObj.campo}${(esPasillo(campoObj.campo) && e.referencia) ? " · " + e.referencia : ""}`;
+      const ubic = noReg ? "Placa no registrada en el inventario" : `${zonaConSector(zl, campoObj.campo)} · Campo: ${campoObj.campo}${(esPasillo(campoObj.campo) && e.referencia) ? " · " + e.referencia : ""}`;
+      const para = noReg ? [`📣 *Reportar a ${destTipo.value}:* ${destNombre.value.trim()}`] : [];
       const fecha = new Date().toLocaleDateString("es-CR", { day:"numeric", month:"short", year:"numeric" });
-      const datos = [e.modelo ? `🚘 *Modelo:* ${e.modelo}` : "", e.color ? `🎨 *Color:* ${e.color}` : ""].filter(Boolean);
+      const datos = [e.modelo ? `🚘 *Modelo:* ${e.modelo}` : "", e.color ? `🎨 *Color:* ${e.color}` : "", e.aseguradora ? `🧑‍💼 *Asesor:* ${e.aseguradora}` : ""].filter(Boolean);
       if(estado === "ok"){
-        return [`*${e.plate.toUpperCase()}*`, "", "✅ *Vehículo Listo CC*", ...datos, `📍 *Zona:* ${ubic}`, `📅 *Fecha:* ${fecha}`, `🛡️ *Revisó:* ${currentUser.username}`].join("\n");
+        return [`*${e.plate.toUpperCase()}*`, "", "✅ *Vehículo Listo CC*", ...para, ...datos, `📍 *Zona:* ${ubic}`, `📅 *Fecha:* ${fecha}`, `🛡️ *Revisó:* ${currentUser.username}`].join("\n");
       }
       const corr = Array.from(marcadas).map(x => `• ${x}`);
       if(notes.value.trim()) corr.push(`• ${notes.value.trim()}`);
-      return [`*${e.plate.toUpperCase()}*`, "", "🚨🚨 *ALERTA CC — requiere correcciones* 🚨🚨", ...datos, `📍 *Zona:* ${ubic}`, "", "🔧 *Correcciones:*", ...corr, "", `📅 *Fecha:* ${fecha}`, `🛡️ *Revisó:* ${currentUser.username}`].join("\n");
+      return [`*${e.plate.toUpperCase()}*`, "", "🚨🚨 *ALERTA CC — requiere correcciones* 🚨🚨", ...para, ...datos, `📍 *Zona:* ${ubic}`, "", "🔧 *Correcciones:*", ...corr, "", `📅 *Fecha:* ${fecha}`, `🛡️ *Revisó:* ${currentUser.username}`].join("\n");
     }
     async function guardar(){
+      if(noReg){
+        if(destTipo.value === "Supervisor"){
+          try{
+            const lista = JSON.parse(localStorage.getItem("cc_supervisores") || "[]");
+            const n = destNombre.value.trim();
+            if(!lista.some(x => x.toLowerCase() === n.toLowerCase())){ lista.push(n); localStorage.setItem("cc_supervisores", JSON.stringify(lista.slice(-20))); }
+          }catch(err){}
+        }
+        return true;
+      }
       const snap = snapshotZones();
       e.cc = { estado, correcciones: estado === "problema" ? Array.from(marcadas) : [], nota: estado === "problema" ? notes.value.trim() : "", por: currentUser.username, fecha: new Date().toISOString() };
       invalidateResumenRowsCache();
@@ -5759,6 +5830,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         showToast("⚠️ Alguien más guardó al mismo tiempo: el reporte CC NO se guardó. Actualizá y probá de nuevo.", 5000);
         return false;
       }
+      if(typeof ccRenderPanel === "function") ccRenderPanel();
       ["viewDetailBody","photoReportSummary"].forEach(id=>{
         const box = document.getElementById(id);
         if(!box) return;
@@ -5776,6 +5848,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       notes.removeEventListener("input", refrescar);
       shareBtn.removeEventListener("click", onShare); saveBtn.removeEventListener("click", onSave);
       cancelBtn.removeEventListener("click", cerrar);
+      destTipo.removeEventListener("change", onDestTipo); destNombre.removeEventListener("input", refrescar);
     }
     async function onSave(){
       if(!(await guardar())) return;
@@ -5801,9 +5874,57 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     notes.addEventListener("input", refrescar);
     shareBtn.addEventListener("click", onShare); saveBtn.addEventListener("click", onSave);
     cancelBtn.addEventListener("click", cerrar);
+    destTipo.addEventListener("change", onDestTipo); destNombre.addEventListener("input", refrescar);
     refrescar();
     modal.classList.add("show");
   }
+  // Pantalla principal del usuario CC: revisar una placa y ver lo último
+  // reportado. "Búsqueda" lo lleva a la búsqueda normal de vehículos.
+  let ccVista = "cc";
+  function ccSetVista(v){
+    ccVista = v;
+    const esCC = v === "cc";
+    document.getElementById("ccPanel").style.display = esCC ? "block" : "none";
+    document.getElementById("tabs").style.display = esCC ? "none" : "";
+    document.getElementById("mainArea").style.display = esCC ? "none" : "";
+    document.getElementById("searchWrap").style.display = esCC ? "none" : "";
+    document.getElementById("ccTabCC").classList.toggle("active", esCC);
+    document.getElementById("ccTabBusqueda").classList.toggle("active", !esCC);
+    if(esCC) ccRenderPanel();
+  }
+  function ccRenderPanel(){
+    const box = document.getElementById("ccPanel");
+    if(!box || box.style.display === "none") return;
+    const previo = document.getElementById("ccPanelPlaca");
+    if(previo && document.activeElement === previo) return; // no pisar lo que se está escribiendo
+    const valor = previo ? previo.value : "";
+    const lista = [];
+    const zonasCC = (state && state.zones) || {};
+    Object.keys(zonasCC).forEach(zk=> (zonasCC[zk] || []).forEach(c=>{
+      const visit = (arr)=> (arr || []).forEach(x=>{ if(x.cc) lista.push({ x, zk, campo: c.campo }); });
+      visit(c.plates); (c.areas || []).forEach(a=>{ visit(a.plates); (a.filas || []).forEach(f=> visit(f.plates)); });
+    }));
+    lista.sort((a,b)=> new Date(b.x.cc.fecha) - new Date(a.x.cc.fecha));
+    const recientes = lista.slice(0, 10).map(({x, zk, campo})=>{
+      const ok = x.cc.estado === "ok";
+      return `<button type="button" class="ccRecentItem ${ok ? "ok" : "bad"}" data-cc-plate="${escapeAttrLike(x.plate)}"><strong>${escapeHtml(x.plate)}</strong> · ${ok ? "✅ Listo CC" : "🚨 Con correcciones"}<div class="historyMeta">${escapeHtml(zoneInfo(zk).label)} · ${escapeHtml(String(campo))}${x.modelo ? " · " + escapeHtml(x.modelo) : ""}</div></button>`;
+    }).join("");
+    box.innerHTML = `
+      <h2>🛡️ Control de calidad</h2>
+      <div class="ccSub">Escribí la placa del vehículo que vas a revisar.</div>
+      <div class="ccPlateRow">
+        <input type="text" id="ccPanelPlaca" placeholder="PLACA" maxlength="12" autocomplete="off" autocapitalize="characters" value="${escapeAttrLike(valor)}">
+        <button type="button" id="ccPanelGo">Revisar</button>
+      </div>
+      <div class="ccSub" style="margin-top:8px;">Si la placa no está en el inventario, igual podés reportarla a un asesor o supervisor.</div>
+      ${recientes ? `<div class="ccRecent"><h3>Últimos reportes</h3>${recientes}</div>` : ""}`;
+    const inp = document.getElementById("ccPanelPlaca");
+    function ir(){ const v = inp.value.trim(); if(!v){ showToast("Escribí una placa"); return; } ccAbrir(v); }
+    document.getElementById("ccPanelGo").addEventListener("click", ir);
+    inp.addEventListener("keydown", (ev)=>{ if(ev.key === "Enter"){ ev.preventDefault(); ir(); } });
+  }
+  document.getElementById("ccTabCC").addEventListener("click", ()=> ccSetVista("cc"));
+  document.getElementById("ccTabBusqueda").addEventListener("click", ()=> ccSetVista("busqueda"));
   document.addEventListener("click", (ev)=>{
     const b = ev.target.closest && ev.target.closest("[data-cc-plate]");
     if(b) ccAbrir(b.getAttribute("data-cc-plate"));
@@ -8813,6 +8934,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     dashboardCharts.forEach(ch => ch.destroy());
     dashboardCharts = [];
 
+    if(currentUser && currentUser.role === "cc") ccRenderPanel();
     renderTabs();
     const main = document.getElementById("mainArea");
     main.innerHTML = "";
@@ -10103,6 +10225,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       main.style.display = "";
       searchWrap.style.display = "";
       updaterPanel.style.display = "none";
+    }
+    const ccBar = document.getElementById("ccTabsBar");
+    if(role === "cc"){
+      ccBar.style.display = "flex";
+      ccSetVista(ccVista);
+    } else {
+      ccBar.style.display = "none";
+      document.getElementById("ccPanel").style.display = "none";
     }
   }
 
