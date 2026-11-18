@@ -1125,6 +1125,23 @@
   .qrPendingList strong{ letter-spacing:0.4px; }
   #qrLabelModal, #qrMoveModal{ z-index:70; }
   #photoReportModal.sobreQr{ z-index:75; }
+  #ccModal{ z-index:80; align-items:flex-start; overflow-y:auto; }
+  #ccModal .modalCard{ max-width:380px; width:100%; }
+  .ccChoice{ display:flex; gap:8px; margin:10px 0; }
+  .ccOpt{ flex:1; padding:12px 8px; border-radius:12px; border:2px solid #d7d8d3; background:var(--surface-3,#f3f3f0); font-weight:800; font-size:0.95rem; cursor:pointer; color:inherit; }
+  .ccOpt.sel.ok{ border-color:#2e9d5f; background:#e3f5ea; color:#1b6b3f; }
+  .ccOpt.sel.bad{ border-color:#d6453a; background:#fde7e4; color:#a1281f; }
+  .ccChips{ display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px; }
+  .ccChips button{ border:1px solid #d7d8d3; background:var(--surface); color:inherit; border-radius:999px; padding:5px 10px; font-size:0.82rem; cursor:pointer; }
+  .ccChips button.sel{ background:#d6453a; border-color:#d6453a; color:#fff; }
+  #ccNotes{ width:100%; box-sizing:border-box; min-height:64px; border:1px solid #d7d8d3; border-radius:10px; padding:8px; font:inherit; }
+  .ccPhotoSlot{ display:flex; align-items:center; justify-content:center; height:120px; border:2px dashed #b9bbb4; border-radius:12px; margin-top:6px; cursor:pointer; background-size:cover; background-position:center; font-size:0.9rem; color:#6b6f73; text-align:center; }
+  .ccPhotoSlot.hasPhoto{ border-style:solid; color:transparent; }
+  .ccPhotoSlot input{ display:none; }
+  .ccTag{ display:block; margin-top:6px; padding:6px 10px; border-radius:10px; font-size:0.85rem; font-weight:700; }
+  .ccTagOk{ background:#e3f5ea; color:#1b6b3f; }
+  .ccTagBad{ background:#fde7e4; color:#a1281f; }
+  .ccMiniBtn{ margin-top:8px; border:none; border-radius:10px; padding:9px 14px; font-size:0.9rem; font-weight:800; background:#1b6b3f; color:#fff; cursor:pointer; }
   .qrFotoBtn{ margin-top:8px; border:none; border-radius:10px; padding:9px 14px; font-size:0.9rem; font-weight:700; background:#fff; color:#1b1e21; cursor:pointer; }
   .qrMoveFotoBtn{ margin-top:8px; border:1px solid #d7d8d3; border-radius:10px; padding:8px 12px; font-size:0.85rem; font-weight:700; background:var(--surface-3); color:inherit; cursor:pointer; }
   .qrSearchBtn{
@@ -2772,6 +2789,13 @@
           <span class="roleLogoLabel">Actualización</span>
           <span class="roleLogoSubtitle">Agregar y mover vehículos</span>
         </button>
+        <button type="button" class="roleLogoBtn" data-role="cc">
+          <span class="roleLogoIcon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5L16 9.5"/></svg>
+          </span>
+          <span class="roleLogoLabel">CC</span>
+          <span class="roleLogoSubtitle">Control de calidad</span>
+        </button>
       </div>
 
       <div id="roleLoginForm" style="display:none;">
@@ -2955,6 +2979,29 @@
 <div id="qrPrintSheet"></div>
 
 
+<div class="modalOverlay" id="ccModal">
+  <div class="modalCard">
+    <h3>🛡️ Control de calidad</h3>
+    <div id="ccPlate" class="historyItem"></div>
+    <div class="ccChoice">
+      <button type="button" class="ccOpt" id="ccOkBtn">✅ Todo perfecto</button>
+      <button type="button" class="ccOpt" id="ccBadBtn">🚨 Tiene problema</button>
+    </div>
+    <div id="ccBadBox" style="display:none;">
+      <label>Correcciones necesarias</label>
+      <div class="ccChips" id="ccChips"></div>
+      <textarea id="ccNotes" maxlength="300" placeholder="Detalle de lo que hay que corregir (opcional si marcaste opciones)"></textarea>
+    </div>
+    <label style="margin-top:8px; display:block;">Foto (1, opcional)</label>
+    <label class="ccPhotoSlot" id="ccPhotoSlot">📷 Tocá para tomar o elegir una foto<input type="file" accept="image/*" id="ccPhotoInput"></label>
+    <div class="modalActions" style="flex-direction:column; gap:8px;">
+      <button class="primaryBtn" id="ccShareBtn" disabled>Guardar y compartir</button>
+      <button class="secondaryBtn" id="ccSaveBtn" disabled>Solo guardar</button>
+      <button class="secondaryBtn" id="ccCancelBtn">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modalOverlay" id="refPasilloModal">
   <div class="modalCard">
     <h3>📍 ¿Dónde en el pasillo?</h3>
@@ -3066,6 +3113,7 @@
           <option value="admin">Administrador</option>
           <option value="consulta">Consulta (solo lectura)</option>
           <option value="actualizacion">Actualización (solo mover placas)</option>
+          <option value="cc">CC (control de calidad)</option>
         </select>
       </label>
     </div>
@@ -3554,7 +3602,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     });
   }
   function visibleZonesForCurrentUser(){
-    if(currentUser && currentUser.role === "consulta"){
+    if(esLectura()){
       return ZONES.filter(z => !HIDDEN_FROM_BUSQUEDA.has(z.key));
     }
     if(currentUser && currentUser.role === "actualizacion"){
@@ -5497,7 +5545,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     resumenBtn.innerHTML = `Resumen general <span class="count">${totalCount}</span>`;
     resumenBtn.onclick = ()=>{ activeTab = "__resumen__"; renderAll(); };
 
-    if(currentUser && currentUser.role === "consulta"){
+    if(esLectura()){
       // Para Búsqueda, lo primero que se ve al entrar son los vehículos
       // (Resumen), no el Dashboard — por eso van en este orden acá.
       nav.appendChild(resumenBtn);
@@ -5637,6 +5685,129 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     results.sort((a,b)=> a.distance - b.distance);
     return results.slice(0, 3);
   }
+
+  // ---- Control de calidad (CC) ----
+  const CC_OPCIONES = ["Rayón", "Golpe / abolladura", "Falta lavar", "Pintura", "Falta pieza", "Luces", "Tapicería / interior", "Falla mecánica", "Vidrios"];
+  function ccTagHtml(e){
+    const c = e && e.cc;
+    if(!c) return "";
+    const f = new Date(c.fecha);
+    const cuando = isNaN(f) ? "" : ` · ${f.toLocaleDateString("es-CR", { day:"numeric", month:"short" })} ${f.toLocaleTimeString("es-CR", { hour:"numeric", minute:"2-digit" })}`;
+    if(c.estado === "ok") return `<span class="ccTag ccTagOk">✅ Vehículo Listo CC${cuando}</span>`;
+    const lista = (c.correcciones || []).concat(c.nota ? [c.nota] : []).join(", ");
+    return `<span class="ccTag ccTagBad">🚨 CC — correcciones: ${escapeHtml(lista || "ver detalle")}${cuando}</span>`;
+  }
+  function ccAbrir(plate){
+    if(!puedeCC()) return;
+    const found = findPlate(plate);
+    if(!found){ showToast("Esa placa ya no está en el inventario"); return; }
+    const e = found.platesArray[found.plateIdx];
+    const campoObj = state.zones[found.zoneKey][found.campoIdx];
+    const zl = zoneInfo(found.zoneKey).label;
+    const modal = document.getElementById("ccModal");
+    const okBtn = document.getElementById("ccOkBtn"), badBtn = document.getElementById("ccBadBtn");
+    const badBox = document.getElementById("ccBadBox"), chips = document.getElementById("ccChips");
+    const notes = document.getElementById("ccNotes");
+    const slot = document.getElementById("ccPhotoSlot");
+    const shareBtn = document.getElementById("ccShareBtn"), saveBtn = document.getElementById("ccSaveBtn"), cancelBtn = document.getElementById("ccCancelBtn");
+    const oldInput = document.getElementById("ccPhotoInput");
+    const input = oldInput.cloneNode(true); oldInput.parentNode.replaceChild(input, oldInput);
+    let estado = "", foto = null; const marcadas = new Set();
+    document.getElementById("ccPlate").innerHTML = `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">📍 ${escapeHtml(zonaConSector(zl, campoObj.campo))} · campo ${escapeHtml(campoObj.campo)}${(esPasillo(campoObj.campo) && e.referencia) ? " · " + escapeHtml(e.referencia) : ""}</div>${ccTagHtml(e)}`;
+    notes.value = ""; input.value = "";
+    slot.classList.remove("hasPhoto"); slot.style.backgroundImage = "";
+    chips.innerHTML = CC_OPCIONES.map(o=>`<button type="button" data-o="${escapeAttrLike(o)}">${escapeHtml(o)}</button>`).join("");
+    function refrescar(){
+      okBtn.className = "ccOpt" + (estado === "ok" ? " sel ok" : "");
+      badBtn.className = "ccOpt" + (estado === "problema" ? " sel bad" : "");
+      badBox.style.display = estado === "problema" ? "block" : "none";
+      const listo = estado === "ok" || (estado === "problema" && (marcadas.size || notes.value.trim()));
+      shareBtn.disabled = !listo; saveBtn.disabled = !listo;
+    }
+    function onOk(){ estado = "ok"; refrescar(); }
+    function onBad(){ estado = "problema"; refrescar(); }
+    function onChip(ev){
+      const b = ev.target.closest("button[data-o]"); if(!b) return;
+      const o = b.dataset.o;
+      if(marcadas.has(o)){ marcadas.delete(o); b.classList.remove("sel"); } else { marcadas.add(o); b.classList.add("sel"); }
+      refrescar();
+    }
+    function onFoto(){
+      const f = input.files && input.files[0]; if(!f) return;
+      foto = f;
+      slot.style.backgroundImage = `url(${URL.createObjectURL(f)})`;
+      slot.classList.add("hasPhoto");
+    }
+    function texto(){
+      const ubic = `${zonaConSector(zl, campoObj.campo)} · Campo: ${campoObj.campo}${(esPasillo(campoObj.campo) && e.referencia) ? " · " + e.referencia : ""}`;
+      const fecha = new Date().toLocaleDateString("es-CR", { day:"numeric", month:"short", year:"numeric" });
+      const datos = [e.modelo ? `🚘 *Modelo:* ${e.modelo}` : "", e.color ? `🎨 *Color:* ${e.color}` : ""].filter(Boolean);
+      if(estado === "ok"){
+        return [`*${e.plate.toUpperCase()}*`, "", "✅ *Vehículo Listo CC*", ...datos, `📍 *Zona:* ${ubic}`, `📅 *Fecha:* ${fecha}`, `🛡️ *Revisó:* ${currentUser.username}`].join("\n");
+      }
+      const corr = Array.from(marcadas).map(x => `• ${x}`);
+      if(notes.value.trim()) corr.push(`• ${notes.value.trim()}`);
+      return [`*${e.plate.toUpperCase()}*`, "", "🚨🚨 *ALERTA CC — requiere correcciones* 🚨🚨", ...datos, `📍 *Zona:* ${ubic}`, "", "🔧 *Correcciones:*", ...corr, "", `📅 *Fecha:* ${fecha}`, `🛡️ *Revisó:* ${currentUser.username}`].join("\n");
+    }
+    async function guardar(){
+      const snap = snapshotZones();
+      e.cc = { estado, correcciones: estado === "problema" ? Array.from(marcadas) : [], nota: estado === "problema" ? notes.value.trim() : "", por: currentUser.username, fecha: new Date().toISOString() };
+      invalidateResumenRowsCache();
+      const r = await saveState(true);
+      if(r === "conflict"){
+        state.zones = snap; invalidateResumenRowsCache();
+        showToast("⚠️ Alguien más guardó al mismo tiempo: el reporte CC NO se guardó. Actualizá y probá de nuevo.", 5000);
+        return false;
+      }
+      ["viewDetailBody","photoReportSummary"].forEach(id=>{
+        const box = document.getElementById(id);
+        if(!box) return;
+        const btn = box.querySelector(".ccMiniBtn");
+        if(!btn || btn.getAttribute("data-cc-plate") !== e.plate) return;
+        box.querySelectorAll(".ccTag").forEach(t=>t.remove());
+        btn.insertAdjacentHTML("beforebegin", ccTagHtml(e));
+      });
+      return true;
+    }
+    function cerrar(){
+      modal.classList.remove("show");
+      okBtn.removeEventListener("click", onOk); badBtn.removeEventListener("click", onBad);
+      chips.removeEventListener("click", onChip); input.removeEventListener("change", onFoto);
+      notes.removeEventListener("input", refrescar);
+      shareBtn.removeEventListener("click", onShare); saveBtn.removeEventListener("click", onSave);
+      cancelBtn.removeEventListener("click", cerrar);
+    }
+    async function onSave(){
+      if(!(await guardar())) return;
+      cerrar(); showToast(estado === "ok" ? "✅ Vehículo Listo CC guardado" : "🚨 Alerta CC guardada");
+      renderAll();
+    }
+    async function onShare(){
+      const t = texto();
+      if(!(await guardar())) return;
+      cerrar(); renderAll();
+      try{
+        if(navigator.share){
+          const data = { text: t };
+          if(foto && navigator.canShare && navigator.canShare({ files:[foto] })) data.files = [foto];
+          await navigator.share(data);
+        } else {
+          window.open("https://wa.me/?text=" + encodeURIComponent(t), "_blank");
+        }
+      }catch(err){ /* compartir cancelado: el reporte ya quedó guardado */ }
+    }
+    okBtn.addEventListener("click", onOk); badBtn.addEventListener("click", onBad);
+    chips.addEventListener("click", onChip); input.addEventListener("change", onFoto);
+    notes.addEventListener("input", refrescar);
+    shareBtn.addEventListener("click", onShare); saveBtn.addEventListener("click", onSave);
+    cancelBtn.addEventListener("click", cerrar);
+    refrescar();
+    modal.classList.add("show");
+  }
+  document.addEventListener("click", (ev)=>{
+    const b = ev.target.closest && ev.target.closest("[data-cc-plate]");
+    if(b) ccAbrir(b.getAttribute("data-cc-plate"));
+  });
 
   // ---- Referencia en Pasillo ----
   // Cuando un vehículo se deja en el campo "Pasillo" se pide una referencia
@@ -5858,6 +6029,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         </div>
       </div>
       <div class="lastMovedBanner recency-${tiempoAca.recency}">🕒 ${escapeHtml(tiempoAca.diasTexto)} · desde el ${escapeHtml(tiempoAca.fecha)}</div>
+      ${ccTagHtml(entry)}${puedeCC() ? `<button type="button" class="ccMiniBtn" data-cc-plate="${escapeAttrLike(entry.plate)}">🛡️ Control de calidad</button>` : ""}
       <div class="vehicleDetailCard">
         <div class="vehicleDetailRow">
           <span class="vehicleDetailRowLabel"><span class="vehicleDetailRowIcon">🧑‍💼</span>Asesor</span>
@@ -6014,7 +6186,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const referencia = (_fp && esPasillo(campoLabel)) ? ((_fp.platesArray[_fp.plateIdx].referencia) || "") : "";
     const refTag = referencia ? `<div><span class="refTag">📍 ${escapeHtml(referencia)}</span></div>` : "";
     const tiempoAquiTag = tiempoAqui ? `<div class="tiempoAquiTag tiempoAquiTag-${tiempoAqui.recency}">🕒 ${tiempoAqui.diasTexto}</div>` : "";
-    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${iconoParaModelo(modelo)} ${escapeHtml(plate)}</strong>${circulacionTag}${llaveTag}<div class="historyMeta">${escapeHtml(zonaConSector(zoneLabel, campoLabel))} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${refTag}${tiempoAquiTag}${(!isTest && puedeUsarQr()) ? `<div><button type="button" class="qrMiniBtn" data-qr-plate="${escapeAttrLike(plate)}">🔳 Ver código QR</button></div>` : ""}`;
+    summaryBox.innerHTML = `${isTest ? `<div class="testModeBanner">🧪 Modo prueba — esto no se guarda ni queda registrado en ningún lado, solo comprueba que compartir funcione en este celular.</div>` : ``}${isAutoPrompt ? `<div class="testModeBanner" style="background:#eaf5ee; border-color:#5FB37A; color:#2e7d4f;">📸 ¿Querés agregar fotos de este vehículo? Si no hace falta, tocá "Omitir".</div>` : ``}<strong>${iconoParaModelo(modelo)} ${escapeHtml(plate)}</strong>${circulacionTag}${llaveTag}<div class="historyMeta">${escapeHtml(zonaConSector(zoneLabel, campoLabel))} · campo ${escapeHtml(campoLabel)} · ${fecha}${detalles ? ` · ${detalles}` : ""}</div>${refTag}${(_fp ? ccTagHtml(_fp.platesArray[_fp.plateIdx]) : "")}${tiempoAquiTag}${(!isTest && puedeCC()) ? `<div><button type="button" class="ccMiniBtn" data-cc-plate="${escapeAttrLike(plate)}">🛡️ Control de calidad</button></div>` : ""}${(!isTest && puedeUsarQr()) ? `<div><button type="button" class="qrMiniBtn" data-qr-plate="${escapeAttrLike(plate)}">🔳 Ver código QR</button></div>` : ""}`;
 
     // Si el modal se vuelve a abrir sin haberse cerrado antes (ej. compartir
     // y enseguida tocar otra placa), esto evita que se acumulen listeners
@@ -8309,7 +8481,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
               showToast(`${r.placa} está dentro de "${r.campo}" — abrilo desde la zona en Admin o Actualización.`, 4500);
               return;
             }
-            if(currentUser && currentUser.role === "consulta"){
+            if(esLectura()){
               openViewDetailModal(r.zoneKey, r.ci, r.pi);
             } else {
               openEditLocModal(r.zoneKey, r.ci, r.pi);
@@ -8399,7 +8571,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       <div class="chartCard">
         <h3>🗺️ Mapa del parqueo</h3>
         <div class="mapaParqueoFlow">
-          ${["Recepcion","Avaluo","AvaluoPuff","Maya","Atras","TallerPintura"].filter(zk => !(currentUser && currentUser.role === "consulta" && HIDDEN_FROM_BUSQUEDA.has(zk))).map((zk, i, arr)=>{
+          ${["Recepcion","Avaluo","AvaluoPuff","Maya","Atras","TallerPintura"].filter(zk => !(esLectura() && HIDDEN_FROM_BUSQUEDA.has(zk))).map((zk, i, arr)=>{
             const z = zoneInfo(zk);
             const totalZona = (state.zones[zk]||[]).reduce((a,c)=>a+c.plates.length,0);
             return `
@@ -9118,8 +9290,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   const ROLES = {
     admin: "Administrador",
     consulta: "Búsqueda",
-    actualizacion: "Actualización"
+    actualizacion: "Actualización",
+    cc: "CC · Control de calidad"
   };
+  function esLectura(){ return !!(currentUser && (currentUser.role === "consulta" || currentUser.role === "cc")); }
+  function puedeCC(){ return !!(currentUser && (currentUser.role === "cc" || currentUser.role === "admin")); }
 
   let currentUser = null; // { username, role }
   let clockInterval = null;
@@ -9735,7 +9910,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       btnEl.className = "roleLogoBtn";
       btnEl.setAttribute("data-featured-username", u.username);
       const nombreParejo = toTitleCaseEs(u.username);
-      const subtitulo = u.role === "consulta" ? "Solo consulta" : (u.role === "actualizacion" ? "Agregar y mover vehículos" : "");
+      const subtitulo = u.role === "consulta" ? "Solo consulta" : (u.role === "cc" ? "Control de calidad" : (u.role === "actualizacion" ? "Agregar y mover vehículos" : ""));
       btnEl.innerHTML = `
         <span class="roleLogoIcon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
@@ -9760,7 +9935,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       selectedTarget = target;
       failedAttemptsInARow = 0;
       roleHelpHint.style.display = "none";
-      const label = target.kind === "user" ? target.username : (target.role === "consulta" ? "Búsqueda" : "Actualización");
+      const label = target.kind === "user" ? target.username : (target.role === "consulta" ? "Búsqueda" : (target.role === "cc" ? "CC" : "Actualización"));
       roleLabel.textContent = `Acceso de ${label}`;
       logosBox.style.display = "none";
       roleForm.style.display = "block";
@@ -9872,7 +10047,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   const ROLE_ICONS = {
     admin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
     consulta: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
-    actualizacion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>`
+    actualizacion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
+    cc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5L16 9.5"/></svg>`
   };
 
   function applyRoleUI(){
@@ -10029,7 +10205,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // sin riesgo de pisar algo que alguien esté editando en ese momento.
   function startAutoRefreshIfNeeded(){
     if(autoRefreshInterval){ clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
-    if(currentUser && currentUser.role === "consulta"){
+    if(esLectura()){
       autoRefreshInterval = setInterval(()=> refreshDataFromStorage(true), 20000);
     }
   }
@@ -10045,7 +10221,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(currentUser.role !== "actualizacion"){
       // Para Búsqueda, arrancar directo en Resumen — lo primero que
       // interesa ver son los vehículos, no el Dashboard.
-      if(currentUser.role === "consulta") activeTab = "__resumen__";
+      if(currentUser.role === "consulta" || currentUser.role === "cc") activeTab = "__resumen__";
       (async function(){
         try{
           await loadState();
@@ -10664,7 +10840,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
     let users = await loadUsers();
 
-    const ROLE_ORDER = ["admin", "actualizacion", "consulta"];
+    const ROLE_ORDER = ["admin", "actualizacion", "cc", "consulta"];
     function draw(){
       // Se ordenan los ÍNDICES por rol para agrupar visualmente — el
       // arreglo "users" en sí no cambia de orden, así que data-i sigue
@@ -10825,7 +11001,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const ROLE_HINTS = {
       admin: "Acceso total: puede administrar usuarios, zonas, capacidades y exportar todo.",
       consulta: "Solo puede buscar y ver — no puede mover ni editar vehículos.",
-      actualizacion: "Puede agregar, mover y editar vehículos en las zonas que tenga permitidas."
+      actualizacion: "Puede agregar, mover y editar vehículos en las zonas que tenga permitidas.",
+      cc: "Busca vehículos (solo lectura) y reporta el control de calidad: \"Vehículo Listo CC\" o alerta con correcciones, con 1 foto para compartir."
     };
     function updateRoleHint(){ roleHint.textContent = ROLE_HINTS[roleSelect.value] || ""; }
     updateRoleHint();
