@@ -1402,7 +1402,7 @@
   }
   .authBtn{ width:100%; margin-top:18px; padding:11px 14px; }
   .roleLogos{
-    display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;
+    display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px;
     margin: 6px 0 4px;
   }
   .roleLogoBtn{
@@ -9926,7 +9926,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const roleHelpHint = document.getElementById("roleLoginHelp");
 
     function showLogos(){
-      logosBox.style.display = "flex";
+      logosBox.style.display = "grid";
       roleForm.style.display = "none";
       adminForm.style.display = "none";
       adminLink.style.display = "block";
@@ -10839,6 +10839,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(passToggleBtnReset) passToggleBtnReset.textContent = "👁️";
 
     let users = await loadUsers();
+    // Si todavía no hay ninguna cuenta CC, el formulario de nueva cuenta
+    // arranca listo para crearla (solo falta escribir la contraseña).
+    if(!users.some(u => u.role === "cc")){ nameInput.value = "CC"; roleSelect.value = "cc"; }
 
     const ROLE_ORDER = ["admin", "actualizacion", "cc", "consulta"];
     function draw(){
