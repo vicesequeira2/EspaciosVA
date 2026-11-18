@@ -1153,6 +1153,9 @@
   .ccRecentItem{ display:block; width:100%; text-align:left; padding:10px 12px; margin-bottom:6px; border-radius:10px; border:1px solid #d7d8d3; background:var(--surface); color:inherit; cursor:pointer; font:inherit; }
   .ccRecentItem.ok{ border-left:5px solid #2e9d5f; }
   .ccRecentItem.bad{ border-left:5px solid #d6453a; }
+  #avaAddModal{ z-index:68; align-items:flex-start; overflow-y:auto; }
+  #avaAddModal .modalCard{ max-width:380px; width:100%; }
+  .avaIn{ width:100%; box-sizing:border-box; padding:11px; border-radius:10px; border:1px solid #b9bbb4; font:inherit; background:var(--surface); color:inherit; }
   .ccLbl{ display:block; font-size:0.8rem; font-weight:800; margin:10px 0 4px; text-transform:none; letter-spacing:0; color:#3a3d40; }
   #ccAsesor, #ccSupervisor{ width:100%; box-sizing:border-box; padding:11px; border-radius:10px; border:1px solid #b9bbb4; font:inherit; background:var(--surface); color:inherit; }
   .ccOpt{ min-height:56px; font-size:1rem; }
@@ -2911,6 +2914,11 @@
   <button type="button" id="ccTabBusqueda">🔎 Búsqueda</button>
 </div>
 
+<div id="avaTabsBar" class="ccTabsBar" style="display:none;">
+  <button type="button" id="avaTabAgregar" class="active">➕ Agregar vehículo</button>
+  <button type="button" id="avaTabBusqueda">🔎 Búsqueda</button>
+</div>
+
 <nav id="tabs"></nav>
 
 <main id="mainArea"></main>
@@ -2918,6 +2926,8 @@
 <div id="updaterPanel" style="display:none;"></div>
 
 <div id="ccPanel" class="ccPanel" style="display:none;"></div>
+
+<div id="avaPanel" class="ccPanel" style="display:none;"></div>
 
 </div>
 
@@ -3006,6 +3016,34 @@
 <div id="qrPrintSheet"></div>
 
 
+<div class="modalOverlay" id="avaAddModal">
+  <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
+    <h3>➕ Vehículo nuevo</h3>
+    <div id="avaAddPlate" class="historyItem"></div>
+    <p class="ccSub" style="margin:6px 0;">Esta placa no está en el inventario. Completá los datos y después elegís el campo.</p>
+    <label class="ccLbl" for="avaAsesor">🧑‍💼 Asesor *</label>
+    <input type="text" id="avaAsesor" class="avaIn" list="asesorSuggestions" maxlength="60" autocomplete="off">
+    <label class="ccLbl" for="avaModelo">🚘 Modelo *</label>
+    <input type="text" id="avaModelo" class="avaIn" list="modelSuggestions" maxlength="60" autocomplete="off">
+    <label class="ccLbl" for="avaColor">🎨 Color</label>
+    <input type="text" id="avaColor" class="avaIn" list="colorSuggestions" maxlength="40" autocomplete="off">
+    <label class="ccLbl">¿Puede circular? *</label>
+    <div class="ccChoice" id="avaCirc">
+      <button type="button" class="ccOpt" data-v="puede">✅ Puede circular</button>
+      <button type="button" class="ccOpt" data-v="no">🚫 No circula</button>
+    </div>
+    <label class="ccLbl">¿Dónde está la llave? *</label>
+    <div class="ccChoice" id="avaLlave">
+      <button type="button" class="ccOpt" data-v="tablero">🗂️ Llave en tablero</button>
+      <button type="button" class="ccOpt" data-v="vehiculo">🔑 Dentro del vehículo</button>
+    </div>
+    <div class="modalActions" style="flex-direction:column; gap:8px;">
+      <button class="primaryBtn" id="avaAddNext" disabled>Elegir campo →</button>
+      <button class="secondaryBtn" id="avaAddCancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modalOverlay" id="ccModal">
   <div class="modalCard">
     <h3>🛡️ Control de calidad</h3>
@@ -3028,7 +3066,7 @@
       <textarea id="ccNotes" maxlength="300" placeholder="Detalle de lo que hay que corregir (opcional si marcaste opciones)"></textarea>
     </div>
     <label class="ccLbl" style="margin-top:10px;">📷 Foto (1, opcional)</label>
-    <label class="ccPhotoSlot" id="ccPhotoSlot">📷 Tocá para tomar o elegir una foto<input type="file" accept="image/*" id="ccPhotoInput"></label>
+    <label class="ccPhotoSlot" id="ccPhotoSlot">📷 Tocá para tomar la foto<input type="file" accept="image/*" capture="environment" id="ccPhotoInput"></label>
     <div class="modalActions" style="flex-direction:column; gap:8px;">
       <button class="primaryBtn" id="ccShareBtn" disabled>Guardar y compartir</button>
       <button class="secondaryBtn" id="ccSaveBtn" disabled>Solo guardar</button>
@@ -4389,6 +4427,16 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   function qrProcesarPlaca(plate, manual){
     if(qrModo === "buscar"){ qrBuscarPlaca(plate); return; }
+    if(qrModo === "ava"){
+      qrDetenerCamara();
+      document.getElementById("qrScanModal").classList.remove("show", "qrModoBuscar");
+      qrModo = "recorrido";
+      try{ navigator.vibrate && navigator.vibrate(60); }catch(err){}
+      const inp = document.getElementById("avaPanelPlaca");
+      if(inp) inp.value = plate;
+      avaContinuar(plate);
+      return;
+    }
     if(qrModo === "cc"){
       qrDetenerCamara();
       document.getElementById("qrScanModal").classList.remove("show", "qrModoBuscar");
@@ -4496,19 +4544,21 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   function abrirRecorridoQr(modo){
     if(!puedeUsarQr() && !((modo === "buscar" || modo === "cc") && puedeCC())) return;
-    qrModo = modo === "buscar" ? "buscar" : (modo === "cc" ? "cc" : "recorrido");
+    qrModo = modo === "buscar" ? "buscar" : (modo === "cc" ? "cc" : (modo === "ava" ? "ava" : "recorrido"));
     const sinRecorrido = qrModo !== "recorrido";
     const ov = document.getElementById("qrScanModal");
     ov.classList.toggle("qrModoBuscar", sinRecorrido);
-    ov.querySelector(".qrScanTop strong").textContent = qrModo === "cc" ? "🔳 Escanear placa (CC)" : (qrModo === "buscar" ? "🔳 Escanear para buscar" : "🔳 Recorrido con QR");
+    ov.querySelector(".qrScanTop strong").textContent = qrModo === "ava" ? "🔳 Escanear placa" : qrModo === "cc" ? "🔳 Escanear placa (CC)" : (qrModo === "buscar" ? "🔳 Escanear para buscar" : "🔳 Recorrido con QR");
     document.getElementById("qrScanCloseBtn").textContent = sinRecorrido ? "Cancelar" : "Terminar";
-    document.getElementById("qrManualBtn").textContent = qrModo === "cc" ? "✓ Usar" : (qrModo === "buscar" ? "🔍 Buscar" : "✓ Marcar");
+    document.getElementById("qrManualBtn").textContent = (qrModo === "cc" || qrModo === "ava") ? "✓ Usar" : (qrModo === "buscar" ? "🔍 Buscar" : "✓ Marcar");
     if(typeof qrcode !== "function"){ showToast("No se pudo cargar el generador de QR"); return; }
     qrScope = "";
     qrUltimoLeido = { plate: "", ts: 0 };
     document.getElementById("qrPendingList").style.display = "none";
     document.getElementById("qrManualPlate").value = "";
-    qrMostrarTarjeta("", qrModo === "cc"
+    qrMostrarTarjeta("", qrModo === "ava"
+      ? "Apuntá la cámara al QR del vehículo para agregarlo o moverlo."
+      : qrModo === "cc"
       ? "Apuntá la cámara al QR del vehículo para revisar su control de calidad."
       : qrModo === "buscar"
       ? "Apuntá la cámara al QR del vehículo para abrir su ficha."
@@ -4519,7 +4569,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     qrIniciarCamara();
   }
   async function cerrarRecorridoQr(){
-    if(qrModo === "buscar" || qrModo === "cc"){
+    if(qrModo === "buscar" || qrModo === "cc" || qrModo === "ava"){
       qrDetenerCamara();
       document.getElementById("qrScanModal").classList.remove("show", "qrModoBuscar");
       qrModo = "recorrido";
@@ -4608,10 +4658,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   function qrDibujarMover(){
     const found = qrMoveFound;
-    const e = found.platesArray[found.plateIdx];
-    const aqui = `${zoneInfo(found.zoneKey).label} · ${state.zones[found.zoneKey][found.campoIdx].campo}`;
-    document.getElementById("qrMoveInfo").innerHTML =
-      `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">📍 Ahora: ${escapeHtml(aqui)}</div><button type="button" class="qrMoveFotoBtn" data-qr-foto="${escapeAttrLike(e.plate)}">📸 Fotos y compartir</button>`;
+    const nuevo = found.nuevo || null;
+    const e = nuevo ? nuevo : found.platesArray[found.plateIdx];
+    const aqui = nuevo ? "" : `${zoneInfo(found.zoneKey).label} · ${state.zones[found.zoneKey][found.campoIdx].campo}`;
+    document.getElementById("qrMoveInfo").innerHTML = nuevo
+      ? `<strong>🚗 ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">🧑‍💼 ${escapeHtml(e.aseguradora || "")} · ➕ Vehículo nuevo</div>`
+      : `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">📍 Ahora: ${escapeHtml(aqui)}</div><button type="button" class="qrMoveFotoBtn" data-qr-foto="${escapeAttrLike(e.plate)}">📸 Fotos y compartir</button>`;
     const chips = document.getElementById("qrMoveZones");
     chips.innerHTML = qrZonasDestino().map(z => `
       <button type="button" class="zoneChipBtn${qrMoveZone===z.key?" active":""}${z.key===SIN_UBICACION_KEY?" sinUbicacionChip":""}" data-zone="${escapeAttrLike(z.key)}" style="--chip-color:#${z.hex}">${escapeHtml(z.label)}</button>`).join("");
@@ -4641,7 +4693,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const cap = c.capacidad, occ = c.plates.length;
       let fill = "empty";
       if(occ > 0) fill = (cap && occ >= cap) ? "full" : "partial";
-      const esAqui = qrMoveZone === found.zoneKey && c.campo === state.zones[found.zoneKey][found.campoIdx].campo;
+      const esAqui = !nuevo && qrMoveZone === found.zoneKey && c.campo === state.zones[found.zoneKey][found.campoIdx].campo;
       return `<button type="button" class="spaceGridBtn ${fill}${qrMoveCampo===c.campo?" active":""}${esAqui?" qrHere":""}" data-campo="${escapeAttrLike(c.campo)}" ${esAqui?'data-here="1" title="Está acá ahora"':""}>
         <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
         <span class="spaceGridCount">${esAqui ? "aquí" : occ + (cap ? "/" + cap : "")}</span></button>`;
@@ -4655,12 +4707,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     });
     if(qrMoveCampo){
       btn.disabled = false;
-      btn.textContent = `Mover a ${zoneInfo(qrMoveZone).label} · ${qrMoveCampo}`;
+      btn.textContent = `${nuevo ? "Agregar en" : "Mover a"} ${zoneInfo(qrMoveZone).label} · ${qrMoveCampo}`;
     } else {
       btn.disabled = true; btn.textContent = "Elegí un espacio";
     }
   }
   function qrAbrirMover(found){
+    document.querySelector("#qrMoveModal h3").textContent = found.nuevo ? "¿En qué campo lo agregás?" : "¿A dónde lo movés?";
+    document.getElementById("qrMoveStayBtn").textContent = found.nuevo ? "Cancelar" : "Se queda aquí";
     qrPausa = true;
     qrMoveFound = found;
     qrMoveZone = "";
@@ -4718,6 +4772,27 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   document.getElementById("qrMoveConfirmBtn").addEventListener("click", async (ev)=>{
     if(!qrMoveFound || !qrMoveZone || !qrMoveCampo) return;
     const found = qrMoveFound, z = qrMoveZone, c = qrMoveCampo;
+    if(found.nuevo){
+      const d = found.nuevo;
+      const dest = (state.zones[z] || []).find(x => x.campo === c);
+      if(dest && dest.capacidad && dest.plates.length >= dest.capacidad){
+        if(!confirm(`${zoneInfo(z).label} · ${c} ya está lleno (${dest.plates.length}/${dest.capacidad}). ¿Agregar ${d.plate} igual?`)) return;
+      }
+      await runGuarded(ev.currentTarget, "Agregando…", async ()=>{
+        const snap = snapshotZones();
+        const ok = await updaterAddNew(z, c, d.plate, d.aseguradora, d.modelo, "first", d.color, d.circulacion, d.llave);
+        qrCerrarMover();
+        if(ok){
+          pushUndo(snap, `Agregar ${d.plate} en ${zoneInfo(z).label} · ${c}`);
+          try{ navigator.vibrate && navigator.vibrate([40,40,40]); }catch(err){}
+          showToast(`✓ ${d.plate} agregado en ${zoneInfo(z).label} · ${c}`);
+          const inp = document.getElementById("avaPanelPlaca"); if(inp) inp.value = "";
+          openPhotoReportModal(d.plate, zoneInfo(z).label, c, false, true, d.aseguradora, d.modelo, d.color, d.circulacion, d.llave);
+          avaRenderPanel(true);
+        }
+      });
+      return;
+    }
     const e = found.platesArray[found.plateIdx];
     const destino = (state.zones[z] || []).find(x => x.campo === c);
     if(destino && destino.capacidad && destino.plates.length >= destino.capacidad){
@@ -4728,6 +4803,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const placa = e.plate;
       qrCerrarMover();
       if(ok){
+        if(!document.getElementById("qrScanModal").classList.contains("show")){
+          showToast(`✓ ${placa} movido a ${zoneInfo(z).label} · ${c}`);
+          const inpA = document.getElementById("avaPanelPlaca"); if(inpA) inpA.value = "";
+          if(typeof avaRenderPanel === "function") avaRenderPanel(true);
+          openPhotoReportModal(placa, zoneInfo(z).label, c, false, true, e.aseguradora, e.modelo, e.color, e.circulacion, e.llave);
+        }
         try{ navigator.vibrate && navigator.vibrate([40,40,40]); }catch(err){}
         qrMostrarTarjeta("ok", `<div class="qrScanPlate">${iconoParaModelo(e.modelo)} ${escapeHtml(placa)}</div><div>↪ Movido a ${escapeHtml(zoneInfo(z).label)} · ${escapeHtml(c)}</div>`);
         qrActualizarProgreso();
@@ -5885,6 +5966,81 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     refrescar();
     modal.classList.add("show");
   }
+  // ---- Pantalla principal de la cuenta Avaluo: Agregar vehículo / Búsqueda ----
+  let avaVista = "agregar";
+  function avaSetVista(v){
+    avaVista = v;
+    const ag = v === "agregar";
+    document.getElementById("avaPanel").style.display = ag ? "block" : "none";
+    document.getElementById("updaterPanel").style.display = ag ? "none" : "block";
+    document.getElementById("avaTabAgregar").classList.toggle("active", ag);
+    document.getElementById("avaTabBusqueda").classList.toggle("active", !ag);
+    if(ag) avaRenderPanel(true);
+  }
+  function avaRenderPanel(force){
+    const box = document.getElementById("avaPanel");
+    if(!box || box.style.display === "none") return;
+    const previo = document.getElementById("avaPanelPlaca");
+    if(previo && !force && document.activeElement === previo) return;
+    const valor = previo ? previo.value : "";
+    box.innerHTML = `
+      <h2>➕ Agregar vehículo</h2>
+      <div class="ccSub">Escribí la placa o escaneá el QR. Si ya está registrada, elegís el campo; si no, la agregás a mano.</div>
+      <div class="ccPlateRow">
+        <input type="text" id="avaPanelPlaca" placeholder="PLACA" maxlength="12" autocomplete="off" autocapitalize="characters" value="${escapeAttrLike(valor)}">
+        <button type="button" id="avaPanelGo">Continuar</button>
+        <button type="button" id="avaPanelScan" title="Escanear el QR del vehículo">🔳</button>
+      </div>`;
+    const inp = document.getElementById("avaPanelPlaca");
+    function ir(){ const v = inp.value.trim(); if(!v){ showToast("Escribí una placa"); return; } avaContinuar(v); }
+    document.getElementById("avaPanelGo").addEventListener("click", ir);
+    document.getElementById("avaPanelScan").addEventListener("click", ()=> abrirRecorridoQr("ava"));
+    inp.addEventListener("keydown", (ev)=>{ if(ev.key === "Enter"){ ev.preventDefault(); ir(); } });
+  }
+  function avaContinuar(plateRaw){
+    if(!(currentUser && currentUser.role === "actualizacion")) return;
+    const plate = normalizePlate(plateRaw);
+    if(!plate){ showToast("Escribí una placa válida"); return; }
+    const found = findPlate(plate);
+    if(found){ qrAbrirMover(found); return; }
+    avaAbrirNuevo(plate);
+  }
+  function avaAbrirNuevo(plate){
+    const modal = document.getElementById("avaAddModal");
+    const asesor = document.getElementById("avaAsesor"), modelo = document.getElementById("avaModelo"), color = document.getElementById("avaColor");
+    const nextBtn = document.getElementById("avaAddNext"), cancelBtn = document.getElementById("avaAddCancel");
+    const circ = document.getElementById("avaCirc"), llaveBox = document.getElementById("avaLlave");
+    let circulacion = "", llave = "";
+    const reg = (typeof lookupPlateInfo === "function") ? lookupPlateInfo(plate) : null;
+    asesor.value = (reg && reg.aseguradora) || ""; modelo.value = (reg && reg.modelo) || ""; color.value = (reg && reg.color) || "";
+    document.getElementById("avaAddPlate").innerHTML = `<strong>🚗 ${escapeHtml(plate)}</strong>`;
+    function pintar(){
+      circ.querySelectorAll(".ccOpt").forEach(b=> b.className = "ccOpt" + (b.dataset.v === circulacion ? (circulacion === "no" ? " sel bad" : " sel ok") : ""));
+      llaveBox.querySelectorAll(".ccOpt").forEach(b=> b.className = "ccOpt" + (b.dataset.v === llave ? " sel ok" : ""));
+      nextBtn.disabled = !(asesor.value.trim() && modelo.value.trim() && circulacion && llave);
+    }
+    function onCirc(ev){ const b = ev.target.closest(".ccOpt"); if(b){ circulacion = b.dataset.v; pintar(); } }
+    function onLlave(ev){ const b = ev.target.closest(".ccOpt"); if(b){ llave = b.dataset.v; pintar(); } }
+    function cerrar(){
+      modal.classList.remove("show");
+      circ.removeEventListener("click", onCirc); llaveBox.removeEventListener("click", onLlave);
+      asesor.removeEventListener("input", pintar); modelo.removeEventListener("input", pintar);
+      nextBtn.removeEventListener("click", onNext); cancelBtn.removeEventListener("click", cerrar);
+    }
+    function onNext(){
+      const datos = { plate, aseguradora: asesor.value.trim(), modelo: modelo.value.trim(), color: color.value.trim(), circulacion, llave };
+      cerrar();
+      qrAbrirMover({ nuevo: datos });
+    }
+    circ.addEventListener("click", onCirc); llaveBox.addEventListener("click", onLlave);
+    asesor.addEventListener("input", pintar); modelo.addEventListener("input", pintar);
+    nextBtn.addEventListener("click", onNext); cancelBtn.addEventListener("click", cerrar);
+    pintar();
+    modal.classList.add("show");
+  }
+  document.getElementById("avaTabAgregar").addEventListener("click", ()=> avaSetVista("agregar"));
+  document.getElementById("avaTabBusqueda").addEventListener("click", ()=> avaSetVista("busqueda"));
+
   // Pantalla principal del usuario CC: revisar una placa y ver lo último
   // reportado. "Búsqueda" lo lleva a la búsqueda normal de vehículos.
   let ccVista = "cc";
@@ -10261,6 +10417,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       main.style.display = "";
       searchWrap.style.display = "";
       updaterPanel.style.display = "none";
+    }
+    const avaBar = document.getElementById("avaTabsBar");
+    if(role === "actualizacion" && isAvaluoUser()){
+      avaBar.style.display = "flex";
+      avaSetVista(avaVista);
+    } else {
+      avaBar.style.display = "none";
+      document.getElementById("avaPanel").style.display = "none";
     }
     const ccBar = document.getElementById("ccTabsBar");
     if(role === "cc"){
