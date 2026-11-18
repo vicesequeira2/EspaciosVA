@@ -9186,6 +9186,33 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
     XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
 
+    // ---- Hoja: Control de calidad (solo vehículos con reporte CC) ----
+    const ccFilas = [];
+    zonasAExportar.forEach(z=>{
+      (state.zones[z.key] || []).forEach(c=>{
+        const visit = (arr)=> (arr || []).forEach(x=>{ if(x && x.cc) ccFilas.push({ x, z, campo: c.campo }); });
+        visit(c.plates); (c.areas || []).forEach(ar=>{ visit(ar.plates); (ar.filas || []).forEach(f=> visit(f.plates)); });
+      });
+    });
+    ccFilas.sort((a,b)=> new Date(b.x.cc.fecha) - new Date(a.x.cc.fecha));
+    const ccData = [
+      ["Control de calidad — Inventario de Parqueo", "", "", "", "", "", "", "", "", ""],
+      [`Generado ${fechaLarga}, ${horaLarga} · ${ccFilas.length} vehículo(s) con reporte CC`, "", "", "", "", "", "", "", "", ""],
+      [],
+      ["Placa","Estado CC","Correcciones","Fecha y hora CC","Revisó","Zona","Campo","Asesor","Modelo","Color"]
+    ];
+    ccFilas.forEach(({x, z, campo})=>{
+      const f = new Date(x.cc.fecha);
+      const cuando = isNaN(f) ? "" : f.toLocaleDateString("es-CR", { day:"2-digit", month:"2-digit", year:"numeric" }) + " " + f.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit" });
+      const corr = x.cc.estado === "ok" ? "" : (x.cc.correcciones || []).concat(x.cc.nota ? [x.cc.nota] : []).join("; ");
+      ccData.push([x.plate, x.cc.estado === "ok" ? "Listo CC" : "Con correcciones", corr, cuando, x.cc.por || "", z.label, campo, x.aseguradora || "", x.modelo || "", x.color || ""]);
+    });
+    const wsCC = XLSX.utils.aoa_to_sheet(ccData);
+    wsCC["!merges"] = [{ s:{r:0,c:0}, e:{r:0,c:9} }, { s:{r:1,c:0}, e:{r:1,c:9} }];
+    wsCC["!cols"] = [{ wch: 14 }, { wch: 18 }, { wch: 44 }, { wch: 18 }, { wch: 16 }, { wch: 20 }, { wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }];
+    if(ccData.length > 4) wsCC["!autofilter"] = { ref: `A4:J${ccData.length}` };
+    XLSX.utils.book_append_sheet(wb, wsCC, "Control de calidad");
+
     // ---- Hoja: conteo por Asesor y por Modelo ----
     const conteoAseguradora = {};
     const conteoModelo = {};
