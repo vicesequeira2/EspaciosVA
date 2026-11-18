@@ -1124,6 +1124,9 @@
   .qrPendingList div{ padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.1); }
   .qrPendingList strong{ letter-spacing:0.4px; }
   #qrLabelModal, #qrMoveModal{ z-index:70; }
+  #photoReportModal.sobreQr{ z-index:75; }
+  .qrFotoBtn{ margin-top:8px; border:none; border-radius:10px; padding:9px 14px; font-size:0.9rem; font-weight:700; background:#fff; color:#1b1e21; cursor:pointer; }
+  .qrMoveFotoBtn{ margin-top:8px; border:1px solid #d7d8d3; border-radius:10px; padding:8px 12px; font-size:0.85rem; font-weight:700; background:var(--surface-3); color:inherit; cursor:pointer; }
   .qrSearchBtn{
     position:absolute; right:6px; top:50%; transform:translateY(-50%);
     border:none; background:var(--asphalt-3); color:var(--paper); border-radius:8px;
@@ -4320,7 +4323,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     qrMostrarTarjeta(yaConfirmadoPorQr ? "again" : "ok",
       `<div class="qrScanPlate">${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate || plate)}</div>` +
       `<div>${yaConfirmadoPorQr ? `Ya estaba confirmado hoy a las ${horaPrev} — hora actualizada` : "✓ Confirmado en su lugar"}${manual ? " (manual)" : ""}</div>` +
-      `<div>📍 ${escapeHtml(ubic)}</div>${detalle ? `<div>${detalle}</div>` : ""}`);
+      `<div>📍 ${escapeHtml(ubic)}</div>${detalle ? `<div>${detalle}</div>` : ""}` +
+      (qrModo === "recorrido" ? `<button type="button" class="qrFotoBtn" data-qr-foto="${escapeAttrLike(e.plate || plate)}">📸 Fotos y compartir</button>` : ""));
     qrActualizarProgreso();
     qrProgramarGuardado();
     if(qrPreguntarMoverActivo()) qrAbrirMover(found);
@@ -4438,7 +4442,29 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   document.getElementById("qrScanBtn").addEventListener("click", ()=> abrirRecorridoQr("recorrido"));
   document.addEventListener("click", (e)=>{
     if(e.target.closest && e.target.closest("[data-qr-search]")) abrirRecorridoQr("buscar");
+    const fb = e.target.closest && e.target.closest("[data-qr-foto]");
+    if(fb) qrAbrirFotos(fb.getAttribute("data-qr-foto"));
   });
+  // Fotos y compartir sin salir del escáner: la ficha se abre por encima, la
+  // cámara espera, y al cerrarla se sigue el recorrido donde estaba.
+  function qrAbrirFotos(plate){
+    const found = findPlate(plate);
+    if(!found) return;
+    const e = found.platesArray[found.plateIdx];
+    const campoObj = state.zones[found.zoneKey][found.campoIdx];
+    const modal = document.getElementById("photoReportModal");
+    qrPausa = true;
+    modal.classList.add("sobreQr");
+    const obs = new MutationObserver(()=>{
+      if(modal.classList.contains("show")) return;
+      obs.disconnect();
+      modal.classList.remove("sobreQr");
+      qrUltimoLeido.ts = Date.now();
+      qrPausa = !!qrMoveFound;
+    });
+    obs.observe(modal, { attributes:true, attributeFilter:["class"] });
+    openPhotoReportModal(e.plate, zoneInfo(found.zoneKey).label, campoObj.campo, false, false, e.aseguradora, e.modelo, e.color, e.circulacion, e.llave, e.lastUpdated);
+  }
   document.getElementById("qrScanCloseBtn").addEventListener("click", cerrarRecorridoQr);
   document.getElementById("qrPendingBtn").addEventListener("click", ()=>{
     const lista = document.getElementById("qrPendingList");
@@ -4489,7 +4515,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const e = found.platesArray[found.plateIdx];
     const aqui = `${zoneInfo(found.zoneKey).label} · ${state.zones[found.zoneKey][found.campoIdx].campo}`;
     document.getElementById("qrMoveInfo").innerHTML =
-      `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">📍 Ahora: ${escapeHtml(aqui)}</div>`;
+      `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">📍 Ahora: ${escapeHtml(aqui)}</div><button type="button" class="qrMoveFotoBtn" data-qr-foto="${escapeAttrLike(e.plate)}">📸 Fotos y compartir</button>`;
     const chips = document.getElementById("qrMoveZones");
     chips.innerHTML = qrZonasDestino().map(z => `
       <button type="button" class="zoneChipBtn${qrMoveZone===z.key?" active":""}${z.key===SIN_UBICACION_KEY?" sinUbicacionChip":""}" data-zone="${escapeAttrLike(z.key)}" style="--chip-color:#${z.hex}">${escapeHtml(z.label)}</button>`).join("");
@@ -6797,7 +6823,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
                 <label class="labeledFieldBox" style="flex:1;">
                   <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
                   <div class="circulacionToggle" id="nestedEditLlaveToggle_${abbr}" data-selected="${escapeAttrLike(p.llave || "")}">
-                    <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Tablero ${escapeHtml(campoObj.campo)}</button>
+                    <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Llave en tablero${esPasillo(campoObj.campo) ? "" : " " + escapeHtml(campoObj.campo)}</button>
                     <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔑 Dentro del vehículo</button>
                   </div>
                   <input type="hidden" id="nestedEditLlave_${abbr}" value="${escapeAttrLike(p.llave || "")}">
@@ -6877,7 +6903,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
             <label class="labeledFieldBox" style="flex:1;">
               <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
               <div class="circulacionToggle" id="nestedNewLlaveToggle_${abbr}">
-                <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Tablero ${escapeHtml(campoObj.campo)}</button>
+                <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Llave en tablero${esPasillo(campoObj.campo) ? "" : " " + escapeHtml(campoObj.campo)}</button>
                 <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔑 Dentro del vehículo</button>
               </div>
               <input type="hidden" id="nestedNewLlave_${abbr}" value="">
@@ -7220,7 +7246,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
               <div class="circulacionField">
                 <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
                 <div class="circulacionToggle" id="zoneEditLlaveToggle_${abbr}" data-selected="${escapeAttrLike(p.llave || "")}">
-                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Tablero ${escapeHtml(c.campo)}</button>
+                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Llave en tablero${esPasillo(c.campo) ? "" : " " + escapeHtml(c.campo)}</button>
                   <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔑 Dentro del vehículo</button>
                 </div>
                 <input type="hidden" id="zoneEditLlave_${abbr}" value="${escapeAttrLike(p.llave || "")}">
@@ -7316,7 +7342,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           <div class="circulacionField">
             <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
             <div class="circulacionToggle" id="zoneNewLlaveToggle_${abbr}">
-              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Tablero ${escapeHtml(c.campo)}</button>
+              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Llave en tablero${esPasillo(c.campo) ? "" : " " + escapeHtml(c.campo)}</button>
               <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔑 Dentro del vehículo</button>
             </div>
             <input type="hidden" id="zoneNewLlave_${abbr}" value="">
@@ -8799,7 +8825,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       [],
       headerCols
     ];
-    const llaveTexto = (p)=> p.llave === "tablero" ? "Tablero" : p.llave === "vehiculo" ? "Dentro del vehículo" : "";
+    const llaveTexto = (p)=> p.llave === "tablero" ? "Llave en tablero" : p.llave === "vehiculo" ? "Dentro del vehículo" : "";
     function agregarFila(campoLabel, p){
       const row = [campoLabel, p.plate, p.aseguradora || "", p.modelo || "", p.color || "", llaveTexto(p), fechaCortaExcel(p)];
       if(esCheckinZone){
@@ -9435,7 +9461,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // fila sin tener que abrir Editar — mismo criterio que el circulito de
   // color: no ocupa espacio, solo se agrega si hay un dato guardado.
   function llaveRowIcon(p, campoLabelParaTexto){
-    if(p.llave === "tablero") return ` <span class="plateLlaveIcon" title="Llave en el tablero ${escapeAttrLike(campoLabelParaTexto)}">🗂️</span>`;
+    if(p.llave === "tablero") return ` <span class="plateLlaveIcon" title="Llave en tablero${esPasillo(campoLabelParaTexto) ? "" : " " + escapeAttrLike(campoLabelParaTexto)}">🗂️</span>`;
     if(p.llave === "vehiculo") return ` <span class="plateLlaveIcon" title="Llave dentro del vehículo">🔑</span>`;
     return "";
   }
@@ -11799,7 +11825,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
               <div class="circulacionField">
                 <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
                 <div class="circulacionToggle" id="spaceEditLlaveToggle" data-selected="${escapeAttrLike(p.llave || "")}">
-                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Tablero ${escapeHtml(campoLabel)}</button>
+                  <button type="button" class="circulacionBtn llaveBtnTablero${p.llave==="tablero" ? " active" : ""}" data-value="tablero">🗂️ Llave en tablero${esPasillo(campoLabel) ? "" : " " + escapeHtml(campoLabel)}</button>
                   <button type="button" class="circulacionBtn llaveBtnVehiculo${p.llave==="vehiculo" ? " active" : ""}" data-value="vehiculo">🔑 Dentro del vehículo</button>
                 </div>
                 <input type="hidden" id="spaceEditLlave" value="${escapeAttrLike(p.llave || "")}">
@@ -11934,7 +11960,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           <div class="circulacionField" id="updLlaveSection"${isAvaluoUser() ? ` style="display:none;"` : ``}>
             <span class="labeledFieldLabel">¿Dónde está la llave?<span class="labeledFieldReq">*</span></span>
             <div class="circulacionToggle" id="updSpaceNewLlaveToggle">
-              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Tablero ${escapeHtml(campoLabel)}</button>
+              <button type="button" class="circulacionBtn llaveBtnTablero" data-value="tablero">🗂️ Llave en tablero${esPasillo(campoLabel) ? "" : " " + escapeHtml(campoLabel)}</button>
               <button type="button" class="circulacionBtn llaveBtnVehiculo" data-value="vehiculo">🔑 Dentro del vehículo</button>
             </div>
             <input type="hidden" id="updSpaceNewLlave" value="">
