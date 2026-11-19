@@ -7971,6 +7971,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         let cuerpo;
         if(nuevo) cuerpo = `<div class="cvHistLine">➕ Agregado en ${escapeHtml(h.hasta)}</div>`;
         else if(tipo) cuerpo = `<div class="cvHistLine">${escapeHtml(h.desde)} → ${escapeHtml(h.hasta)}</div>`;
+        else if(h.hasta === "Eliminado del inventario") cuerpo = `<div class="cvHistLine">🗑️ Eliminado del inventario</div><div class="cvHistLine"><span class="lbl">Estaba en:</span> ${escapeHtml(h.desde)}</div>`;
+        else if(/^Sin ubicaci[oó]n/i.test(String(h.hasta || ""))){
+          // "Sin ubicación · campo General" solo lo ven Admin y Actualización: para el resto, solo se dice que lo sacaron.
+          const veSinUbic = !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion"));
+          cuerpo = `<div class="cvHistLine"><span class="lbl">Retirado de:</span> ${escapeHtml(h.desde)}</div>` + (veSinUbic ? `<div class="cvHistLine"><span class="lbl">Quedó en:</span> ${escapeHtml(h.hasta)}</div>` : "");
+        }
         else cuerpo = `<div class="cvHistLine"><span class="lbl">Salió de:</span> ${escapeHtml(h.desde)}</div><div class="cvHistLine"><span class="lbl">Llegó a:</span> ${escapeHtml(h.hasta)}</div>`;
         return `<div class="cvHistItem2${i === 0 ? " first" : ""}${nuevo ? " nuevo" : ""}${tipo ? " " + tipo : ""}">
           ${i === 0 ? `<span class="cvHistTag">★ MÁS RECIENTE</span> ` : ""}${etiqueta ? `<span class="cvHistTag" style="margin-left:6px;">${etiqueta}</span>` : ""}
