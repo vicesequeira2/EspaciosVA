@@ -3527,7 +3527,7 @@
   <div class="modalCard modalCardWide">
     <h3>📥 Importar Excel</h3>
     <p style="font-size:0.78rem; color:var(--muted);">
-      Subí un Excel con columnas <strong>Placa</strong>, <strong>Modelo</strong>, <strong>Asesor</strong> (o <strong>Nombre</strong>) y <strong>Color</strong> — no hace falta que estén todas, ni en ese orden — se reconocen por el nombre del encabezado, sin importar mayúsculas. Si alguna de esas columnas no está en tu archivo, ese dato simplemente no se toca; el resto de columnas que tenga el archivo (Zona, notas, etc.) se ignoran. Si la columna del asesor trae un código de usuario conocido (ej. "daraal"), se convierte solo al nombre completo del asesor; si trae un nombre suelto, solo se guarda el primer nombre. Las placas que ya coincidan con algún vehículo ubicado se completan/actualizan; las que no aparezcan en ningún lado se agregan a <strong>Sin ubicación</strong>, listas para reubicar.
+      Subí un Excel con columnas <strong>Placa</strong>, <strong>Modelo</strong>, <strong>Asesor</strong> (o <strong>Nombre</strong>), <strong>Color</strong> y <strong># de OT</strong> (el encabezado puede decir "OT", "# de OT", "N° OT", "Orden de trabajo"…) — no hace falta que estén todas, ni en ese orden — se reconocen por el nombre del encabezado, sin importar mayúsculas. Si alguna de esas columnas no está en tu archivo, ese dato simplemente no se toca; el resto de columnas que tenga el archivo (Zona, notas, etc.) se ignoran. Si la columna del asesor trae un código de usuario conocido (ej. "daraal"), se convierte solo al nombre completo del asesor; si trae un nombre suelto, solo se guarda el primer nombre. Las placas que ya coincidan con algún vehículo ubicado se completan/actualizan; las que no aparezcan en ningún lado se agregan a <strong>Sin ubicación</strong>, listas para reubicar.
     </p>
     <button type="button" class="secondaryBtn" id="importExcelChooseBtn" style="width:100%; margin-top:8px;">📁 Elegir archivo Excel</button>
     <div id="importExcelFileName" style="font-size:0.78rem; color:var(--muted); margin-top:6px;"></div>
@@ -7966,8 +7966,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       titulo.style.display = ""; box.style.display = "";
       box.innerHTML = mios.map((h, i)=>{
         const nuevo = h.desde === "Vehículo nuevo";
-        const tipo = h.tipo === "etapa" ? "etapa" : (h.tipo === "ot" ? "ot" : (h.tipo === "renombre" ? "renombre" : ""));
-        const etiqueta = h.nota === "deshacer" ? "↩️ DESHACER" : (h.nota === "desplazado" ? "⤵️ DESPLAZADO" : "");
+        const tipo = h.tipo === "etapa" ? "etapa" : ((h.tipo === "ot" || h.tipo === "asesor") ? "ot" : (h.tipo === "renombre" ? "renombre" : ""));
+        const etiqueta = h.nota === "deshacer" ? "↩️ DESHACER" : (h.nota === "desplazado" ? "⤵️ DESPLAZADO" : (h.nota === "excel" ? "📥 POR EXCEL" : ""));
         let cuerpo;
         if(nuevo) cuerpo = `<div class="cvHistLine">➕ Agregado en ${escapeHtml(h.hasta)}</div>`;
         else if(tipo) cuerpo = `<div class="cvHistLine">${escapeHtml(h.desde)} → ${escapeHtml(h.hasta)}</div>`;
@@ -11929,6 +11929,22 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       await conLimiteDeTiempo(window.storage.set(key, JSON.stringify(list), true), 2500);
     }catch(e){ /* el registro de historial nunca debe romper la acción principal */ }
   }
+  // Igual que appendLog pero para varias entradas de una sola vez (una lectura y una escritura).
+  async function appendLogLote(key, entries, limit){
+    if(!entries || !entries.length) return;
+    if(typeof storageAvailable !== "undefined" && !storageAvailable){
+      for(const entry of entries){ await appendLog(key, entry, limit); }
+      return;
+    }
+    let list = [];
+    try{
+      const res = await conLimiteDeTiempo(window.storage.get(key, true), 2500);
+      if(res && res.value) list = JSON.parse(res.value);
+    }catch(e){}
+    list = list.concat(entries);
+    if(list.length > limit) list = list.slice(list.length - limit);
+    try{ await conLimiteDeTiempo(window.storage.set(key, JSON.stringify(list), true), 2500); }catch(e){}
+  }
   async function readLog(key){
     try{
       const res = await conLimiteDeTiempo(window.storage.get(key, true), 2500);
@@ -11959,8 +11975,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         const esNuevo = h.desde === "Vehículo nuevo";
         const esEliminado = h.hasta === "Eliminado del inventario";
         const tipo = esNuevo ? "nuevo" : (esEliminado ? "eliminado" : "movido");
-        const icono = esNuevo ? "＋" : (esEliminado ? "✕" : "🔀");
-        const verbo = esNuevo ? "agregó" : (esEliminado ? "eliminó" : "movió");
+        const esDato = h.tipo === "etapa" || h.tipo === "ot" || h.tipo === "asesor";
+        const icono = esNuevo ? "＋" : (esEliminado ? "✕" : (esDato ? "✏️" : "🔀"));
+        const verbo = esNuevo ? "agregó" : (esEliminado ? "eliminó" : (esDato ? "actualizó" : "movió"));
         const cuando = h.tsMillis ? relativeTimeShort(new Date(h.tsMillis)) : (h.ts || "");
         const inicial = (h.username || "?").trim().charAt(0).toUpperCase();
         return `
@@ -11972,7 +11989,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
             <div class="activityTimelineBody">
               <div class="activityTimelineText">
                 <span class="activityTimelineIcon">${icono}</span>
-                <strong>${escapeHtml(h.username)}</strong> ${verbo} <span class="plate activityTimelinePlate">${escapeHtml(h.placa)}</span>${esNuevo || esEliminado ? "" : ` a ${escapeHtml(h.hasta)}`}
+                <strong>${escapeHtml(h.username)}</strong> ${verbo} <span class="plate activityTimelinePlate">${escapeHtml(h.placa)}</span>${esNuevo || esEliminado ? "" : (esDato ? ` · ${escapeHtml(h.desde)} → ${escapeHtml(h.hasta)}` : ` a ${escapeHtml(h.hasta)}`)}
               </div>
               <div class="activityTimelineWhen">${escapeHtml(cuando)}</div>
             </div>
@@ -12692,7 +12709,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       // Se toman Placa, Modelo, Asesor y Color — pero SOLO si esa columna
       // existe de verdad en el archivo; si no está, ese dato queda vacío
       // (nunca se completa ni se inventa desde otro lado).
-      let filaEncabezado = -1, colPlaca = -1, colModelo = -1, colAsesor = -1, colColor = -1;
+      let filaEncabezado = -1, colPlaca = -1, colModelo = -1, colAsesor = -1, colColor = -1, colOT = -1;
       for(let r=0; r<Math.min(filasCrudo.length, 10); r++){
         const fila = filasCrudo[r].map(normalizarEncabezado);
         const idx = fila.findIndex(c => c === "placa");
@@ -12701,6 +12718,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           colModelo = fila.findIndex(c => c === "modelo");
           colAsesor = fila.findIndex(c => c === "asesor" || c === "aseguradora" || c === "nombre");
           colColor = fila.findIndex(c => c === "color");
+          // Columna del # de OT: "OT", "# de OT", "N° OT", "No. de OT", "Número de OT", "Orden de trabajo"…
+          colOT = fila.findIndex(c => {
+            const t = c.split(/[^a-z0-9]+/).filter(Boolean);
+            return t.includes("ot") || /orden.*trabajo/.test(c);
+          });
           break;
         }
       }
@@ -12718,7 +12740,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           // usa el nombre completo correspondiente. Si no, sigue como
           // antes: nombre suelto, solo se guarda la primera palabra.
           asesor: colAsesor !== -1 ? resolverAsesorImportado(fila[colAsesor]) : "",
-          color: colColor !== -1 ? String(fila[colColor] || "").trim() : ""
+          color: colColor !== -1 ? String(fila[colColor] || "").trim() : "",
+          ot: colOT !== -1 ? normalizarOT(fila[colOT]) : ""
         });
       }
     });
@@ -12728,14 +12751,25 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   function applyExcelImport(filas){
     const snap = snapshotZones();
     let agregados = 0, actualizados = 0, sinCambios = 0;
+    const logs = [];
+    const quien = currentUser ? currentUser.username : "?";
+    const anotar = (placa, tipo, desde, hasta)=> logs.push({ ts: nowStamp(), tsMillis: Date.now(), username: quien, placa, tipo, desde, hasta, nota: "excel" });
     filas.forEach(fila=>{
       const dup = findPlate(fila.plate);
       if(dup){
         const entry = dup.platesArray[dup.plateIdx];
         let cambio = false;
         if(fila.modelo && fila.modelo !== entry.modelo){ entry.modelo = fila.modelo; cambio = true; }
-        if(fila.asesor && fila.asesor !== entry.aseguradora){ entry.aseguradora = fila.asesor; cambio = true; }
+        // Asesor y # de OT: si el Excel trae un valor distinto, manda el del Excel (puede ser una OT nueva con otro asesor).
+        if(fila.asesor && fila.asesor !== entry.aseguradora){
+          if(entry.aseguradora) anotar(entry.plate, "asesor", "👤 Asesor: " + entry.aseguradora, "👤 Asesor: " + fila.asesor);
+          entry.aseguradora = fila.asesor; cambio = true;
+        }
         if(fila.color && fila.color !== entry.color){ entry.color = fila.color; cambio = true; }
+        if(fila.ot && fila.ot !== (entry.ot || "")){
+          anotar(entry.plate, "ot", "# de OT: " + (entry.ot || "—"), "# de OT: " + fila.ot);
+          entry.ot = fila.ot; cambio = true;
+        }
         if(cambio){
           entry.lastUpdated = new Date().toISOString();
           rememberPlateInfo(entry.plate, entry.aseguradora, entry.modelo, entry.color).catch(()=>{});
@@ -12747,7 +12781,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         ensureSinUbicacionConsolidada(SIN_UBICACION_KEY);
         insertPlateAtPosition(
           getOrCreateCampo(SIN_UBICACION_KEY, SIN_UBICACION_CAMPO),
-          { plate: fila.plate, aseguradora: fila.asesor, modelo: fila.modelo, color: fila.color, lastUpdated: new Date().toISOString() },
+          { plate: fila.plate, aseguradora: fila.asesor, modelo: fila.modelo, color: fila.color, ...(fila.ot ? { ot: fila.ot } : {}), lastUpdated: new Date().toISOString() },
           "first"
         );
         rememberPlateInfo(fila.plate, fila.asesor, fila.modelo, fila.color).catch(()=>{});
@@ -12755,7 +12789,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
     });
     pushUndo(snap, `Importar Excel: ${agregados} nuevo(s), ${actualizados} actualizado(s)`);
-    return { agregados, actualizados, sinCambios };
+    return { agregados, actualizados, sinCambios, logs };
   }
 
   // Busca pares "Dani" / "Daniel" ya guardados en los datos reales (no solo
@@ -13074,10 +13108,18 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           filasParaImportar = filas;
           const nuevos = filas.filter(f => !findPlate(f.plate)).length;
           const existentes = filas.length - nuevos;
+          let cambiaOT = 0, cambiaAsesor = 0;
+          filas.forEach(f=>{
+            const d = findPlate(f.plate); if(!d) return;
+            const e = d.platesArray[d.plateIdx];
+            if(f.ot && f.ot !== (e.ot || "")) cambiaOT++;
+            if(f.asesor && f.asesor !== e.aseguradora) cambiaAsesor++;
+          });
           previewEl.innerHTML = `
             <div class="historyItem">
               <strong>${filas.length} placa(s) encontrada(s)</strong>
-              <div class="historyMeta">${nuevos} se agregarán a Sin ubicación · ${existentes} ya están ubicadas y se completarán/actualizarán</div>
+              <div class="historyMeta">${nuevos} se agregarán a Sin ubicación · ${existentes} ya están ubicadas y se completarán/actualizarán${filas.some(f => f.ot) ? ` · ${filas.filter(f => f.ot).length} con # de OT` : ""}</div>
+              ${(cambiaOT || cambiaAsesor) ? `<div class="historyMeta"><b>Cambios que se aplicarán:</b> ${cambiaOT} # de OT · ${cambiaAsesor} asesor(es)</div>` : ""}
             </div>
           `;
           confirmBtn.disabled = false;
@@ -13094,6 +13136,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       await runGuarded(confirmBtn, "Importando…", async ()=>{
         const resultado = applyExcelImport(filasParaImportar);
         await saveState(true);
+        try{ await appendLogLote(HISTORY_KEY, (resultado.logs || []).slice(-150), 300); }catch(e){}
         renderAll();
         showToast(`Importado: ${resultado.agregados} nuevo(s), ${resultado.actualizados} actualizado(s)${resultado.sinCambios ? `, ${resultado.sinCambios} sin cambios` : ""}`, 5000);
         onClose();
@@ -13453,7 +13496,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         return `
         <div class="historyItem historyItem-${tipo}">
           <span class="historyItemIcon">${icono}</span>
-          <strong>${escapeHtml(h.placa)}</strong> movida por ${escapeHtml(h.username)}<br>
+          <strong>${escapeHtml(h.placa)}</strong> ${(h.tipo === "etapa" || h.tipo === "ot" || h.tipo === "asesor") ? "actualizada" : "movida"} por ${escapeHtml(h.username)}<br>
           de ${escapeHtml(h.desde)} a ${escapeHtml(h.hasta)}
           <div class="historyMeta">${escapeHtml(h.ts)}</div>
         </div>
