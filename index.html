@@ -1382,6 +1382,7 @@
   .modalBackTop{ display:inline-flex; align-items:center; gap:4px; border:0; background:var(--surface-2); color:var(--ink); font:inherit; font-weight:800; font-size:.9rem; padding:8px 14px; border-radius:999px; cursor:pointer; margin:0 0 10px; }
   #dupModal{ z-index:95; }
   @media (pointer:coarse){ input, select, textarea{ font-size:16px; } }
+  input[id*="Asesor"], input[id*="Aseg"], input[id*="Modelo"], input[id*="Color"], input[id*="OT"], input[id="otInput"], input[id*="Resp"], input[id="refPasilloInput"], input[id="ccSupervisor"]{ text-transform:uppercase; }
   #dupModal .modalCard{ text-align:center; padding:26px 20px 20px; }
   #dupModal h3{ font-size:1.45rem; line-height:1.25; margin:0 0 12px; }
   #dupModal .bigPlate{ display:inline-block; font-size:2.1rem; font-weight:800; letter-spacing:.08em; padding:6px 18px; border:3px solid currentColor; border-radius:12px; margin:4px 0 14px; }
@@ -6065,7 +6066,60 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   let saveRetryAttempts = 0; // tope de reintentos: si el celular queda horas sin señal con la pantalla prendida, no tiene sentido seguir intentando cada 6 seg para siempre — mejor avisar claro y dejar que la persona lo retome a mano cuando quiera.
   const SAVE_RETRY_MAX_ATTEMPTS = 20; // ~2 minutos de reintentos antes de rendirse
 
+  // Lo que se escribe en asesor, modelo, color, OT, responsable y referencia se pasa a MAYÚSCULA al instante.
+  document.addEventListener("input", (ev)=>{
+    const t = ev.target;
+    if(!t || t.tagName !== "INPUT" || t.type !== "text") return;
+    if(!/(Asesor|Aseg|Modelo|Color|OT|Resp|refPasilloInput|ccSupervisor)/.test(t.id || "") || /Filter|Search|search/.test(t.id || "")) return;
+    const u = t.value.toUpperCase();
+    if(u !== t.value){ const a = t.selectionStart, b = t.selectionEnd; t.value = u; try{ t.setSelectionRange(a, b); }catch(e){} }
+  });
+  // ---- Limpieza automática: TODO en mayúscula y sin placas repetidas ----
+  const CAMPOS_MAYUSCULA = ["aseguradora", "modelo", "color", "referencia", "responsable", "ot"];
+  function limpiezaAutomatica(){
+    let mayus = 0, dups = 0;
+    const grupos = new Map();
+    const pasar = (arr)=>{
+      (arr || []).forEach(e=>{
+        if(!e || typeof e !== "object") return;
+        CAMPOS_MAYUSCULA.forEach(k=>{
+          if(typeof e[k] === "string"){ const u = e[k].toUpperCase(); if(u !== e[k]){ e[k] = u; mayus++; } }
+        });
+        if(Array.isArray(e.etapas)) e.etapas.forEach(x=>{ if(x && typeof x.responsable === "string"){ const u = x.responsable.toUpperCase(); if(u !== x.responsable){ x.responsable = u; mayus++; } } });
+        const k = normalizePlate(e.plate); if(!k) return;
+        if(!grupos.has(k)) grupos.set(k, []);
+        grupos.get(k).push({ e, arr });
+      });
+    };
+    Object.keys(state.zones || {}).forEach(zk=> (state.zones[zk] || []).forEach(c=>{
+      pasar(c.plates);
+      (c.areas || []).forEach(a=>{ pasar(a.plates); (a.filas || []).forEach(f => pasar(f.plates)); });
+    }));
+    grupos.forEach(g=>{
+      if(g.length < 2) return;
+      const ts = (x)=>{ const t = new Date(x.e.lastUpdated || 0).getTime(); return isNaN(t) ? 0 : t; };
+      const mejor = g.reduce((m, x)=> ts(x) > ts(m) ? x : m, g[0]); // la más reciente; si empatan, la primera
+      g.forEach(x=>{ if(x !== mejor){ const i = x.arr.indexOf(x.e); if(i >= 0){ x.arr.splice(i, 1); dups++; } } });
+    });
+    if(mayus || dups) invalidateResumenRowsCache();
+    return { mayus, dups };
+  }
+  // Al abrir la app: si había algo por limpiar, se limpia y se guarda solo.
+  async function limpiezaAlCargar(){
+    try{
+      if(!currentUser || currentUser.isGuest || currentUser.role === "cc" || !storageAvailable || modoSinConexion) return;
+      const r = limpiezaAutomatica();
+      if(r.mayus || r.dups){
+        const res = await saveState(true);
+        if(res === true){
+          renderAll();
+          showToast(`🧹 Se ordenó solo: ${r.dups ? r.dups + " placa(s) repetida(s) quitada(s)" : ""}${r.dups && r.mayus ? " · " : ""}${r.mayus ? r.mayus + " dato(s) pasados a MAYÚSCULA" : ""}`, 5000);
+        }
+      }
+    }catch(e){ console.error("Limpieza automática", e); }
+  }
   async function saveState(silent){
+    try{ limpiezaAutomatica(); }catch(e){ console.error("Limpieza automática", e); }
     state.updatedAt = new Date().toISOString();
 
     if(!storageAvailable){
@@ -6114,6 +6168,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       // podría quedarse esperando en vez de fallar rápido y pasar al
       // reintento automático de fondo (que es lo que de verdad resuelve
       // el guardado más adelante).
+      try{ limpiezaAutomatica(); }catch(e){} // por si la unión con otro celular trajo algo repetido
       const setTimeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout")), 8000));
       const result = await Promise.race([window.storage.set(STORAGE_KEY, JSON.stringify(state), true), setTimeoutPromise]);
       if(!result || typeof result !== "object"){
@@ -11478,9 +11533,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // Si la clave todavía está en el formato viejo, la guarda en el nuevo (sin que la persona note nada).
   async function actualizarHashSiHaceFalta(user, password){
     try{
-      if(!user || String(user.hash).startsWith("p2$")) return;
+      if(!user || String(user.hash).startsWith("p2$") || usersLoadError) return;
       const nuevo = await hashClaveNueva(user.username, password);
       const lista = await loadUsers();
+      if(usersLoadError || !lista.length) return;
       const i = lista.findIndex(u => u.username.toLowerCase() === user.username.toLowerCase() && u.hash === user.hash);
       if(i < 0) return; // cambió mientras tanto: no se toca
       lista[i].hash = nuevo;
@@ -11488,16 +11544,28 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }catch(e){ console.error("No se pudo actualizar el formato de la clave", e); }
   }
 
+  let usersLoadError = false; // true si la última lectura de usuarios FALLÓ (distinto de "todavía no existe")
   async function loadUsers(){
+    usersLoadError = false;
     if(typeof storageAvailable !== "undefined" && !storageAvailable && modoSinConexion){
       const cu = await leerCacheOffline("users");
       if(cu){ try{ return JSON.parse(cu); }catch(e){} }
       return [];
     }
-    try{
-      const res = await withTimeout(window.storage.get(USERS_KEY, true), 5000, "tardó");
-      if(res && res.value){ guardarCacheOffline("users", res.value); return JSON.parse(res.value); }
-    }catch(e){ /* no existe todavía */ }
+    for(let intento = 0; intento < 2; intento++){
+      try{
+        const res = await withTimeout(window.storage.get(USERS_KEY, true), 6000, "tardó");
+        if(res && res.value){ guardarCacheOffline("users", res.value); return JSON.parse(res.value); }
+        return [];
+      }catch(e){
+        // "Clave no encontrada" = de verdad no existe todavía. Cualquier otro error (sin señal, lento) NO significa que no haya usuarios.
+        if(/no encontrada/i.test(String(e && e.message))) return [];
+        usersLoadError = true;
+        if(intento === 0) await new Promise(r => setTimeout(r, 800));
+      }
+    }
+    // Falló dos veces: se usa la última copia buena guardada en este dispositivo, solo para consultar.
+    try{ const cu = await leerCacheOffline("users"); if(cu) return JSON.parse(cu); }catch(e){}
     return [];
   }
   async function saveUsers(list){
@@ -11594,7 +11662,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(!key || (!aseguradora && !modelo && !color)) return;
     try{
       const registry = await loadPlateRegistry();
-      registry[key] = { aseguradora: aseguradora || "", modelo: modelo || "", color: color || "" };
+      registry[key] = { aseguradora: (aseguradora || "").toUpperCase(), modelo: (modelo || "").toUpperCase(), color: (color || "").toUpperCase() };
       await window.storage.set(PLATE_REGISTRY_KEY, JSON.stringify(registry), true);
       refreshModelSuggestions();
       refreshColorSuggestions();
@@ -11609,11 +11677,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const set = new Set();
     ZONES.forEach(z=>{
       (state.zones[z.key] || []).forEach(c=>{
-        c.plates.forEach(p=>{ if(p.modelo && p.modelo.trim()) set.add(p.modelo.trim()); });
+        c.plates.forEach(p=>{ if(p.modelo && p.modelo.trim()) set.add(p.modelo.trim().toUpperCase()); });
       });
     });
     if(plateRegistryCache){
-      Object.values(plateRegistryCache).forEach(r=>{ if(r.modelo && r.modelo.trim()) set.add(r.modelo.trim()); });
+      Object.values(plateRegistryCache).forEach(r=>{ if(r.modelo && r.modelo.trim()) set.add(r.modelo.trim().toUpperCase()); });
     }
     return [...set].sort((a,b)=> a.localeCompare(b, "es"));
   }
@@ -11628,11 +11696,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const set = new Set();
     ZONES.forEach(z=>{
       (state.zones[z.key] || []).forEach(c=>{
-        c.plates.forEach(p=>{ if(p.color && p.color.trim()) set.add(p.color.trim()); });
+        c.plates.forEach(p=>{ if(p.color && p.color.trim()) set.add(p.color.trim().toUpperCase()); });
       });
     });
     if(plateRegistryCache){
-      Object.values(plateRegistryCache).forEach(r=>{ if(r.color && r.color.trim()) set.add(r.color.trim()); });
+      Object.values(plateRegistryCache).forEach(r=>{ if(r.color && r.color.trim()) set.add(r.color.trim().toUpperCase()); });
     }
     return [...set].sort((a,b)=> a.localeCompare(b, "es"));
   }
@@ -11649,11 +11717,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const set = new Set();
     ZONES.forEach(z=>{
       (state.zones[z.key] || []).forEach(c=>{
-        c.plates.forEach(p=>{ if(p.aseguradora && p.aseguradora.trim()) set.add(p.aseguradora.trim()); });
+        c.plates.forEach(p=>{ if(p.aseguradora && p.aseguradora.trim()) set.add(p.aseguradora.trim().toUpperCase()); });
       });
     });
     if(plateRegistryCache){
-      Object.values(plateRegistryCache).forEach(r=>{ if(r.aseguradora && r.aseguradora.trim()) set.add(r.aseguradora.trim()); });
+      Object.values(plateRegistryCache).forEach(r=>{ if(r.aseguradora && r.aseguradora.trim()) set.add(r.aseguradora.trim().toUpperCase()); });
     }
     // Si "Dani" y "Daniel" quedaron guardados los dos (de antes de que
     // existiera el autocompletado, o porque nunca se le sacó el foco al
@@ -12542,7 +12610,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           renderAll();
           updateUndoBtn();
           startAutoRefreshIfNeeded();
-          avisarRepetidasAdmin();
+          await limpiezaAlCargar();
         }catch(e){
           console.error("Error cargando la aplicación", e);
           showToast("Ocurrió un error al cargar. Recargá la página e intentá de nuevo.", 5000);
@@ -12569,9 +12637,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       if(cu){ try{ users = JSON.parse(cu); modoSinConexion = true; }catch(e){ users = []; } }
     }
     if(users.length === 0){
-      users = await seedDefaultAdmin();
-      if(storageAvailable){
-        await saveUsers(users);
+      if(storageAvailable && usersLoadError){
+        // La lectura falló (no es que no haya usuarios): NO se crean cuentas nuevas ni se guarda nada,
+        // para no pisar la lista real de usuarios.
+        showLoginScreenError("No se pudo cargar la lista de usuarios (conexión lenta). Recargá la página en unos segundos.");
+      } else {
+        users = await seedDefaultAdmin();
+        if(storageAvailable){
+          await saveUsers(users);
+        }
       }
     }
 
@@ -12692,10 +12766,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const limpio = String(valorCrudo || "").trim();
     if(!limpio) return "";
     const codigo = limpio.toLowerCase();
-    if(ASESOR_CODIGO_MAP[codigo]) return ASESOR_CODIGO_MAP[codigo];
+    if(ASESOR_CODIGO_MAP[codigo]) return ASESOR_CODIGO_MAP[codigo].toUpperCase();
     // No es un código conocido — se trata como nombre suelto, igual que
     // antes: si trae nombre completo, solo se guarda la primera palabra.
-    return limpio.split(/\s+/)[0] || "";
+    return (limpio.split(/\s+/)[0] || "").toUpperCase();
   }
   function parseExcelParaImportar(workbook){
     const filas = [];
@@ -12735,13 +12809,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         if(!plate) continue;
         filas.push({
           plate,
-          modelo: colModelo !== -1 ? String(fila[colModelo] || "").trim() : "",
+          modelo: colModelo !== -1 ? String(fila[colModelo] || "").trim().toUpperCase() : "",
           // Si coincide con un código conocido (ver ASESOR_CODIGO_MAP), se
           // usa el nombre completo correspondiente. Si no, sigue como
           // antes: nombre suelto, solo se guarda la primera palabra.
           asesor: colAsesor !== -1 ? resolverAsesorImportado(fila[colAsesor]) : "",
-          color: colColor !== -1 ? String(fila[colColor] || "").trim() : "",
-          ot: colOT !== -1 ? normalizarOT(fila[colOT]) : ""
+          color: colColor !== -1 ? String(fila[colColor] || "").trim().toUpperCase() : "",
+          ot: colOT !== -1 ? normalizarOT(fila[colOT]).toUpperCase() : ""
         });
       }
     });
@@ -12966,7 +13040,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const set = new Set();
     ZONES.forEach(z=>{
       (state.zones[z.key] || []).forEach(c=>{
-        c.plates.forEach(p=>{ if(p.aseguradora && p.aseguradora.trim()) set.add(p.aseguradora.trim()); });
+        c.plates.forEach(p=>{ if(p.aseguradora && p.aseguradora.trim()) set.add(p.aseguradora.trim().toUpperCase()); });
       });
     });
     const todos = [...set];
@@ -13238,6 +13312,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(passToggleBtnReset) passToggleBtnReset.textContent = "👁️";
 
     let users = await loadUsers();
+    if(usersLoadError){
+      showToast("⚠️ No se pudo cargar la lista de usuarios (conexión lenta). Probá de nuevo; no se cambió nada.", 6000, true);
+      return;
+    }
     // Si todavía no hay ninguna cuenta CC, el formulario de nueva cuenta
     // arranca listo para crearla (solo falta escribir la contraseña).
     if(!users.some(u => u.role === "cc")){ nameInput.value = "CC"; roleSelect.value = "cc"; }
