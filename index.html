@@ -3521,9 +3521,9 @@
 
 <div class="modalOverlay" id="etapaPermModal">
   <div class="modalCard">
-    <h3>🧭 Etapas que puede mover</h3>
+    <h3>🧭 Etapas que puede elegir</h3>
     <p id="etapaPermUserLabel"></p>
-    <p style="font-size:0.78rem; color:var(--muted);">Marcá las etapas cuyos vehículos puede mover esta cuenta. Si dejás todas marcadas, no hay restricción.</p>
+    <p style="font-size:0.78rem; color:var(--muted);">Marcá las etapas que va a ver y poder elegir esta cuenta (por ejemplo, solo 2). Las demás no le aparecen. Si dejás todas marcadas, no hay restricción.</p>
     <div id="etapaPermList" class="zoneRestrictList"></div>
     <p class="authError" id="etapaPermError"></p>
     <div class="modalActions" style="margin-top:14px;">
@@ -5582,13 +5582,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   document.getElementById("qrMoveConfirmBtn").addEventListener("click", async (ev)=>{
     if(!qrMoveFound || !qrMoveZone || !qrMoveCampo) return;
     const found = qrMoveFound, z = qrMoveZone, c = qrMoveCampo;
+    const btnConfirm = ev.currentTarget; // currentTarget se pierde después de un await
     if(found.nuevo){
       const d = found.nuevo;
       const dest = (state.zones[z] || []).find(x => x.campo === c);
       if(dest && dest.capacidad && dest.plates.length >= dest.capacidad){
         if(!(await confirmUI(`${zoneInfo(z).label} · ${c} ya está lleno (${dest.plates.length}/${dest.capacidad}). ¿Agregar ${d.plate} igual?`))) return;
       }
-      await runGuarded(ev.currentTarget, "Agregando…", async ()=>{
+      await runGuarded(btnConfirm, "Agregando…", async ()=>{
         const snap = snapshotZones();
         const ok = await updaterAddNew(z, c, d.plate, d.aseguradora, d.modelo, "first", d.color, d.circulacion, d.llave, d.ot);
         qrCerrarMover();
@@ -5609,7 +5610,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       if(!(await confirmUI(`${zoneInfo(z).label} · ${c} ya está lleno (${destino.plates.length}/${destino.capacidad}). ¿Mover ${e.plate} igual?`))) return;
     }
     // Confirmación grande antes de mover de lugar (todos los usuarios)
-    const btnMover = ev.currentTarget; // currentTarget se pierde después de un await
+    const btnMover = btnConfirm;
     const desdeCampo = state.zones[found.zoneKey][found.campoIdx].campo;
     if((await askMoveOrCancel(e.plate, zoneInfo(found.zoneKey).label, desdeCampo, zoneInfo(z).label, c, true)) !== "move") return;
     await runGuarded(btnMover, "Moviendo…", async ()=>{
@@ -7190,10 +7191,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(e.responsable){
       return String(e.responsable).toLowerCase() === yo ? "" : `Este vehículo lo mueve ${e.responsable}`;
     }
-    const perm = u.etapasPermitidas || [];
-    if(perm.length && e.etapa && !perm.includes(e.etapa)) return `Tu cuenta no mueve vehículos de la etapa «${(etapaInfo(e.etapa) || {}).l || e.etapa}»`;
     return "";
   }
+  // Etapas que esta cuenta puede elegir (las que el Admin dejó marcadas). Sin restricción = todas.
+  function etapasElegiblesDe(u){
+    if(!u || u.role === "admin") return ETAPAS.slice();
+    const perm = u.etapasPermitidas || [];
+    return perm.length ? ETAPAS.filter(x => perm.includes(x.k)) : ETAPAS.slice();
+  }
+  function etapasRestringidasDe(u){ return !!(u && u.role !== "admin" && (u.etapasPermitidas || []).length); }
   function puedeCambiarEtapa(e){ return !etapaBloqueo(e); }
   function puedeVerBotonEtapa(){ return etapasHabilitadasDe(currentUser); }
   function puedeAsignarResponsable(){ return !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion" || currentUser.role === "taller")); }
@@ -7508,7 +7514,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       zonaSel.addEventListener("change", onZona); sugBtn.addEventListener("click", onSug);
     }
     function pintar(){
-      grid.innerHTML = (esTaller ? [] : [{ k:"", l:"Sin etapa", i:"➖" }]).concat(ETAPAS.filter(x => !(esTaller && TALLER_OCULTAS.includes(x.k)))).map(x => `<button type="button" class="etapaOpt${sel === x.k ? " sel" : ""}" data-k="${x.k}" ${bloqueo ? "disabled" : ""}><span>${x.i}</span>${escapeHtml(x.l)}</button>`).join("");
+      grid.innerHTML = ((esTaller || etapasRestringidasDe(currentUser)) ? [] : [{ k:"", l:"Sin etapa", i:"➖" }]).concat(etapasElegiblesDe(currentUser).filter(x => !(esTaller && TALLER_OCULTAS.includes(x.k)))).map(x => `<button type="button" class="etapaOpt${sel === x.k ? " sel" : ""}" data-k="${x.k}" ${bloqueo ? "disabled" : ""}><span>${x.i}</span>${escapeHtml(x.l)}</button>`).join("");
       pintarLugar();
       if(esTaller) pintarTiles();
       const puedeEntregar = currentUser.role === "admin" || (currentUser.role === "actualizacion" && !bloqueo && e.etapa === "entrega");
