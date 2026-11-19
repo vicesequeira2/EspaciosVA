@@ -1181,6 +1181,21 @@
   .tallerCard p{ font-size:.88rem; color:var(--muted); }
   #tallerPlaca{ width:100%; font-size:1.8rem; font-weight:800; text-align:center; letter-spacing:.12em; text-transform:uppercase; padding:14px 8px; margin:10px 0; box-sizing:border-box; }
   .tallerCard button{ width:100%; margin-top:8px; padding:14px; font-size:1rem; }
+  .datosCard{ padding:4px 2px; }
+  .datosCard .dcPlate{ font-size:1.7rem; font-weight:800; letter-spacing:.06em; }
+  .datosCard .dcGrid{ display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin-top:8px; font-size:1rem; line-height:1.3; }
+  .datosCard .dcGrid span:nth-child(odd){ color:var(--muted); font-weight:700; font-size:.88rem; }
+  .datosCard .dcGrid span:nth-child(even){ font-weight:800; font-size:1.05rem; word-break:break-word; }
+  .datosCard .dcVacio{ color:#b3261e !important; }
+  .datosCard .dcBtns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .datosCard .dcBtns button{ padding:12px 6px; border-radius:12px; border:2px solid #1b6b3f; font:inherit; font-weight:800; font-size:.92rem; cursor:pointer; background:#fff; color:#1b6b3f; }
+  .datosCard .dcBtns button.ok{ background:#1b6b3f; color:#fff; }
+  .datosCard .dcVerif{ margin-top:8px; font-size:.85rem; font-weight:700; color:#1b6b3f; }
+  .qrResumen{ background:#e3f5ea; border:2px solid #1b6b3f; border-radius:14px; padding:10px 12px; margin:6px 0; }
+  .qrResumen .qrResL{ font-size:1.05rem; font-weight:800; color:#1b6b3f; }
+  .qrResumen .qrResB{ display:flex; gap:8px; margin-top:8px; }
+  .qrResumen .qrResB button{ flex:1; padding:8px 6px; border-radius:10px; border:1.5px solid #1b6b3f; background:#fff; color:#1b6b3f; font:inherit; font-weight:700; font-size:.8rem; cursor:pointer; }
+  .zonaTile{ min-height:62px; border-left-width:6px !important; }
   .etStepT{ font-weight:800; font-size:.88rem; margin:14px 0 6px; display:flex; align-items:center; gap:8px; }
   .etStepN{ width:22px; height:22px; border-radius:50%; background:#1b6b3f; color:#fff; font-size:.78rem; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .etLugarOpts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -3272,14 +3287,45 @@
   </div>
 </div>
 
+<div class="modalOverlay" id="datosModal" style="z-index:95;">
+  <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
+    <h3>✏️ Editar datos</h3>
+    <div id="datosPlate" class="historyItem"></div>
+    <label class="ccLbl">🚙 Modelo</label>
+    <input type="text" id="datosModelo" class="avaIn" autocomplete="off">
+    <label class="ccLbl">🎨 Color</label>
+    <input type="text" id="datosColor" class="avaIn" autocomplete="off">
+    <label class="ccLbl">🧑‍💼 Asesor</label>
+    <input type="text" id="datosAsesor" class="avaIn" autocomplete="off">
+    <label class="ccLbl">#️⃣ # de OT</label>
+    <input type="text" id="datosOT" class="avaIn" maxlength="20" autocomplete="off">
+    <label class="ccLbl">¿Puede circular?</label>
+    <div class="ccChoice" id="datosCirc">
+      <button type="button" class="ccOpt" data-v="puede">✅ Puede circular</button>
+      <button type="button" class="ccOpt" data-v="no">🚫 No circula</button>
+    </div>
+    <label class="ccLbl">¿Dónde está la llave?</label>
+    <div class="ccChoice" id="datosLlave">
+      <button type="button" class="ccOpt" data-v="tablero">🗂️ Llave en tablero</button>
+      <button type="button" class="ccOpt" data-v="vehiculo">🔑 Dentro del vehículo</button>
+    </div>
+    <p class="authError" id="datosError"></p>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="primaryBtn" id="datosSaveBtn">Guardar cambios</button>
+      <button class="secondaryBtn" id="datosCancelBtn">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modalOverlay" id="qrMoveModal">
   <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
     <button type="button" class="modalBackTop" data-proxy="qrMoveStayBtn">← Volver</button>
     <h3>¿A dónde lo movés?</h3>
     <div id="qrMoveInfo" class="historyItem" style="margin-bottom:10px;"></div>
-    <label>Lugar</label>
-    <div class="zoneChipsRow" id="qrMoveZones"></div>
-    <label style="margin-top:10px;">Espacios</label>
+    <div class="etStepT" id="qrMoveStepZ"><span class="etStepN">1</span> ¿En qué lugar?</div>
+    <div class="spaceGrid" id="qrMoveZones"></div>
+    <div id="qrMoveResumen" class="qrResumen" style="display:none;"></div>
+    <div class="etStepT" id="qrMoveStepE" style="display:none;"><span class="etStepN">2</span> ¿En qué espacio?</div>
     <div class="spaceGrid" id="qrMoveGrid"><div class="dashEmptyNote" style="padding:8px;">Elegí un lugar para ver sus espacios.</div></div>
     <div class="modalActions" style="margin-top:14px; position:sticky; bottom:-20px; background:var(--surface); padding:10px 0 4px; z-index:2;">
       <button class="primaryBtn" id="qrMoveConfirmBtn" disabled>Elegí un espacio</button>
@@ -5245,28 +5291,134 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       : [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO];
   }
   let qrMoveEstac = false;
+  // ---- Tarjeta de datos del vehículo (legible) con Editar / Datos correctos ----
+  function puedeEditarDatosVehiculo(){ return !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion" || esBusquedaAgrega())); }
+  function datosTarjetaHtml(e, aquiTxt, esNuevo){
+    const fila = (lbl, v)=> `<span>${lbl}</span><span class="${v ? "" : "dcVacio"}">${v ? escapeHtml(String(v)) : "— falta —"}</span>`;
+    const circ = e.circulacion === "no" ? "🚫 No circula" : (e.circulacion === "puede" ? "✅ Puede circular" : "");
+    const llave = e.llave === "tablero" ? "🗂️ En tablero" : (e.llave === "vehiculo" ? "🔑 Dentro del vehículo" : "");
+    const verif = e.datosVerif && e.datosVerif.por ? `<div class="dcVerif">✔ Datos verificados por ${escapeHtml(e.datosVerif.por)}${e.datosVerif.ts ? " · " + escapeHtml(relativeTimeShort(new Date(e.datosVerif.ts))) : ""}</div>` : "";
+    return `<div class="datosCard">
+      <div class="dcPlate">${esNuevo ? "🚗" : iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</div>
+      <div class="dcGrid">
+        ${fila("Modelo", e.modelo)}${fila("Color", e.color)}${fila("Asesor", e.aseguradora)}${fila("# OT", e.ot)}${fila("Circula", circ)}${fila("Llave", llave)}
+        ${esNuevo ? "" : `<span>Ahora en</span><span>📍 ${escapeHtml(aquiTxt)}</span>`}
+      </div>
+      ${verif}
+      ${puedeEditarDatosVehiculo() ? `<div class="dcBtns"><button type="button" data-datos-editar="1">✏️ Editar datos</button>${esNuevo ? "" : `<button type="button" class="ok" data-datos-ok="1">✅ Datos correctos</button>`}</div>` : ""}
+      ${esNuevo ? "" : `<button type="button" class="qrMoveFotoBtn" data-qr-foto="${escapeAttrLike(e.plate)}" style="margin-top:10px;">📸 Fotos y compartir</button>`}
+    </div>`;
+  }
+  function wireDatosTarjeta(){
+    const box = document.getElementById("qrMoveInfo");
+    const ed = box.querySelector("[data-datos-editar]"), ok = box.querySelector("[data-datos-ok]");
+    if(ed) ed.addEventListener("click", abrirDatosModal);
+    if(ok) ok.addEventListener("click", datosMarcarCorrectos);
+  }
+  async function datosMarcarCorrectos(){
+    const f = qrMoveFound; if(!f || f.nuevo) return;
+    const fr = findPlate(f.platesArray[f.plateIdx].plate); if(!fr) return;
+    const e = fr.platesArray[fr.plateIdx];
+    e.datosVerif = { por: currentUser.username, ts: new Date().toISOString() };
+    invalidateResumenRowsCache();
+    const r = await saveState(true);
+    if(r === "conflict"){ showToast("⚠️ Alguien más guardó al mismo tiempo. Probá de nuevo.", 4500); return; }
+    qrMoveFound = fr;
+    showToast("✅ Datos confirmados", 2500);
+    qrDibujarMover();
+  }
+  function abrirDatosModal(){
+    const f = qrMoveFound; if(!f) return;
+    const esNuevo = !!f.nuevo;
+    const e0 = esNuevo ? f.nuevo : f.platesArray[f.plateIdx];
+    const modal = document.getElementById("datosModal");
+    const iMod = document.getElementById("datosModelo"), iCol = document.getElementById("datosColor"), iAse = document.getElementById("datosAsesor"), iOT = document.getElementById("datosOT");
+    const circBox = document.getElementById("datosCirc"), llaveBox = document.getElementById("datosLlave");
+    const save = document.getElementById("datosSaveBtn"), cancel = document.getElementById("datosCancelBtn"), err = document.getElementById("datosError");
+    err.textContent = "";
+    document.getElementById("datosPlate").innerHTML = `<strong>🚗 ${escapeHtml(e0.plate)}</strong>`;
+    iMod.value = e0.modelo || ""; iCol.value = e0.color || ""; iAse.value = e0.aseguradora || ""; iOT.value = e0.ot || "";
+    let circ = e0.circulacion || "", llave = e0.llave || "";
+    function pintar(){
+      circBox.querySelectorAll(".ccOpt").forEach(b=> b.className = "ccOpt" + (b.dataset.v === circ ? (circ === "no" ? " sel bad" : " sel ok") : ""));
+      llaveBox.querySelectorAll(".ccOpt").forEach(b=> b.className = "ccOpt" + (b.dataset.v === llave ? " sel ok" : ""));
+    }
+    function onCirc(ev){ const b = ev.target.closest(".ccOpt"); if(b){ circ = b.dataset.v; pintar(); } }
+    function onLlave(ev){ const b = ev.target.closest(".ccOpt"); if(b){ llave = b.dataset.v; pintar(); } }
+    function cerrar(){ modal.classList.remove("show"); circBox.removeEventListener("click", onCirc); llaveBox.removeEventListener("click", onLlave); save.removeEventListener("click", onSave); cancel.removeEventListener("click", cerrar); }
+    async function onSave(){
+      const nuevo = { modelo: iMod.value.trim().toUpperCase(), color: iCol.value.trim().toUpperCase(), aseguradora: iAse.value.trim().toUpperCase(), ot: normalizarOT(iOT.value), circulacion: circ, llave };
+      if(esNuevo){
+        Object.assign(qrMoveFound.nuevo, nuevo);
+        cerrar(); qrDibujarMover(); return;
+      }
+      const fr = findPlate(e0.plate);
+      if(!fr){ cerrar(); return; }
+      const e = fr.platesArray[fr.plateIdx];
+      const antes = { modelo: e.modelo || "", color: e.color || "", aseguradora: e.aseguradora || "", ot: e.ot || "", circulacion: e.circulacion || "", llave: e.llave || "" };
+      const cambios = Object.keys(antes).filter(k => (antes[k] || "") !== (nuevo[k] || ""));
+      if(!cambios.length){ cerrar(); return; }
+      const snap = snapshotZones();
+      cambios.forEach(k=>{ if(nuevo[k]) e[k] = nuevo[k]; else delete e[k]; });
+      e.lastUpdated = new Date().toISOString();
+      e.datosVerif = { por: currentUser.username, ts: new Date().toISOString() };
+      invalidateResumenRowsCache();
+      const r = await saveState(true);
+      if(r === "conflict"){ state.zones = snap; invalidateResumenRowsCache(); err.textContent = "Alguien más guardó al mismo tiempo: NO se guardó. Probá de nuevo."; return; }
+      cerrar();
+      const nombres = { modelo:"Modelo", color:"Color", aseguradora:"Asesor", ot:"# OT", circulacion:"Circulación", llave:"Llave" };
+      const ver = (k, v)=> k === "circulacion" ? (v === "no" ? "No circula" : v === "puede" ? "Puede circular" : "—") : (k === "llave" ? (v === "tablero" ? "En tablero" : v === "vehiculo" ? "Dentro del vehículo" : "—") : (v || "—"));
+      for(const k of cambios){
+        await appendLog(HISTORY_KEY, { ts: nowStamp(), tsMillis: Date.now(), username: currentUser.username, placa: e.plate, tipo: k === "aseguradora" ? "asesor" : (k === "ot" ? "ot" : "dato"), desde: `${nombres[k]}: ${ver(k, antes[k])}`, hasta: `${nombres[k]}: ${ver(k, nuevo[k])}` }, 300);
+      }
+      qrMoveFound = fr;
+      showToast("✏️ Datos actualizados", 2500);
+      renderAll();
+      qrDibujarMover();
+    }
+    circBox.addEventListener("click", onCirc); llaveBox.addEventListener("click", onLlave);
+    save.addEventListener("click", onSave); cancel.addEventListener("click", cerrar);
+    pintar();
+    modal.classList.add("show");
+  }
   function qrDibujarMover(){
     ensureTallerCampos();
     const found = qrMoveFound;
     const nuevo = found.nuevo || null;
     const e = nuevo ? nuevo : found.platesArray[found.plateIdx];
     const aqui = nuevo ? "" : `${zoneInfo(found.zoneKey).label} · ${state.zones[found.zoneKey][found.campoIdx].campo}`;
-    document.getElementById("qrMoveInfo").innerHTML = nuevo
-      ? `<strong>🚗 ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">🧑‍💼 ${escapeHtml(e.aseguradora || "")} · ➕ Vehículo nuevo</div>`
-      : `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(e.modelo || "")}${e.color ? " · " + escapeHtml(e.color) : ""}</div><div class="historyMeta">📍 Ahora: ${escapeHtml(aqui)}</div><button type="button" class="qrMoveFotoBtn" data-qr-foto="${escapeAttrLike(e.plate)}">📸 Fotos y compartir</button>`;
+    document.getElementById("qrMoveInfo").innerHTML = datosTarjetaHtml(e, nuevo ? "Vehículo nuevo" : aqui, !!nuevo);
+    wireDatosTarjeta();
     const chips = document.getElementById("qrMoveZones");
-    chips.innerHTML = qrZonasDestino().map(z => `
-      <button type="button" class="zoneChipBtn${qrMoveZone===z.key?" active":""}${z.key===SIN_UBICACION_KEY?" sinUbicacionChip":""}" data-zone="${escapeAttrLike(z.key)}" style="--chip-color:#${z.hex}">${escapeHtml(z.label)}</button>`).join("");
-    chips.querySelectorAll(".zoneChipBtn").forEach(b=>{
-      b.addEventListener("click", ()=>{ qrMoveZone = b.getAttribute("data-zone"); qrMoveCampo = ""; qrMoveEstac = false; qrDibujarMover(); });
-    });
+    const stepZ = document.getElementById("qrMoveStepZ"), stepE = document.getElementById("qrMoveStepE"), resumen = document.getElementById("qrMoveResumen");
     const grid = document.getElementById("qrMoveGrid");
     const btn = document.getElementById("qrMoveConfirmBtn");
-    if(!qrMoveZone){
-      grid.innerHTML = `<div class="dashEmptyNote" style="padding:8px;">Elegí un lugar para ver sus espacios.</div>`;
-      btn.disabled = true; btn.textContent = "Elegí un espacio";
+    const faseZona = !qrMoveZone;
+    stepZ.style.display = chips.style.display = faseZona ? "" : "none";
+    if(faseZona){
+      chips.innerHTML = qrZonasDestino().map(z => `
+        <button type="button" class="spaceGridBtn zonaTile${z.key===SIN_UBICACION_KEY?" sinUbicacionChip":""}" data-zone="${escapeAttrLike(z.key)}" style="border-color:#${z.hex}"><span class="spaceGridLabel">${escapeHtml(z.label)}</span></button>`).join("");
+      chips.querySelectorAll("[data-zone]").forEach(b=>{
+        b.addEventListener("click", ()=>{ qrMoveZone = b.getAttribute("data-zone"); qrMoveCampo = ""; qrMoveEstac = false; qrDibujarMover(); });
+      });
+      resumen.style.display = "none"; stepE.style.display = "none";
+      grid.innerHTML = "";
+      btn.disabled = true; btn.textContent = "Elegí un lugar";
       return;
     }
+    chips.innerHTML = "";
+    // Con el lugar elegido se quita todo lo demás: resumen con botón para cambiarlo.
+    const zInfoSel = zoneInfo(qrMoveZone);
+    const fase3 = !!qrMoveCampo && !qrMoveEstac;
+    resumen.style.display = "";
+    resumen.innerHTML = `<div class="qrResL">📍 ${escapeHtml(zInfoSel.label)}${fase3 ? " · " + escapeHtml(String(qrMoveCampo)) : ""}</div><div class="qrResB"><button type="button" data-cambiar="zona">Cambiar lugar</button>${fase3 ? `<button type="button" data-cambiar="espacio">Cambiar espacio</button>` : ""}</div>`;
+    resumen.querySelectorAll("[data-cambiar]").forEach(b=> b.addEventListener("click", ()=>{
+      if(b.getAttribute("data-cambiar") === "zona"){ qrMoveZone = ""; qrMoveCampo = ""; qrMoveEstac = false; }
+      else qrMoveCampo = "";
+      qrDibujarMover();
+    }));
+    stepE.style.display = fase3 ? "none" : "";
+    grid.style.display = fase3 ? "none" : "";
     if(qrMoveEstac && qrMoveZone === TALLER_KEY){
       const lados = ESTAC_ZONAS.filter(k => qrZonasDestino().some(z => z.key === k));
       grid.innerHTML = `<div class="dashEmptyNote" style="padding:4px 0 8px;grid-column:1/-1;">🅿️ ¿De qué lado lo estacionás?</div>` + lados.map(k=>`<button type="button" class="spaceGridBtn partial" data-lado="${escapeAttrLike(k)}"><span class="spaceGridLabel">${escapeHtml(zoneInfo(k).label)}</span><span class="spaceGridCount">${(state.zones[k]||[]).length} esp.</span></button>`).join("") + `<button type="button" class="spaceGridBtn" data-lado=""><span class="spaceGridLabel">← Volver</span></button>`;
@@ -5367,10 +5519,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     return n;
   }
   async function qrMoverVehiculo(found, destZone, destCampo, opts){
-    if(!puedeMoverVehiculos()) return false;
+    const porEtapa = !!(opts && opts.porEtapa && destZone === TALLER_KEY);
+    if(!puedeMoverVehiculos() && !porEtapa) return false;
     if(currentUser.role === "taller" && !(destZone === TALLER_KEY || ESTAC_ZONAS.includes(destZone))) return false;
     if(destZone === TALLER_KEY) ensureTallerCampos();
-    if(currentUser.role === "actualizacion" && destZone !== SIN_UBICACION_KEY){
+    if(currentUser.role === "actualizacion" && destZone !== SIN_UBICACION_KEY && !porEtapa){
       const permitidas = allowedZonesForCurrentUser();
       if(permitidas.length && !permitidas.some(z => z.key === destZone)){
         qrMostrarTarjeta("bad", `Tu cuenta no tiene acceso a ${escapeHtml(zoneInfo(destZone).label)}.`);
@@ -5729,6 +5882,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(!isNaN(n)) return n;
     const m = /^L[ií]nea\s+(\d+)$/i.exec(String(c).trim());
     if(m) return 1000000 + parseInt(m[1], 10); // Líneas: después de los números, pero en orden numérico entre sí
+    // Espacios del Taller: en el orden del proceso (no alfabético)
+    const iT = ["espera de reparación","desarmado","enderezado","pintura","mecánica","armado","pulido","control de calidad"].indexOf(String(c).trim().toLowerCase());
+    if(iT >= 0) return 500000 + iT;
     return Infinity;
   }
   function sortCampos(arr){
@@ -7194,7 +7350,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const quedaBtn = document.getElementById("etapaQuedaBtn"), cambiaBtn = document.getElementById("etapaCambiaBtn");
     const zonaSel = document.getElementById("etapaDestZona"), campoSel = document.getElementById("etapaDestCampo"), sugBtn = document.getElementById("etapaSugBtn");
     const esTaller = !!(currentUser && currentUser.role === "taller");
-    const TALLER_OCULTAS = ["recepcion","espera","entrega"];
+    const TALLER_OCULTAS = ["recepcion","avaluo","espera","entrega"];
     let cambiaLugar = false;
     let vistaTiles = null, ladoEleg = "", espEleg = "";
     const tilesBox = document.getElementById("etapaTiles");
@@ -7225,7 +7381,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const SUG = { recepcion:"Recepcion", avaluo:"Avaluo", pintura:"TallerPintura" };
     function zonasDestino(){
       const todas = qrZonasDestino();
-      if(sel === "estacionamiento") return todas.filter(z => (esTaller ? ["AvaluoPuff","Maya","Atras"] : ESTAC_ZONAS).includes(z.key));
+      if(sel === "estacionamiento") return todas.filter(z => ESTAC_ZONAS.includes(z.key));
       if(esTaller && sel === "avaluo") return todas.filter(z => z.key === "Avaluo");
       return todas;
     }
@@ -7277,7 +7433,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         note.style.cursor = "pointer";
       }
       document.getElementById("etapaLugarBox").style.display = (sel && !vistaTiles) ? "" : "none";
-      saveBtn.disabled = !sel || (necesitaElegir && !espEleg) || !resp.value.trim();
+      saveBtn.disabled = esTaller ? (!sel || (necesitaElegir && !espEleg) || !resp.value.trim()) : false;
     }
     function pintarTiles(){
       const normal = !vistaTiles;
@@ -7328,7 +7484,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     tilesBox.addEventListener("click", onTiles);
     document.getElementById("etapaAutoNote").addEventListener("click", onNote);
     function pintarLugar(){
-      if(esTaller){ pintarLugarTaller(); return; }
+      const tcAuto = TALLER_CAMPOS.find(x => x[1] === sel);
+      if(esTaller || (tcAuto && !bloqueo)){ pintarLugarTaller(); return; }
+      document.querySelector("#etapaLugarBox .etLugarOpts").style.display = "";
+      document.getElementById("etapaAqui").style.display = "";
+      document.getElementById("etapaAutoNote").style.display = "none";
+      lugarBox.style.display = puedeMover ? "" : "none";
       quedaBtn.classList.toggle("sel", !cambiaLugar); cambiaBtn.classList.toggle("sel", cambiaLugar);
       destBox.style.display = cambiaLugar ? "" : "none";
       if(cambiaLugar){ pintarSugerido(); if(!campoSel.options.length) llenarCampos(); }
@@ -7387,7 +7548,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     async function onSave(){
       if(esTaller && !resp.value.trim()){ showToast("Escribí quién lo mueve", 3000); resp.focus(); return; }
       let destZ = "", destC = "";
-      if((cambiaLugar || (esTaller && sel)) && puedeMover){
+      const tcAuto = TALLER_CAMPOS.find(x => x[1] === sel);
+      const porEtapa = !!tcAuto && !bloqueo;
+      if(porEtapa){
+        // Elegir una etapa del Taller mueve el vehículo a ese espacio (así no queda repetido en su lugar anterior).
+        destZ = TALLER_KEY; destC = tcAuto[0];
+        const actual0 = state.zones[found.zoneKey][found.campoIdx].campo;
+        if(found.zoneKey === destZ && String(actual0).toLowerCase() === destC.toLowerCase()){ destZ = ""; destC = ""; }
+        ensureTallerCampos();
+      } else if((cambiaLugar || (esTaller && sel)) && puedeMover){
         destZ = zonaSel.value; destC = campoSel.value;
         const tcs = esTaller && TALLER_CAMPOS.find(x => x[1] === sel);
         if(tcs){ destZ = TALLER_KEY; destC = tcs[0]; }
@@ -7408,7 +7577,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       let movido = false;
       if(destZ){
         const f2 = findPlate(plate);
-        if(f2) movido = await qrMoverVehiculo(f2, destZ, destC, { sinEtapa: !bloqueo });
+        if(f2) movido = await qrMoverVehiculo(f2, destZ, destC, { sinEtapa: !bloqueo, porEtapa });
         if(!movido) showToast("⚠️ La etapa se guardó, pero el vehículo NO se movió.", 5000, true);
       }
       cerrar();
@@ -8442,7 +8611,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       titulo.style.display = ""; box.style.display = "";
       box.innerHTML = mios.map((h, i)=>{
         const nuevo = h.desde === "Vehículo nuevo";
-        const tipo = h.tipo === "etapa" ? "etapa" : ((h.tipo === "ot" || h.tipo === "asesor") ? "ot" : (h.tipo === "renombre" ? "renombre" : ""));
+        const tipo = h.tipo === "etapa" ? "etapa" : ((h.tipo === "ot" || h.tipo === "asesor" || h.tipo === "dato") ? "ot" : (h.tipo === "renombre" ? "renombre" : ""));
         const etiqueta = h.nota === "deshacer" ? "↩️ DESHACER" : (h.nota === "desplazado" ? "⤵️ DESPLAZADO" : (h.nota === "excel" ? "📥 POR EXCEL" : ""));
         let cuerpo;
         if(nuevo) cuerpo = `<div class="cvHistLine">➕ Agregado en ${escapeHtml(h.hasta)}</div>`;
@@ -9274,8 +9443,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         gridBox.innerHTML = `<button type="button" class="linkBackBtn" id="zoneCreateFirstBtn" style="text-decoration:none; font-weight:700;">+ Crear ${esFemenino ? "la primera" : "el primer"} ${labelLower}</button>`;
         const createBtn = gridBox.querySelector("#zoneCreateFirstBtn");
         if(createBtn){
-          createBtn.addEventListener("click", ()=>{
-            const nuevo = crearNuevoCampo();
+          createBtn.addEventListener("click", async ()=>{
+            const nuevo = await crearNuevoCampo();
             if(!nuevo) return;
             getOrCreateCampo(zone.key, nuevo);
             saveState();
@@ -9356,8 +9525,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }).join("")}</div>`;
       const addCampoBtn = gridBox.querySelector("#zoneGridAddCampoBtn");
       if(addCampoBtn){
-        addCampoBtn.addEventListener("click", ()=>{
-          const nuevo = crearNuevoCampo();
+        addCampoBtn.addEventListener("click", async ()=>{
+          const nuevo = await crearNuevoCampo();
           if(!nuevo) return;
           getOrCreateCampo(zone.key, nuevo);
           saveState();
@@ -12465,7 +12634,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         const esNuevo = h.desde === "Vehículo nuevo";
         const esEliminado = h.hasta === "Eliminado del inventario";
         const tipo = esNuevo ? "nuevo" : (esEliminado ? "eliminado" : "movido");
-        const esDato = h.tipo === "etapa" || h.tipo === "ot" || h.tipo === "asesor";
+        const esDato = h.tipo === "etapa" || h.tipo === "ot" || h.tipo === "asesor" || h.tipo === "dato";
         const icono = esNuevo ? "＋" : (esEliminado ? "✕" : (esDato ? "✏️" : "🔀"));
         const verbo = esNuevo ? "agregó" : (esEliminado ? "eliminó" : (esDato ? "actualizó" : "movió"));
         const cuando = h.tsMillis ? relativeTimeShort(new Date(h.tsMillis)) : (h.ts || "");
@@ -14122,7 +14291,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         return `
         <div class="historyItem historyItem-${tipo}">
           <span class="historyItemIcon">${icono}</span>
-          <strong>${escapeHtml(h.placa)}</strong> ${(h.tipo === "etapa" || h.tipo === "ot" || h.tipo === "asesor") ? "actualizada" : "movida"} por ${escapeHtml(h.username)}<br>
+          <strong>${escapeHtml(h.placa)}</strong> ${(h.tipo === "etapa" || h.tipo === "ot" || h.tipo === "asesor" || h.tipo === "dato") ? "actualizada" : "movida"} por ${escapeHtml(h.username)}<br>
           de ${escapeHtml(h.desde)} a ${escapeHtml(h.hasta)}
           <div class="historyMeta">${escapeHtml(h.ts)}</div>
         </div>
