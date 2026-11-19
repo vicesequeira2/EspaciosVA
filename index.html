@@ -1395,6 +1395,7 @@
   #dupModal .modalActions{ margin-top:18px; }
   #dupModal .modalActions button{ font-size:1.15rem; padding:15px 10px; }
   #refPasilloModal{ z-index:80; }
+  #etapaPermModal, #zoneRestrictModal{ z-index:85; }
   #refPasilloInput{ width:100%; box-sizing:border-box; margin-top:6px; }
   .refFrenteRow{ display:flex; align-items:stretch; gap:8px; margin-top:6px; }
   .refFrenteTag{ display:flex; align-items:center; padding:0 14px; border-radius:12px; background:#e3f5ea; color:#1b6b3f; font-weight:900; font-size:1.05rem; white-space:nowrap; }
@@ -1732,32 +1733,49 @@
   .adminMenuDropdown{
     display:none;
     position:absolute;
-    top:calc(100% + 4px);
+    top:calc(100% + 6px);
     left:0;
     z-index:80;
     background: var(--surface);
     border:1px solid var(--border);
-    border-radius:10px;
-    box-shadow:0 8px 20px rgba(0,0,0,0.2);
-    padding:6px;
-    min-width:160px;
+    border-radius:14px;
+    box-shadow:0 12px 28px rgba(0,0,0,0.28);
+    padding:8px;
+    width:270px;
+    max-width:calc(100vw - 16px);
+    max-height:74vh; max-height:74dvh;
+    overflow-y:auto;
     flex-direction:column;
     gap:2px;
   }
   .adminMenuDropdown.show{ display:flex; }
-  .adminMenuDropdown button{
-    background:none;
-    border:none;
+  /* Con # para ganarle a los estilos de los botones del encabezado (que dejaban el texto ilegible). */
+  #adminMenuDropdown button{
+    display:flex; align-items:center; gap:10px;
+    width:100%;
+    background:none !important;
+    border:none !important;
     text-align:left;
-    padding:8px 10px;
-    border-radius:8px;
-    font-size:0.82rem;
-    font-weight:600;
-    color: var(--ink);
+    padding:9px 10px;
+    border-radius:10px;
+    font-size:0.92rem;
+    font-weight:700;
+    color: var(--ink) !important;
     cursor:pointer;
-    white-space:nowrap;
+    white-space:normal;
   }
-  .adminMenuDropdown button:active{ background: var(--surface-2); }
+  #adminMenuDropdown button:hover, #adminMenuDropdown button:active{ background: var(--surface-2) !important; }
+  .amIc{ width:26px; text-align:center; font-size:1.2rem; flex:none; }
+  .amTx{ display:flex; flex-direction:column; line-height:1.2; min-width:0; }
+  .amTx small{ font-weight:500; color:var(--muted); font-size:0.74rem; margin-top:1px; }
+  .amSec{ font-size:0.66rem; letter-spacing:0.16em; font-weight:900; color:var(--muted); padding:8px 10px 3px; }
+  .amSec:first-child{ padding-top:2px; }
+  .amMore{ margin-top:6px; border-top:1px solid var(--border-soft, var(--border)); padding-top:4px; }
+  .amMore > summary{ cursor:pointer; padding:9px 10px; font-weight:800; font-size:0.9rem; color:var(--ink); list-style:none; border-radius:10px; }
+  .amMore > summary::-webkit-details-marker{ display:none; }
+  .amMore > summary::after{ content:"▸"; float:right; color:var(--muted); }
+  .amMore[open] > summary::after{ content:"▾"; }
+  .amMore button{ padding:7px 10px 7px 16px !important; font-size:0.86rem !important; }
   .identityRow{
     display:flex; align-items:center; gap:8px;
     margin-top:5px;
@@ -1884,6 +1902,31 @@
   .userRow button.featureUserBtn{ color: #8a5a1c; }
   .userRow button.exportPermBtn{ color: #2f7a4a; }
   .userRow.inactive{ opacity:0.5; }
+  #usersList{ max-height:52vh; max-height:52dvh; gap:8px; }
+  .newUserBox{ margin-top:12px; border:1px dashed var(--border); border-radius:12px; padding:8px 12px; }
+  .newUserBox > summary{ cursor:pointer; font-weight:800; padding:4px 0; color:var(--ink); }
+  #usersList > *{ flex:0 0 auto; }
+  #usersModal .modalCard{ max-height:94vh; max-height:94dvh; overflow-y:auto; }
+  .uCard{ border:1px solid var(--border-soft, var(--border)); border-radius:12px; background:var(--surface); overflow:hidden; }
+  .uCard.inactive .uHead{ opacity:.55; }
+  .uHead{ all:unset; box-sizing:border-box; width:100%; display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; }
+  .uAv{ width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; flex:none; }
+  .uMain{ display:flex; flex-direction:column; min-width:0; flex:1; }
+  .uMain b{ font-size:.98rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .uMain small{ color:var(--muted); font-size:.74rem; font-weight:700; }
+  .uChips{ display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; max-width:96px; font-size:.78rem; }
+  .uChips span{ background:var(--surface-2, #eee); border-radius:999px; padding:1px 6px; font-weight:700; color:var(--ink); }
+  .uArrow{ color:var(--muted); transition:transform .15s; flex:none; }
+  .uCard.open .uArrow{ transform:rotate(180deg); }
+  .uBody{ display:none; padding:4px 12px 12px; border-top:1px solid var(--border-soft, var(--border)); }
+  .uCard.open .uBody{ display:block; }
+  .uSec{ font-size:.68rem; letter-spacing:.12em; font-weight:900; color:var(--muted); margin:10px 0 6px; }
+  .uGrid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .uGrid button{ font:inherit; font-size:.8rem; font-weight:700; padding:9px 8px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2, #f3f3f3); color:var(--ink); cursor:pointer; text-align:left; line-height:1.2; }
+  .uGrid button.on{ background:#e3f4ea; border-color:#7cc59a; color:#1d6b3f; }
+  .uGrid button.danger{ color:#b3261e; border-color:#e6aaa6; }
+  .uGrid button:disabled{ opacity:.4; }
+  .uGroup{ font-size:.7rem; letter-spacing:.14em; font-weight:900; color:var(--muted); margin:8px 2px 0; }
   .historyTabs{ display:flex; gap:6px; margin-bottom:10px; }
   .historyTabBtn{
     flex:1; background:var(--surface-3); border:none; border-radius:8px;
@@ -3086,20 +3129,25 @@
       <div class="adminMenuWrap" id="adminMenuWrap" style="display:none;">
         <button type="button" id="adminMenuBtn">⚙️ Administrar</button>
         <div class="adminMenuDropdown" id="adminMenuDropdown">
-          <button id="usersBtn">👤 Usuarios</button>
-          <button id="historyBtn">🕒 Historial</button>
-          <button id="guestLinksBtn">🔗 Invitados</button>
-          <button id="backupBtn">💾 Respaldo</button>
-          <button id="restoreBtn">📂 Restaurar</button>
-          <button id="dataHealthBtn">🩺 Salud de datos</button>
-          <button id="qrBatchBtn">🏷️ Etiquetas QR (lote)</button>
-          <button id="checkinItemsBtn">📋 Ítems de check-in</button>
-          <button id="importExcelBtn">📥 Importar Excel</button>
-          <button id="unifyAsesoresBtn">🧹 Unificar nombres de asesor</button>
-          <button id="dedupePlatesBtn">🧹 Quitar placas repetidas</button>
-          <button id="cleanPlatesBtn">🧹 Limpiar formato de placas</button>
-          <button id="unifyModelosBtn">🧹 Unificar nombres de modelo</button>
-          <button id="testPhotoReportBtn">🧪 Probar compartir fotos</button>
+          <div class="amSec">GESTIÓN</div>
+          <button id="usersBtn"><span class="amIc">👤</span><span class="amTx">Usuarios<small>Cuentas, permisos y etapas</small></span></button>
+          <button id="historyBtn"><span class="amIc">🕒</span><span class="amTx">Historial<small>Movimientos y accesos</small></span></button>
+          <button id="guestLinksBtn"><span class="amIc">🔗</span><span class="amTx">Invitados<small>Enlaces temporales de solo lectura</small></span></button>
+          <div class="amSec">DATOS</div>
+          <button id="importExcelBtn"><span class="amIc">📥</span><span class="amTx">Importar Excel<small>Actualiza placas, asesor y OT</small></span></button>
+          <button id="backupBtn"><span class="amIc">💾</span><span class="amTx">Respaldo<small>Descargar copia del inventario</small></span></button>
+          <button id="restoreBtn"><span class="amIc">📂</span><span class="amTx">Restaurar<small>Cargar una copia guardada</small></span></button>
+          <button id="qrBatchBtn"><span class="amIc">🏷️</span><span class="amTx">Etiquetas QR<small>Imprimir varias a la vez</small></span></button>
+          <details class="amMore">
+            <summary>🔧 Mantenimiento</summary>
+            <button id="dataHealthBtn"><span class="amIc">🩺</span><span class="amTx">Salud de datos</span></button>
+            <button id="unifyAsesoresBtn"><span class="amIc">🧹</span><span class="amTx">Unificar asesores</span></button>
+            <button id="unifyModelosBtn"><span class="amIc">🧹</span><span class="amTx">Unificar modelos</span></button>
+            <button id="dedupePlatesBtn"><span class="amIc">🧹</span><span class="amTx">Quitar placas repetidas<small>Ya se hace solo; úsalo para revisar</small></span></button>
+            <button id="cleanPlatesBtn"><span class="amIc">🧹</span><span class="amTx">Limpiar formato de placas</span></button>
+            <button id="checkinItemsBtn"><span class="amIc">📋</span><span class="amTx">Ítems de check-in</span></button>
+            <button id="testPhotoReportBtn"><span class="amIc">🧪</span><span class="amTx">Probar compartir fotos</span></button>
+          </details>
         </div>
       </div>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
@@ -3474,37 +3522,41 @@
 <div class="modalOverlay" id="usersModal">
   <div class="modalCard modalCardWide">
     <h3>Usuarios con acceso</h3>
+    <input type="search" id="usersSearch" placeholder="🔎 Buscar usuario…" autocomplete="off" style="width:100%;margin:6px 0 8px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--ink);">
     <div id="usersList" class="usersList"></div>
-    <div class="labeledFieldRow" style="margin-top:14px;">
-      <label class="labeledFieldBox" style="flex:1;">
-        <span class="labeledFieldLabel">Usuario<span class="labeledFieldReq">*</span></span>
-        <input type="text" id="newUserName" autocomplete="off" placeholder="Nombre de usuario">
-      </label>
-    </div>
-    <div class="labeledFieldRow">
-      <label class="labeledFieldBox" style="flex:1;">
-        <span class="labeledFieldLabel">Contraseña<span class="labeledFieldReq">*</span></span>
-        <div class="colorFieldWithDot">
-          <input type="password" id="newUserPass" autocomplete="new-password" placeholder="Mínimo 4 caracteres">
-          <button type="button" class="passwordToggleBtn" id="newUserPassToggle" title="Mostrar/ocultar contraseña">👁️</button>
-        </div>
-      </label>
-    </div>
-    <div class="labeledFieldRow">
-      <label class="labeledFieldBox" style="flex:1;">
-        <span class="labeledFieldLabel">Rol<span class="labeledFieldReq">*</span></span>
-        <select id="newUserRole">
-          <option value="admin">Administrador</option>
-          <option value="consulta">Consulta (solo lectura)</option>
-          <option value="actualizacion">Actualización (solo mover placas)</option>
-          <option value="cc">CC (control de calidad)</option>
-        </select>
-      </label>
-    </div>
-    <p class="reqFieldHint" id="newUserRoleHint" style="margin-top:2px;"></p>
+    <details id="newUserDetails" class="newUserBox">
+      <summary>＋ Agregar usuario nuevo</summary>
+      <div class="labeledFieldRow" style="margin-top:10px;">
+        <label class="labeledFieldBox" style="flex:1;">
+          <span class="labeledFieldLabel">Usuario<span class="labeledFieldReq">*</span></span>
+          <input type="text" id="newUserName" autocomplete="off" placeholder="Nombre de usuario">
+        </label>
+      </div>
+      <div class="labeledFieldRow">
+        <label class="labeledFieldBox" style="flex:1;">
+          <span class="labeledFieldLabel">Contraseña<span class="labeledFieldReq">*</span></span>
+          <div class="colorFieldWithDot">
+            <input type="password" id="newUserPass" autocomplete="new-password" placeholder="Mínimo 4 caracteres">
+            <button type="button" class="passwordToggleBtn" id="newUserPassToggle" title="Mostrar/ocultar contraseña">👁️</button>
+          </div>
+        </label>
+      </div>
+      <div class="labeledFieldRow">
+        <label class="labeledFieldBox" style="flex:1;">
+          <span class="labeledFieldLabel">Rol<span class="labeledFieldReq">*</span></span>
+          <select id="newUserRole">
+            <option value="admin">Administrador</option>
+            <option value="consulta">Consulta (solo lectura)</option>
+            <option value="actualizacion">Actualización (solo mover placas)</option>
+            <option value="cc">CC (control de calidad)</option>
+          </select>
+        </label>
+      </div>
+      <p class="reqFieldHint" id="newUserRoleHint" style="margin-top:2px;"></p>
+      <button class="primaryBtn" id="addUserBtn" style="width:100%;margin-top:8px;">Agregar usuario</button>
+    </details>
     <p class="authError" id="usersError"></p>
-    <div class="modalActions" style="margin-top:14px;">
-      <button class="primaryBtn" id="addUserBtn">Agregar usuario</button>
+    <div class="modalActions" style="margin-top:12px;">
       <button class="secondaryBtn" id="usersCloseBtn">Cerrar</button>
     </div>
   </div>
@@ -6822,11 +6874,20 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if((antes || "") === (despues || "")) return;
     await appendLog(HISTORY_KEY, { ts: nowStamp(), tsMillis: Date.now(), username: currentUser ? currentUser.username : "?", placa: plate, tipo: "etapa", desde: "🧭 " + etapaNombre(antes), hasta: "🧭 " + etapaNombre(despues) }, 300);
   }
+  // ¿Esta cuenta puede cambiar etapas? Admin siempre. Actualización y CC sí (salvo que el Admin lo apague).
+  // Búsqueda (consulta) no, salvo que el Admin le dé el acceso.
+  function etapasHabilitadasDe(u){
+    if(!u || u.isGuest) return false;
+    if(u.role === "admin") return true;
+    if(u.role === "consulta") return u.etapasOn === true;
+    return u.etapasOn !== false;
+  }
   function etapaBloqueo(e){
     const u = currentUser;
     if(!u) return "Sin sesión";
-    if(u.role === "admin" || u.role === "cc") return "";
-    if(u.role !== "actualizacion") return "Tu usuario solo puede consultar las etapas";
+    if(u.role === "admin") return "";
+    if(!etapasHabilitadasDe(u)) return "Tu usuario solo puede consultar las etapas";
+    if(u.role === "cc") return "";
     const yo = String(u.username || "").toLowerCase();
     if(e.responsable){
       return String(e.responsable).toLowerCase() === yo ? "" : `Este vehículo lo mueve ${e.responsable}`;
@@ -6836,7 +6897,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     return "";
   }
   function puedeCambiarEtapa(e){ return !etapaBloqueo(e); }
-  function puedeVerBotonEtapa(){ return !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion" || currentUser.role === "cc")); }
+  function puedeVerBotonEtapa(){ return etapasHabilitadasDe(currentUser); }
   function puedeAsignarResponsable(){ return !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion")); }
   // Todas las placas (incluidas las de áreas y filas) con su ubicación.
   function todasLasPlacas(){
@@ -12672,7 +12733,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(sessionData){
       const found = users.find(u => u.username.toLowerCase() === sessionData.username.toLowerCase() && u.active !== false);
       if(found && (found.sessionVersion || 0) === sessionData.v){
-        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [] };
+        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn };
         revealApp();
         return;
       } else if(found){
@@ -12692,7 +12753,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         return false;
       }
       if(storageAvailable && !modoSinConexion) await actualizarHashSiHaceFalta(found, password);
-      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [] };
+      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn };
       if(storageAvailable){
         await setSessionUsername(found.username, found.sessionVersion || 0);
         await logAccess(found.username, "login");
@@ -13238,14 +13299,20 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     document.getElementById("etapaPermUserLabel").textContent = `Cuenta: ${user.username}`;
     errorP.textContent = "";
     const act = (user.etapasPermitidas && user.etapasPermitidas.length) ? new Set(user.etapasPermitidas) : null;
-    listEl.innerHTML = ETAPAS.map(x=>`<label class="zoneRestrictRow"><input type="checkbox" value="${x.k}" ${(!act || act.has(x.k)) ? "checked" : ""}><span>${x.i} ${x.l}</span></label>`).join("");
+    const onInicial = etapasHabilitadasDe(user);
+    listEl.innerHTML = `<label class="zoneRestrictRow" style="background:var(--surface-2);border-radius:10px;padding:10px 12px;margin-bottom:8px;"><input type="checkbox" id="etapaPermOn" ${onInicial ? "checked" : ""}><span style="text-transform:none;letter-spacing:0;"><b style="font-size:1rem;color:var(--ink);">Puede cambiar etapas</b><br><small style="color:var(--muted);font-size:.8rem;font-weight:600;">Si está apagado, solo las ve (no las mueve).</small></span></label><div id="etapaPermChecks">`
+      + ETAPAS.map(x=>`<label class="zoneRestrictRow"><input type="checkbox" class="etapaChk" value="${x.k}" ${(!act || act.has(x.k)) ? "checked" : ""}><span>${x.i} ${x.l}</span></label>`).join("") + `</div>`;
+    const onChk = listEl.querySelector("#etapaPermOn"), checksBox = listEl.querySelector("#etapaPermChecks");
+    function syncOn(){ checksBox.style.opacity = onChk.checked ? "1" : ".4"; checksBox.style.pointerEvents = onChk.checked ? "" : "none"; }
+    onChk.addEventListener("change", syncOn); syncOn();
     function onSaveClick(){
-      const marc = [...listEl.querySelectorAll('input[type="checkbox"]')].filter(c=>c.checked).map(c=>c.value);
-      if(!marc.length){ errorP.textContent = "Marcá al menos una etapa."; return; }
-      const g = marc.length === ETAPAS.length ? [] : marc;
-      Promise.resolve(onSave(g)).then(ok=>{
+      const on = onChk.checked;
+      const marc = [...listEl.querySelectorAll('input.etapaChk')].filter(c=>c.checked).map(c=>c.value);
+      if(on && !marc.length){ errorP.textContent = "Marcá al menos una etapa."; return; }
+      const g = (!marc.length || marc.length === ETAPAS.length) ? [] : marc;
+      Promise.resolve(onSave(g, on)).then(ok=>{
         if(ok === false){ errorP.textContent = "No se pudo guardar, intentá de nuevo."; return; }
-        showToast(g.length ? `Etapas actualizadas (${g.length})` : "Sin restricción de etapas");
+        showToast(!on ? "Esta cuenta ya no cambia etapas" : (g.length ? `Etapas actualizadas (${g.length})` : "Puede mover todas las etapas"));
         onClose();
       });
     }
@@ -13318,9 +13385,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
     // Si todavía no hay ninguna cuenta CC, el formulario de nueva cuenta
     // arranca listo para crearla (solo falta escribir la contraseña).
-    if(!users.some(u => u.role === "cc")){ nameInput.value = "CC"; roleSelect.value = "cc"; }
+    const detallesNuevo = document.getElementById("newUserDetails");
+    detallesNuevo.open = false;
+    if(!users.some(u => u.role === "cc")){ nameInput.value = "CC"; roleSelect.value = "cc"; detallesNuevo.open = true; }
 
     const ROLE_ORDER = ["admin", "actualizacion", "cc", "consulta"];
+    let usersAbierto = -1;
+    const searchEl = document.getElementById("usersSearch");
+    searchEl.value = "";
+    searchEl.oninput = ()=> draw();
     function draw(){
       // Se ordenan los ÍNDICES por rol para agrupar visualmente — el
       // arreglo "users" en sí no cambia de orden, así que data-i sigue
@@ -13329,32 +13402,63 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         ROLE_ORDER.indexOf(users[a].role) - ROLE_ORDER.indexOf(users[b].role)
       );
       let lastRole = null;
-      listEl.innerHTML = indices.map(i=>{
+      const filtro = (document.getElementById("usersSearch").value || "").trim().toLowerCase();
+      const visibles = indices.filter(i => !filtro || users[i].username.toLowerCase().includes(filtro) || (ROLES[users[i].role] || "").toLowerCase().includes(filtro));
+      if(!visibles.length){ listEl.innerHTML = `<div class="dashEmptyNote">Sin resultados.</div>`; }
+      else listEl.innerHTML = visibles.map(i=>{
         const u = users[i];
-        const headerHtml = u.role !== lastRole ? `<div class="usersGroupHeader">${ROLES[u.role] || u.role}</div>` : "";
+        const headerHtml = u.role !== lastRole ? `<div class="uGroup">${(ROLES[u.role] || u.role).toUpperCase()}</div>` : "";
         lastRole = u.role;
+        const esYo = currentUser.username.toLowerCase() === u.username.toLowerCase();
+        const etOn = etapasHabilitadasDe(u);
+        const etTxt = u.role === "admin" ? "todas" : (!etOn ? "sin acceso" : (u.etapasPermitidas && u.etapasPermitidas.length ? u.etapasPermitidas.length + " de " + ETAPAS.length : "todas"));
+        const chips = [];
+        if(u.active === false) chips.push("<span>⏸</span>");
+        if(u.featured) chips.push("<span title='Logo propio'>🌟</span>");
+        if(u.role !== "admin" && u.canExport) chips.push("<span title='Excel'>📥</span>");
+        if(u.role !== "admin" && etOn && u.role !== "actualizacion") chips.push("<span title='Etapas'>🧭</span>");
+        if(u.role === "actualizacion" && etOn) chips.push("<span title='Etapas'>🧭</span>");
+        if(u.role === "actualizacion" && u.allowedZones && u.allowedZones.length) chips.push("<span title='Zonas limitadas'>🔒</span>");
+        const sn = (v)=> v ? "SÍ" : "NO";
+        const abierto = (typeof usersAbierto !== "undefined" && usersAbierto === i);
         return headerHtml + `
-        <div class="userRow ${u.active===false ? 'inactive' : ''}">
-          <div class="userRowInfo">
-            <span class="userRowName">${escapeHtml(u.username)} ${currentUser.username.toLowerCase()===u.username.toLowerCase() ? '<span class="userRowMe">(vos)</span>' : ''}</span>
-            <span class="userRowRole">${ROLES[u.role] || u.role}${u.active===false ? ' · inactivo' : ''}${u.featured ? ' · logo propio' : ''}${(u.role!=="admin" && u.canExport) ? ' · puede exportar' : ''}${u.searchFocused ? ' · enfocado en buscar' : ''}${u.showMovedBy ? ' · muestra quién movió' : ''}</span>
-          </div>
-          <div class="userRowBtns">
-            <button class="renameUserBtn" data-i="${i}">Renombrar</button>
-            <button class="resetPassBtn" data-i="${i}">Restablecer clave</button>
-            <button class="featureUserBtn" data-i="${i}">${u.featured ? "Quitar logo" : "Dar logo propio"}</button>
-            ${u.role!=="admin" ? `<button class="exportPermBtn" data-i="${i}">${u.canExport ? "Quitar Excel" : "Dar acceso a Excel"}</button>` : ``}
-            ${u.role==="actualizacion" ? `<button class="searchFocusBtn" data-i="${i}" title="Al entrar, prioriza el buscador de placas y deja la edición en segundo plano (colapsada, pero disponible)">${u.searchFocused ? "Quitar enfoque en buscar" : "Enfocar en buscar ubicación"}</button>` : ``}
-            ${u.role==="actualizacion" ? `<button class="movedByBtn" data-i="${i}" title="Reemplaza el campo Asesor por quién hizo el último movimiento del vehículo — ya no se pide ni se muestra asesor para esta cuenta">${u.showMovedBy ? "Quitar \"quién movió\"" : "Mostrar quién movió (en vez de asesor)"}</button>` : ``}
-            ${u.role==="actualizacion" ? `<button class="zoneRestrictBtn" data-i="${i}" title="Elegir en qué zonas puede trabajar esta cuenta">🔒 ${u.allowedZones && u.allowedZones.length ? `Zonas (${u.allowedZones.length})` : "Zonas (todas)"}</button>` : ``}
-            ${u.role==="actualizacion" ? `<button class="etapaPermBtn" data-i="${i}" title="Elegir qué etapas puede mover esta cuenta">🧭 ${u.etapasPermitidas && u.etapasPermitidas.length ? `Etapas (${u.etapasPermitidas.length})` : "Etapas (todas)"}</button>` : ``}
-            <button class="revokeSessionBtn" data-i="${i}" title="Fuerza a que esta cuenta tenga que volver a iniciar sesión en cualquier dispositivo donde haya quedado recordada">Cerrar sesión en otros dispositivos</button>
-            <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "Activar" : "Desactivar"}</button>
-            <button class="removeUserBtn" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>Quitar</button>
+        <div class="uCard${u.active===false ? " inactive" : ""}${abierto ? " open" : ""}">
+          <button type="button" class="uHead" data-utoggle="${i}">
+            <span class="uAv" style="background:${avatarColorForName(u.username)};">${escapeHtml((u.username || "?").trim().charAt(0).toUpperCase())}</span>
+            <span class="uMain"><b>${escapeHtml(u.username)}${esYo ? " (vos)" : ""}</b><small>${ROLES[u.role] || u.role}${u.active===false ? " · inactivo" : ""}</small></span>
+            <span class="uChips">${chips.join("")}</span>
+            <span class="uArrow">▾</span>
+          </button>
+          <div class="uBody">
+            <div class="uSec">PERMISOS</div>
+            <div class="uGrid">
+              ${u.role!=="admin" ? `<button class="etapaPermBtn${etOn ? " on" : ""}" data-i="${i}" title="Elegir si esta cuenta puede cambiar etapas y cuáles">🧭 Etapas: ${etTxt}</button>` : ``}
+              ${u.role!=="admin" ? `<button class="exportPermBtn${u.canExport ? " on" : ""}" data-i="${i}">📥 Excel: ${sn(u.canExport)}</button>` : ``}
+              <button class="featureUserBtn${u.featured ? " on" : ""}" data-i="${i}" title="Muestra a esta persona con su propio logo en la pantalla de inicio">🌟 Logo propio: ${sn(u.featured)}</button>
+              ${u.role==="actualizacion" ? `<button class="zoneRestrictBtn${u.allowedZones && u.allowedZones.length ? " on" : ""}" data-i="${i}" title="Elegir en qué zonas puede trabajar esta cuenta">🔒 Zonas: ${u.allowedZones && u.allowedZones.length ? u.allowedZones.length : "todas"}</button>` : ``}
+              ${u.role==="actualizacion" ? `<button class="searchFocusBtn${u.searchFocused ? " on" : ""}" data-i="${i}" title="Al entrar, prioriza el buscador de placas y deja la edición en segundo plano">🔍 Enfocar en buscar: ${sn(u.searchFocused)}</button>` : ``}
+              ${u.role==="actualizacion" ? `<button class="movedByBtn${u.showMovedBy ? " on" : ""}" data-i="${i}" title="Reemplaza el campo Asesor por quién hizo el último movimiento del vehículo">👁 Mostrar quién movió: ${sn(u.showMovedBy)}</button>` : ``}
+            </div>
+            <div class="uSec">CUENTA</div>
+            <div class="uGrid">
+              <button class="renameUserBtn" data-i="${i}">✏️ Renombrar</button>
+              <button class="resetPassBtn" data-i="${i}">🔑 Cambiar clave</button>
+              <button class="revokeSessionBtn" data-i="${i}" title="Fuerza a que esta cuenta tenga que volver a iniciar sesión en cualquier dispositivo">🚪 Cerrar sus sesiones</button>
+              <button class="toggleActiveBtn" data-i="${i}">${u.active===false ? "▶️ Activar" : "⏸ Desactivar"}</button>
+              <button class="removeUserBtn danger" data-i="${i}" ${users.length<=1 ? 'disabled title="Debe quedar al menos un usuario"' : ''}>🗑 Quitar usuario</button>
+            </div>
           </div>
         </div>
       `;
       }).join("");
+      listEl.querySelectorAll("[data-utoggle]").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const i = parseInt(b.getAttribute("data-utoggle"), 10);
+          usersAbierto = (usersAbierto === i) ? -1 : i;
+          draw();
+          if(usersAbierto === i){ const card = listEl.querySelector(".uCard.open"); if(card && card.scrollIntoView) card.scrollIntoView({ block: "nearest" }); }
+        });
+      });
       listEl.querySelectorAll(".renameUserBtn").forEach(b=>{
         b.addEventListener("click", async ()=>{
           const i = parseInt(b.getAttribute("data-i"),10);
@@ -13448,8 +13552,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       listEl.querySelectorAll(".etapaPermBtn").forEach(b=>{
         b.addEventListener("click", ()=>{
           const i = parseInt(b.getAttribute("data-i"),10);
-          openEtapaPermModal(users[i], async (nuevas)=>{
+          openEtapaPermModal(users[i], async (nuevas, on)=>{
             users[i].etapasPermitidas = nuevas;
+            users[i].etapasOn = !!on;
             const ok = await saveUsers(users);
             if(ok) draw();
             return ok;
@@ -13511,6 +13616,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const ok = await saveUsers(users);
       if(!ok){ errorP.textContent = "No se pudo guardar, intentá de nuevo."; return; }
       nameInput.value = ""; passInput.value = "";
+      document.getElementById("newUserDetails").open = false;
       draw();
     }
     function onPassToggle(){
@@ -15678,6 +15784,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     menuBtn.addEventListener("click", (e)=>{
       e.stopPropagation();
       dropdown.classList.toggle("show");
+      if(dropdown.classList.contains("show")){
+        // Que el menú nunca quede cortado por el borde de la pantalla.
+        dropdown.style.left = "0px";
+        const r = dropdown.getBoundingClientRect();
+        if(r.right > window.innerWidth - 8) dropdown.style.left = (-(r.right - window.innerWidth + 8)) + "px";
+        const r2 = dropdown.getBoundingClientRect();
+        if(r2.left < 8) dropdown.style.left = (parseFloat(dropdown.style.left) + (8 - r2.left)) + "px";
+      }
     });
     dropdown.querySelectorAll("button").forEach(b=>{
       b.addEventListener("click", ()=> dropdown.classList.remove("show"));
