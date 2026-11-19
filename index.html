@@ -13279,7 +13279,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(sessionData){
       const found = users.find(u => u.username.toLowerCase() === sessionData.username.toLowerCase() && u.active !== false);
       if(found && (found.sessionVersion || 0) === sessionData.v){
-        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn, moverOn: found.moverOn, pestanas: found.pestanas || [] };
+        currentUser = { sessionVersion: found.sessionVersion || 0, username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn, moverOn: found.moverOn, pestanas: found.pestanas || [] };
         revealApp();
         return;
       } else if(found){
@@ -13299,7 +13299,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         return false;
       }
       if(storageAvailable && !modoSinConexion) await actualizarHashSiHaceFalta(found, password);
-      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn, moverOn: found.moverOn, pestanas: found.pestanas || [] };
+      currentUser = { sessionVersion: found.sessionVersion || 0, username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn, moverOn: found.moverOn, pestanas: found.pestanas || [] };
       if(storageAvailable){
         await setSessionUsername(found.username, found.sessionVersion || 0);
         await logAccess(found.username, "login");
@@ -14075,6 +14075,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           if(newPass.length < 4){ errorP.textContent = "La contraseña debe tener al menos 4 caracteres."; return; }
           users[i].username = trimmed;
           users[i].hash = await hashClaveNueva(trimmed, newPass);
+          users[i].sessionVersion = (users[i].sessionVersion || 0) + 1;
           const ok = await saveUsers(users);
           if(!ok){ errorP.textContent = "No se pudo guardar, intentá de nuevo."; return; }
           errorP.textContent = "";
@@ -14090,9 +14091,18 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           if(newPass === null) return;
           if(newPass.length < 4){ errorP.textContent = "La contraseña debe tener al menos 4 caracteres."; return; }
           users[i].hash = await hashClaveNueva(uname, newPass);
+          // Al cambiar la clave se cierran todas las sesiones abiertas de esa cuenta.
+          users[i].sessionVersion = (users[i].sessionVersion || 0) + 1;
           const ok = await saveUsers(users);
           errorP.textContent = ok ? "" : "No se pudo guardar, intentá de nuevo.";
-          if(ok) showToast(`Contraseña de "${uname}" actualizada`);
+          if(ok){
+            // Si es la cuenta con la que está trabajando quien cambia la clave, esta sesión sigue abierta.
+            if(currentUser && currentUser.username.toLowerCase() === uname.toLowerCase()){
+              currentUser.sessionVersion = users[i].sessionVersion;
+              await setSessionUsername(users[i].username, users[i].sessionVersion);
+            }
+            showToast(`Contraseña de "${uname}" actualizada — se cerraron sus sesiones abiertas`);
+          }
         });
       });
       listEl.querySelectorAll(".featureUserBtn").forEach(b=>{
@@ -16306,6 +16316,31 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       e.returnValue = ""; // el texto exacto lo define el navegador, no la app
     }
   });
+
+  // Cierra esta sesión si el Admin cambió la clave (o cerró sesiones / desactivó la cuenta)
+  // mientras la app estaba abierta en este dispositivo.
+  let verificandoSesion = false;
+  async function verificarSesionViva(){
+    if(verificandoSesion || !currentUser || currentUser.isGuest || typeof currentUser.sessionVersion !== "number") return;
+    if(!storageAvailable || modoSinConexion) return;
+    verificandoSesion = true;
+    try{
+      const lista = await loadUsers();
+      if(usersLoadError || !lista || !lista.length) return; // lectura fallida: no se saca a nadie
+      const f = lista.find(u => u.username.toLowerCase() === currentUser.username.toLowerCase());
+      if(!f || f.active === false || (f.sessionVersion || 0) !== currentUser.sessionVersion){
+        if(clockInterval) clearInterval(clockInterval);
+        if(autoRefreshInterval) clearInterval(autoRefreshInterval);
+        await clearSession();
+        showToast("Tu sesión se cerró porque cambió la contraseña o el acceso. Volvé a ingresar.", 4000);
+        setTimeout(()=> location.reload(), 2500);
+      }
+    }catch(e){ /* no crítico */ }
+    finally{ verificandoSesion = false; }
+  }
+  setInterval(verificarSesionViva, 30000);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) verificarSesionViva(); });
+  window.addEventListener("focus", verificarSesionViva);
 
   document.getElementById("logoutBtn").addEventListener("click", async ()=>{
     if(!(await confirmUI("¿Cerrar sesión?"))) return;
