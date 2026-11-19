@@ -1174,6 +1174,21 @@
   .etBtn{ width:100%; border:0; border-radius:12px; padding:10px; font:inherit; font-weight:800; background:#1b6b3f; color:#fff; cursor:pointer; }
   .etapaGrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .etapaOpt{ display:flex; gap:8px; align-items:center; padding:10px; border-radius:12px; border:2px solid #d7d8d3; background:var(--surface); color:inherit; font:inherit; font-weight:700; font-size:.85rem; text-align:left; cursor:pointer; }
+  #tallerPanel{ padding:16px; }
+  .tallerCard{ max-width:420px; margin:10px auto; background:var(--surface); border-radius:18px; padding:22px 18px; text-align:center; box-shadow:0 2px 14px rgba(0,0,0,.08); }
+  .tallerIcon{ font-size:2.4rem; }
+  .tallerCard h2{ margin:4px 0; }
+  .tallerCard p{ font-size:.88rem; color:var(--muted); }
+  #tallerPlaca{ width:100%; font-size:1.8rem; font-weight:800; text-align:center; letter-spacing:.12em; text-transform:uppercase; padding:14px 8px; margin:10px 0; box-sizing:border-box; }
+  .tallerCard button{ width:100%; margin-top:8px; padding:14px; font-size:1rem; }
+  .etStepT{ font-weight:800; font-size:.88rem; margin:14px 0 6px; display:flex; align-items:center; gap:8px; }
+  .etStepN{ width:22px; height:22px; border-radius:50%; background:#1b6b3f; color:#fff; font-size:.78rem; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .etLugarOpts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .etLugarBtn{ padding:10px 8px; border-radius:12px; border:2px solid #d7d8d3; background:var(--surface); color:inherit; font:inherit; font-weight:700; font-size:.82rem; cursor:pointer; }
+  .etLugarBtn.sel{ border-color:#1b6b3f; background:#e3f5ea; color:#1b6b3f; }
+  #etapaDestBox select{ width:100%; margin-bottom:6px; }
+  .etMini{ display:block; font-size:.75rem; font-weight:700; margin:8px 0 3px; color:var(--muted); }
+  .etSugerido{ width:100%; margin-top:8px; padding:9px; border-radius:10px; border:2px dashed #1b6b3f; background:transparent; color:#1b6b3f; font:inherit; font-weight:700; font-size:.82rem; cursor:pointer; }
   .etapaOpt.sel{ border-color:#1b6b3f; background:#e3f5ea; color:#1b6b3f; }
   .etapaOpt:disabled{ opacity:.5; }
   .ccTabsBar{ display:flex; gap:8px; padding:10px 16px 0; }
@@ -3071,6 +3086,13 @@
           <span class="roleLogoLabel">CC</span>
           <span class="roleLogoSubtitle">Control de calidad</span>
         </button>
+        <button type="button" class="roleLogoBtn" data-role="taller">
+          <span class="roleLogoIcon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>
+          </span>
+          <span class="roleLogoLabel">Taller</span>
+          <span class="roleLogoSubtitle">Placa y etapa</span>
+        </button>
       </div>
 
       <div id="roleLoginForm" style="display:none;">
@@ -3187,6 +3209,17 @@
 <main id="mainArea"></main>
 
 <div id="updaterPanel" style="display:none;"></div>
+<div id="tallerPanel" style="display:none;">
+  <div class="tallerCard">
+    <div class="tallerIcon">🔧</div>
+    <h2>Taller</h2>
+    <p>Escribí la placa o escaneá el QR para elegir la etapa del vehículo.</p>
+    <input type="text" id="tallerPlaca" placeholder="PLACA" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="14">
+    <button type="button" class="primaryBtn" id="tallerGoBtn">Continuar</button>
+    <button type="button" class="secondaryBtn" id="tallerQrBtn">🔳 Escanear QR</button>
+    <p class="historyMeta" id="tallerUltimo" style="margin-top:14px;"></p>
+  </div>
+</div>
 
 <div id="ccPanel" class="ccPanel" style="display:none;"></div>
 
@@ -3387,19 +3420,36 @@
 </div>
 
 <div class="modalOverlay" id="etapaModal" style="z-index:80;">
-  <div class="modalCard">
+  <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
     <button type="button" class="modalBackTop" data-proxy="etapaCancelBtn">← Volver</button>
-    <h3>🧭 Etapa del vehículo</h3>
+    <h3>🧭 Actualizar vehículo</h3>
     <div id="etapaPlate"></div>
     <p id="etapaAviso" style="font-size:.85rem;color:var(--muted);"></p>
+    <div class="etStepT"><span class="etStepN">1</span> ¿En qué etapa está?</div>
     <div id="etapaGrid" class="etapaGrid"></div>
-    <label style="display:block;margin-top:12px;font-weight:700;font-size:.85rem;">👤 ¿Quién lo mueve? (opcional)</label>
-    <input type="text" id="etapaResp" list="etapaRespList" placeholder="Nombre de la cuenta" autocomplete="off" style="width:100%;">
-    <datalist id="etapaRespList"></datalist>
-    <div class="modalActions" style="margin-top:14px;">
+    <div id="etapaLugarBox" style="display:none;">
+      <div class="etStepT"><span class="etStepN">2</span> ¿Dónde queda el vehículo?</div>
+      <div id="etapaAqui" class="historyMeta" style="margin-bottom:6px;"></div>
+      <div class="etLugarOpts">
+        <button type="button" class="etLugarBtn sel" id="etapaQuedaBtn">Se queda aquí</button>
+        <button type="button" class="etLugarBtn" id="etapaCambiaBtn">📍 Lo muevo a otro lugar</button>
+      </div>
+      <div id="etapaDestBox" style="display:none;">
+        <button type="button" class="etSugerido" id="etapaSugBtn" style="display:none;"></button>
+        <label class="etMini" id="etLblZona">Lugar</label>
+        <select id="etapaDestZona"></select>
+        <label class="etMini" id="etLblCampo">Espacio / campo</label>
+        <select id="etapaDestCampo"></select>
+      </div>
+    </div>
+    <div id="etapaRespBox">
+      <div class="etStepT"><span class="etStepN" id="etapaRespN">2</span> ¿Quién lo mueve? <small style="font-weight:400;">(opcional)</small></div>
+      <input type="text" id="etapaResp" list="etapaRespList" placeholder="Nombre de la cuenta" autocomplete="off" style="width:100%;">
+      <datalist id="etapaRespList"></datalist>
+    </div>
+    <div class="modalActions" style="margin-top:14px; position:sticky; bottom:-20px; background:var(--surface); padding:10px 0 4px; z-index:2;">
       <button class="primaryBtn" id="etapaSaveBtn">Guardar</button>
-      <button class="secondaryBtn" id="etapaMoveBtn" style="display:none;">📍 Moverlo de lugar</button>
-      <button class="primaryBtn" id="etapaDeliverBtn" style="display:none;background:#1b6b3f;">🏁 Entregar al cliente</button>
+            <button class="primaryBtn" id="etapaDeliverBtn" style="display:none;background:#1b6b3f;">🏁 Entregar al cliente</button>
       <button class="secondaryBtn" id="etapaCancelBtn">Cancelar</button>
     </div>
   </div>
@@ -3549,6 +3599,7 @@
             <option value="consulta">Consulta (solo lectura)</option>
             <option value="actualizacion">Actualización (solo mover placas)</option>
             <option value="cc">CC (control de calidad)</option>
+            <option value="taller">Taller (placa → etapa)</option>
           </select>
         </label>
       </div>
@@ -3934,6 +3985,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     { key: "Maya", label: "Maya", abbr: "MY", color: "var(--z-malla)", hex: "A175D4" },
     { key: "Atras", label: "Atrás", abbr: "AT", color: "var(--z-atras)", hex: "5FB37A" },
     { key: "TallerPintura", label: "Taller de Pintura", abbr: "TP", color: "var(--z-taller)", hex: "C97A3D" },
+    { key: "Taller", label: "Taller", abbr: "TL", color: "var(--z-taller)", hex: "8E5A2B" },
     { key: "Neon Nieto", label: "Neon Nieto", abbr: "NN", color: "var(--z-neon)", hex: "E0529C" },
     { key: "Parqueo Gash Externo", label: "Parqueo Gash Externo", abbr: "PGE", color: "var(--z-pge)", hex: "E2843A" }
   ];
@@ -4033,10 +4085,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // que solo Admin puede crear y nombrar (ej. "Zona de lijado" en vez de
   // "Línea 1" automático). Actualización solo trabaja dentro de las que
   // ya existen, nunca crea una nueva ahí.
-  const CUSTOM_NAMED_ZONES = new Set(["TallerPintura"]);
+  const CUSTOM_NAMED_ZONES = new Set(["TallerPintura", "Taller"]);
   // Zonas que Búsqueda no debe ver en ningún lado (Dashboard, Resumen,
   // buscador) — siguen existiendo normalmente para Admin y Actualización.
-  const HIDDEN_FROM_BUSQUEDA = new Set(["Recepcion", "TallerPintura"]);
+  const HIDDEN_FROM_BUSQUEDA = new Set(["Recepcion", "TallerPintura", "Taller"]);
   // Zonas con 3 niveles en vez del campo plano de siempre: campo → área →
   // fila. Los vehículos pueden vivir en CUALQUIER nivel (un campo puede
   // tener vehículos propios además de áreas adentro; una área puede tener
@@ -4862,6 +4914,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
     if(qrModo === "etapa"){
       const f0 = findPlate(plate);
+      if(!f0 && currentUser && currentUser.role === "taller"){
+        qrDetenerCamara();
+        document.getElementById("qrScanModal").classList.remove("show", "qrModoBuscar");
+        qrModo = "recorrido";
+        tallerAbrirPlaca(plate);
+        return;
+      }
       if(!f0){
         try{ navigator.vibrate && navigator.vibrate([80,60,80]); }catch(e){}
         qrMostrarTarjeta("bad", `<div class="qrScanPlate">${escapeHtml(plate)}</div>Esta placa <strong>no está en el inventario</strong>.`);
@@ -4871,7 +4930,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       document.getElementById("qrScanModal").classList.remove("show", "qrModoBuscar");
       qrModo = "recorrido";
       try{ navigator.vibrate && navigator.vibrate(60); }catch(err){}
-      etapaDesdeEscaner = true;
+      etapaDesdeEscaner = !(currentUser && currentUser.role === "taller");
       abrirEtapaModal(f0.platesArray[f0.plateIdx].plate);
       return;
     }
@@ -5161,11 +5220,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   });
   function qrZonasDestino(){
     if(esBusquedaAgrega()) return visibleZonesForCurrentUser();
+    if(currentUser && currentUser.role === "cc") return [...ZONES, SIN_UBICACION_INFO];
+    if(currentUser && currentUser.role === "taller") return ZONES.filter(z => z.key === TALLER_KEY || ESTAC_ZONAS.includes(z.key));
     return (currentUser.allowedZones && currentUser.allowedZones.length)
       ? allowedZonesForCurrentUser()
       : [...allowedZonesForCurrentUser(), SIN_UBICACION_INFO];
   }
+  let qrMoveEstac = false;
   function qrDibujarMover(){
+    ensureTallerCampos();
     const found = qrMoveFound;
     const nuevo = found.nuevo || null;
     const e = nuevo ? nuevo : found.platesArray[found.plateIdx];
@@ -5177,13 +5240,25 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     chips.innerHTML = qrZonasDestino().map(z => `
       <button type="button" class="zoneChipBtn${qrMoveZone===z.key?" active":""}${z.key===SIN_UBICACION_KEY?" sinUbicacionChip":""}" data-zone="${escapeAttrLike(z.key)}" style="--chip-color:#${z.hex}">${escapeHtml(z.label)}</button>`).join("");
     chips.querySelectorAll(".zoneChipBtn").forEach(b=>{
-      b.addEventListener("click", ()=>{ qrMoveZone = b.getAttribute("data-zone"); qrMoveCampo = ""; qrDibujarMover(); });
+      b.addEventListener("click", ()=>{ qrMoveZone = b.getAttribute("data-zone"); qrMoveCampo = ""; qrMoveEstac = false; qrDibujarMover(); });
     });
     const grid = document.getElementById("qrMoveGrid");
     const btn = document.getElementById("qrMoveConfirmBtn");
     if(!qrMoveZone){
       grid.innerHTML = `<div class="dashEmptyNote" style="padding:8px;">Elegí un lugar para ver sus espacios.</div>`;
       btn.disabled = true; btn.textContent = "Elegí un espacio";
+      return;
+    }
+    if(qrMoveEstac && qrMoveZone === TALLER_KEY){
+      const lados = ESTAC_ZONAS.filter(k => qrZonasDestino().some(z => z.key === k));
+      grid.innerHTML = `<div class="dashEmptyNote" style="padding:4px 0 8px;grid-column:1/-1;">🅿️ ¿De qué lado lo estacionás?</div>` + lados.map(k=>`<button type="button" class="spaceGridBtn partial" data-lado="${escapeAttrLike(k)}"><span class="spaceGridLabel">${escapeHtml(zoneInfo(k).label)}</span><span class="spaceGridCount">${(state.zones[k]||[]).length} esp.</span></button>`).join("") + `<button type="button" class="spaceGridBtn" data-lado=""><span class="spaceGridLabel">← Volver</span></button>`;
+      grid.querySelectorAll("[data-lado]").forEach(b=> b.addEventListener("click", ()=>{
+        const k = b.getAttribute("data-lado");
+        qrMoveEstac = false; qrMoveCampo = "";
+        if(k) qrMoveZone = k;
+        qrDibujarMover();
+      }));
+      btn.disabled = true; btn.textContent = "Elegí un lado";
       return;
     }
     let campos;
@@ -5207,8 +5282,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <span class="spaceGridLabel">${escapeHtml(c.campo)}</span>
         <span class="spaceGridCount">${esAqui ? "aquí" : occ + (cap ? "/" + cap : "")}</span></button>`;
     }).join("");
+    if(qrMoveZone === TALLER_KEY && ESTAC_ZONAS.some(k => qrZonasDestino().some(z => z.key === k))){
+      grid.insertAdjacentHTML("beforeend", `<button type="button" class="spaceGridBtn partial" data-estac="1"><span class="spaceGridLabel">🅿️ Estacionamiento</span><span class="spaceGridCount">elegir lado</span></button>`);
+    }
     grid.querySelectorAll(".spaceGridBtn").forEach(b=>{
       b.addEventListener("click", ()=>{
+        if(b.getAttribute("data-estac")){ qrMoveEstac = true; qrMoveCampo = ""; qrDibujarMover(); return; }
         if(b.getAttribute("data-here")) return;
         qrMoveCampo = b.getAttribute("data-campo");
         qrDibujarMover();
@@ -5228,6 +5307,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     qrMoveFound = found;
     qrMoveZone = "";
     qrMoveCampo = "";
+    qrMoveEstac = false;
     qrDibujarMover();
     document.getElementById("qrMoveModal").classList.add("show");
   }
@@ -5268,8 +5348,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     });
     return n;
   }
-  async function qrMoverVehiculo(found, destZone, destCampo){
-    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin" || currentUser.role === "consulta"))) return false;
+  async function qrMoverVehiculo(found, destZone, destCampo, opts){
+    if(!puedeMoverVehiculos()) return false;
+    if(currentUser.role === "taller" && !(destZone === TALLER_KEY || ESTAC_ZONAS.includes(destZone))) return false;
+    if(destZone === TALLER_KEY) ensureTallerCampos();
     if(currentUser.role === "actualizacion" && destZone !== SIN_UBICACION_KEY){
       const permitidas = allowedZonesForCurrentUser();
       if(permitidas.length && !permitidas.some(z => z.key === destZone)){
@@ -5278,7 +5360,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
     }
     if(destZone === SIN_UBICACION_KEY) ensureSinUbicacionConsolidada();
-    if(currentUser.role === "actualizacion" && !SINGLE_BUCKET_ZONES.has(destZone)){
+    if(currentUser.role !== "admin" && !SINGLE_BUCKET_ZONES.has(destZone)){
       if(!(state.zones[destZone] || []).some(c => c.campo === destCampo)){
         qrMostrarTarjeta("bad", `"${escapeHtml(destCampo)}" no existe en ${escapeHtml(zoneInfo(destZone).label)}.`);
         return false;
@@ -5308,6 +5390,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(refQr) e.referencia = refQr; else if(!esPasillo(destCampo)) delete e.referencia;
     insertPlateAtPosition(getOrCreateCampo(destZone, destCampo), e, "first");
     eliminarOtrasCopiasDePlaca(e);
+    let etapaCambio = null;
+    if(destZone === TALLER_KEY && !(opts && opts.sinEtapa)){
+      const k = etapaDeCampoTaller(destCampo);
+      if(k && e.etapa !== k && !etapaBloqueo(e)){ etapaCambio = [e.etapa || "", k]; aplicarEtapa(e, k, currentUser.username); }
+    }
     pushUndo(snap, `Mover ${e.plate} a ${zoneInfo(destZone).label} campo ${destCampo}`);
     invalidateResumenRowsCache();
     const guardado = await saveState(true);
@@ -5317,6 +5404,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       return false;
     }
     await logUpdate(e.plate, fromZone, fromCampo, destZone, destCampo);
+    if(etapaCambio) await logEtapa(e.plate, etapaCambio[0], etapaCambio[1]);
     return true;
   }
   document.getElementById("qrMoveStayBtn").addEventListener("click", qrCerrarMover);
@@ -5609,7 +5697,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // Estas 3 zonas no tienen campos numerados nunca: todo su contenido vive
   // bajo "Sin asignar", así que su ocupación se mide por vehículos totales,
   // no por cantidad de campos numerados (que siempre sería cero).
-  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "Neon Nieto", "Parqueo Gash Externo", "SinUbicacion", "TallerPintura"]);
+  const UNNUMBERED_ONLY_ZONES = new Set(["AvaluoPuff", "Neon Nieto", "Parqueo Gash Externo", "SinUbicacion", "TallerPintura", "Taller"]);
   function occupancyCountForZone(zoneKey){
     const campos = state.zones[zoneKey] || [];
     if(UNNUMBERED_ONLY_ZONES.has(zoneKey)){
@@ -6128,7 +6216,33 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   });
   // ---- Limpieza automática: TODO en mayúscula y sin placas repetidas ----
   const CAMPOS_MAYUSCULA = ["aseguradora", "modelo", "color", "referencia", "responsable", "ot"];
+  // Zona "Taller": cada espacio es una etapa del proceso. Mover un vehículo ahí actualiza también su etapa.
+  // "Estacionamiento" agrupa Avalúo, Avalúo Puff, Maya y Atrás (Neon Nieto y Gash quedan aparte).
+  const TALLER_KEY = "Taller";
+  const TALLER_CAMPOS = [["Espera de reparación","espera"],["Desarmado","desarmado"],["Enderezado","enderezado"],["Pintura","pintura"],["Mecánica","mecanica"],["Armado","armado"],["Pulido","pulido"],["Control de calidad","cc"]];
+  const ESTAC_ZONAS = ["Avaluo","AvaluoPuff","Maya","Atras"];
+  function etapaDeCampoTaller(campo){
+    const n = String(campo || "").trim().toLowerCase();
+    const f = TALLER_CAMPOS.find(x => x[0].toLowerCase() === n);
+    return f ? f[1] : "";
+  }
+  function ensureTallerCampos(){
+    try{
+      if(!state || !state.zones) return false;
+      let ch = false;
+      if(!Array.isArray(state.zones[TALLER_KEY])){ state.zones[TALLER_KEY] = []; ch = true; }
+      // "Adicional" ya no es una etapa: si quedó creado y vacío, se quita.
+      const antes = state.zones[TALLER_KEY].length;
+      state.zones[TALLER_KEY] = state.zones[TALLER_KEY].filter(c => !(String(c.campo).toLowerCase() === "adicional" && !(c.plates || []).length));
+      if(state.zones[TALLER_KEY].length !== antes) ch = true;
+      TALLER_CAMPOS.forEach(([nombre])=>{
+        if(!state.zones[TALLER_KEY].some(c => String(c.campo).toLowerCase() === nombre.toLowerCase())){ state.zones[TALLER_KEY].push({ campo: nombre, plates: [] }); ch = true; }
+      });
+      return ch;
+    }catch(e){ return false; }
+  }
   function limpiezaAutomatica(){
+    ensureTallerCampos();
     let mayus = 0, dups = 0;
     const grupos = new Map();
     const pasar = (arr)=>{
@@ -6805,9 +6919,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   const ETAPAS = [
     { k:"recepcion", l:"Recepción", i:"📥" }, { k:"avaluo", l:"Avalúo", i:"🧮" },
     { k:"espera", l:"Espera de reparación", i:"⏳" }, { k:"desarmado", l:"Desarmado", i:"🔧" },
-    { k:"enderezado", l:"Enderezado", i:"🔨" }, { k:"pintura", l:"Pintura", i:"🎨" },
+    { k:"enderezado", l:"Enderezado", i:"🔨" }, { k:"pintura", l:"Pintura", i:"🎨" }, { k:"mecanica", l:"Mecánica", i:"🔩" },
     { k:"armado", l:"Armado", i:"🧩" }, { k:"pulido", l:"Pulido", i:"✨" },
-    { k:"cc", l:"Control de calidad", i:"🛡️" }, { k:"entrega", l:"Entrega al cliente", i:"🏁" }
+    { k:"cc", l:"Control de calidad", i:"🛡️" }, { k:"estacionamiento", l:"Estacionamiento", i:"🅿️" }, { k:"entrega", l:"Entrega al cliente", i:"🏁" }
   ];
   const ENTREGAS_KEY = "inventario_parqueo_entregas_v1"; // compartido: vehículos ya entregados
   let entregasCache = [];
@@ -6882,12 +6996,22 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(u.role === "consulta") return u.etapasOn === true;
     return u.etapasOn !== false;
   }
+  // ¿Esta cuenta puede mover vehículos / actualizar dónde están? Admin siempre.
+  // Por defecto: Actualización y Búsqueda sí, CC no. El Admin lo cambia por usuario (Usuarios → Mover vehículos).
+  function puedeMoverVehiculosDe(u){
+    if(!u || u.isGuest) return false;
+    if(u.role === "admin") return true;
+    if(u.moverOn === true) return true;
+    if(u.moverOn === false) return false;
+    return u.role === "actualizacion" || u.role === "consulta" || u.role === "taller";
+  }
+  function puedeMoverVehiculos(){ return puedeMoverVehiculosDe(currentUser); }
   function etapaBloqueo(e){
     const u = currentUser;
     if(!u) return "Sin sesión";
     if(u.role === "admin") return "";
     if(!etapasHabilitadasDe(u)) return "Tu usuario solo puede consultar las etapas";
-    if(u.role === "cc") return "";
+    if(u.role === "cc" || u.role === "taller") return "";
     const yo = String(u.username || "").toLowerCase();
     if(e.responsable){
       return String(e.responsable).toLowerCase() === yo ? "" : `Este vehículo lo mueve ${e.responsable}`;
@@ -6927,14 +7051,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(!entry.etapa){
       // Sin etapa: no se muestra el bloque de etapas; solo, si la persona puede asignar, un botón.
       return (entry.responsable ? `<div class="cvResp">👤 Lo mueve: <strong>${escapeHtml(entry.responsable)}</strong></div>` : "")
-        + (puedeVerBotonEtapa() ? `<button type="button" class="etBtn" data-etapa-plate="${escapeAttrLike(entry.plate)}">🧭 Asignar etapa / responsable</button>` : "");
+        + (puedeVerBotonEtapa() ? `<button type="button" class="etBtn" data-etapa-plate="${escapeAttrLike(entry.plate)}">🧭 Actualizar etapa y ubicación</button>` : "");
     }
     const dots = ETAPAS.map((x, i)=> `<span class="cvDot${x.k === entry.etapa ? " cur" : ""}" title="${escapeAttrLike(x.l)}">${x.k === entry.etapa ? x.i : i + 1}</span>`).join("");
     return `<div class="cvEtapa">
       <div class="cvEtapaTop"><span class="cvEtapaLbl">🧭 ETAPA</span> <strong>${inf ? escapeHtml(inf.i + " " + inf.l) : "Sin etapa"}</strong>${dias !== null ? ` <small>· ${dias === 0 ? "desde hoy" : dias + (dias === 1 ? " día" : " días") + " en esta etapa"}</small>` : ""}</div>
       <div class="cvDots">${dots}</div>
       ${entry.responsable ? `<div class="cvResp">👤 Lo mueve: <strong>${escapeHtml(entry.responsable)}</strong></div>` : ""}
-      ${puedeVerBotonEtapa() ? `<button type="button" class="etBtn" data-etapa-plate="${escapeAttrLike(entry.plate)}">🧭 Cambiar etapa / responsable</button>` : ""}
+      ${puedeVerBotonEtapa() ? `<button type="button" class="etBtn" data-etapa-plate="${escapeAttrLike(entry.plate)}">🧭 Actualizar etapa y ubicación</button>` : ""}
     </div>`;
   }
   function abrirFichaPlaca(plate){
@@ -7047,28 +7171,104 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const grid = document.getElementById("etapaGrid"), resp = document.getElementById("etapaResp");
     const saveBtn = document.getElementById("etapaSaveBtn"), delBtn = document.getElementById("etapaDeliverBtn"), cancelBtn = document.getElementById("etapaCancelBtn");
     const bloqueo = etapaBloqueo(e);
-    const moveBtn = document.getElementById("etapaMoveBtn");
-    moveBtn.style.display = (!bloqueo && currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion")) ? "" : "none";
+    const puedeMover = puedeMoverVehiculos();
+    const lugarBox = document.getElementById("etapaLugarBox"), destBox = document.getElementById("etapaDestBox");
+    const quedaBtn = document.getElementById("etapaQuedaBtn"), cambiaBtn = document.getElementById("etapaCambiaBtn");
+    const zonaSel = document.getElementById("etapaDestZona"), campoSel = document.getElementById("etapaDestCampo"), sugBtn = document.getElementById("etapaSugBtn");
+    let cambiaLugar = false;
     let sel = e.etapa || "";
     document.getElementById("etapaPlate").innerHTML = `<strong>${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</strong><div class="historyMeta">${escapeHtml(zoneInfo(found.zoneKey).label)} · campo ${escapeHtml(String(state.zones[found.zoneKey][found.campoIdx].campo))}${e.modelo ? " · " + escapeHtml(e.modelo) : ""}</div>`;
-    document.getElementById("etapaAviso").textContent = bloqueo ? "🔒 " + bloqueo : "Elegí la etapa en la que está ahora. No hace falta seguir el orden: podés saltar las que no apliquen.";
+    document.getElementById("etapaAviso").textContent = bloqueo ? "🔒 " + bloqueo : "Podés saltar etapas: elegí la que corresponde ahora.";
+    const aquiTxt = `${zoneInfo(found.zoneKey).label} · ${String(state.zones[found.zoneKey][found.campoIdx].campo)}`;
+    document.getElementById("etapaAqui").innerHTML = "📍 Ahora está en <b>" + escapeHtml(aquiTxt) + "</b>";
+    lugarBox.style.display = puedeMover ? "" : "none";
+    const puedeResp = puedeAsignarResponsable();
+    document.getElementById("etapaRespBox").style.display = puedeResp ? "" : "none";
+    document.getElementById("etapaRespN").textContent = puedeMover ? "3" : "2";
     resp.value = e.responsable || "";
     resp.disabled = !puedeAsignarResponsable() || !!bloqueo && !(currentUser.role === "admin");
     try{
       const us = (await loadUsers()) || [];
       document.getElementById("etapaRespList").innerHTML = us.filter(x => x.active !== false && x.role !== "consulta").map(x => `<option value="${escapeAttrLike(x.username)}"></option>`).join("");
     }catch(err){}
+    const SUG = { recepcion:"Recepcion", avaluo:"Avaluo", pintura:"TallerPintura" };
+    function zonasDestino(){
+      const todas = qrZonasDestino();
+      if(sel === "estacionamiento") return todas.filter(z => ESTAC_ZONAS.includes(z.key));
+      return todas;
+    }
+    function rellenarZonas(){
+      const prev = zonaSel.value;
+      const zs = zonasDestino();
+      zonaSel.innerHTML = zs.map(z => `<option value="${escapeAttrLike(z.key)}">${escapeHtml(z.label)}</option>`).join("");
+      if(zs.some(z => z.key === prev)) zonaSel.value = prev;
+      else if(sel === "estacionamiento"){ zonaSel.value = zs.some(z => z.key === found.zoneKey) ? found.zoneKey : (zs[0] ? zs[0].key : ""); }
+      document.getElementById("etLblZona").textContent = sel === "estacionamiento" ? "🅿️ ¿De qué lado lo estacionás?" : "Lugar";
+      document.getElementById("etLblCampo").textContent = sel === "estacionamiento" ? "Espacio" : "Espacio / campo";
+      llenarCampos();
+    }
+    function llenarCampos(){
+      const z = zonaSel.value;
+      let campos;
+      if(SINGLE_BUCKET_ZONES.has(z)) campos = [SIN_UBICACION_CAMPO];
+      else campos = (state.zones[z] || []).map(c => c.campo);
+      campoSel.innerHTML = campos.length ? campos.map(c => `<option value="${escapeAttrLike(String(c))}">${escapeHtml(String(c))}</option>`).join("") : `<option value="">(este lugar no tiene espacios)</option>`;
+    }
+    // Sugerencia según la etapa: Taller (espacio con el nombre de la etapa), o las zonas de siempre.
+    function destinoSugerido(){
+      const tc = TALLER_CAMPOS.find(x => x[1] === sel);
+      if(tc && zonasDestino().some(z => z.key === TALLER_KEY)) return { z: TALLER_KEY, c: tc[0], txt: "Taller · " + tc[0] };
+      const k = SUG[sel];
+      const zi = k && zonasDestino().find(z => z.key === k);
+      return zi ? { z: k, c: "", txt: zi.label } : null;
+    }
+    function pintarSugerido(){
+      const d = destinoSugerido();
+      const yaAhi = d && found.zoneKey === d.z && (!d.c || String(state.zones[found.zoneKey][found.campoIdx].campo) === d.c);
+      if(d && !yaAhi){ sugBtn.style.display = ""; sugBtn.textContent = `✨ Sugerido para ${(etapaInfo(sel) || {}).l}: ${d.txt}`; sugBtn.dataset.z = d.z; sugBtn.dataset.c = d.c; }
+      else sugBtn.style.display = "none";
+    }
+    function pintarLugar(){
+      quedaBtn.classList.toggle("sel", !cambiaLugar); cambiaBtn.classList.toggle("sel", cambiaLugar);
+      destBox.style.display = cambiaLugar ? "" : "none";
+      if(cambiaLugar){ pintarSugerido(); if(!campoSel.options.length) llenarCampos(); }
+      saveBtn.disabled = bloqueo ? !(cambiaLugar && puedeMover) : false;
+    }
+    function onQueda(){ cambiaLugar = false; pintarLugar(); }
+    function onCambia(){ cambiaLugar = true; pintarLugar(); }
+    function onZona(){ llenarCampos(); }
+    function onSug(){ zonaSel.value = sugBtn.dataset.z; llenarCampos(); if(sugBtn.dataset.c) campoSel.value = sugBtn.dataset.c; }
+    if(puedeMover){
+      ensureTallerCampos();
+      rellenarZonas();
+      if(zonaSel.querySelector(`option[value="${found.zoneKey}"]`)) zonaSel.value = found.zoneKey;
+      llenarCampos();
+      quedaBtn.addEventListener("click", onQueda); cambiaBtn.addEventListener("click", onCambia);
+      zonaSel.addEventListener("change", onZona); sugBtn.addEventListener("click", onSug);
+    }
     function pintar(){
       grid.innerHTML = [{ k:"", l:"Sin etapa", i:"➖" }].concat(ETAPAS).map(x => `<button type="button" class="etapaOpt${sel === x.k ? " sel" : ""}" data-k="${x.k}" ${bloqueo ? "disabled" : ""}><span>${x.i}</span>${escapeHtml(x.l)}</button>`).join("");
-      saveBtn.disabled = !!bloqueo;
+      pintarLugar();
       const puedeEntregar = currentUser.role === "admin" || (currentUser.role === "actualizacion" && !bloqueo && e.etapa === "entrega");
       delBtn.style.display = puedeEntregar ? "" : "none";
     }
-    function onGrid(ev){ const b = ev.target.closest(".etapaOpt"); if(!b || b.disabled) return; sel = b.dataset.k; pintar(); }
+    function onGrid(ev){ const b = ev.target.closest(".etapaOpt"); if(!b || b.disabled) return; sel = b.dataset.k;
+      if(puedeMover){
+        if(sel === "estacionamiento") cambiaLugar = true;
+        rellenarZonas();
+        if(currentUser.role === "taller"){
+          const d = destinoSugerido();
+          if(d && d.c){ cambiaLugar = true; zonaSel.value = d.z; llenarCampos(); campoSel.value = d.c; }
+          else if(sel !== "estacionamiento") cambiaLugar = false;
+        }
+      }
+      pintar(); }
     function cerrar(){
       modal.classList.remove("show");
       grid.removeEventListener("click", onGrid); saveBtn.removeEventListener("click", onSave);
-      delBtn.removeEventListener("click", onDel); moveBtn.removeEventListener("click", onMove); cancelBtn.removeEventListener("click", cancelar);
+      delBtn.removeEventListener("click", onDel); cancelBtn.removeEventListener("click", cancelar);
+      quedaBtn.removeEventListener("click", onQueda); cambiaBtn.removeEventListener("click", onCambia);
+      zonaSel.removeEventListener("change", onZona); sugBtn.removeEventListener("click", onSug);
     }
     function cancelar(){ etapaDesdeEscaner = false; cerrar(); }
     async function refrescarVistas(){
@@ -7077,17 +7277,33 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       if(typeof avaVista !== "undefined" && avaVista === "etapas") etapasRenderPanelAva();
     }
     async function onSave(){
-      const ok = await etapaGuardar(plate, sel, resp.value.trim());
-      if(!ok) return;
-      cerrar(); showToast(sel ? `🧭 ${plate}: ${(etapaInfo(sel) || {}).l}` : `🧭 ${plate}: sin etapa`, 3000);
-      await refrescarVistas();
-      if(etapaDesdeEscaner) etapaVolverAlEscaner(); else abrirFichaPlaca(plate);
-    }
-    function onMove(){
-      const f = findPlate(plate);
-      etapaDesdeEscaner = false;
+      let destZ = "", destC = "";
+      if(cambiaLugar && puedeMover){
+        destZ = zonaSel.value; destC = campoSel.value;
+        if(!destZ || !destC){ showToast("Elegí el espacio al que va el vehículo", 3000); return; }
+        const actual = state.zones[found.zoneKey][found.campoIdx].campo;
+        if(destZ === found.zoneKey && destC === actual){ destZ = ""; destC = ""; }
+        else {
+          const dc = (state.zones[destZ] || []).find(x => x.campo === destC);
+          if(dc && dc.capacidad && dc.plates.length >= dc.capacidad){
+            if(!(await confirmUI(`${zoneInfo(destZ).label} · ${destC} ya está lleno (${dc.plates.length}/${dc.capacidad}). ¿Mover ${plate} igual?`))) return;
+          }
+        }
+      }
+      if(!bloqueo){
+        const ok = await etapaGuardar(plate, sel, resp.value.trim());
+        if(!ok) return;
+      }
+      let movido = false;
+      if(destZ){
+        const f2 = findPlate(plate);
+        if(f2) movido = await qrMoverVehiculo(f2, destZ, destC, { sinEtapa: !bloqueo });
+        if(!movido) showToast("⚠️ La etapa se guardó, pero el vehículo NO se movió.", 5000, true);
+      }
       cerrar();
-      if(f) qrAbrirMover(f);
+      showToast(`🧭 ${plate}: ${sel ? (etapaInfo(sel) || {}).l : "sin etapa"}${movido ? " · 📍 " + zoneInfo(destZ).label + " · " + destC : ""}`, 3500);
+      await refrescarVistas();
+      if(currentUser && currentUser.role === "taller") tallerListo(plate, sel); else if(etapaDesdeEscaner) etapaVolverAlEscaner(); else abrirFichaPlaca(plate);
     }
     async function onDel(){
       cerrar();
@@ -7096,7 +7312,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       if(etapaDesdeEscaner) etapaVolverAlEscaner(); else if(!ok) abrirFichaPlaca(plate);
     }
     grid.addEventListener("click", onGrid); saveBtn.addEventListener("click", onSave);
-    delBtn.addEventListener("click", onDel); moveBtn.addEventListener("click", onMove); cancelBtn.addEventListener("click", cancelar);
+    delBtn.addEventListener("click", onDel); cancelBtn.addEventListener("click", cancelar);
     pintar();
     modal.classList.add("show");
   }
@@ -7104,6 +7320,39 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const b = ev.target.closest && ev.target.closest("[data-etapa-plate]");
     if(b) abrirEtapaModal(b.getAttribute("data-etapa-plate"));
   });
+
+  // ---- Pantalla del usuario Taller: placa o QR → etapa ----
+  async function tallerAbrirPlaca(raw){
+    if(!currentUser || currentUser.role !== "taller") return;
+    const plate = normalizePlate(raw);
+    if(plate.length < 3){ showToast("Escribí la placa completa", 2500); return; }
+    let f = findPlate(plate);
+    if(!f){
+      if(!(await confirmUI(`La placa ${plate} no está registrada. ¿Registrarla ahora?`))) return;
+      ensureSinUbicacionConsolidada();
+      const ok = await updaterAddNew(SIN_UBICACION_KEY, SIN_UBICACION_CAMPO, plate, "", "", "first", "", "", "");
+      if(!ok){ showToast("No se pudo registrar la placa. Probá de nuevo.", 4000, true); return; }
+      f = findPlate(plate);
+      if(!f){ showToast("No se pudo registrar la placa. Probá de nuevo.", 4000, true); return; }
+      showToast(`✓ ${plate} registrada`, 2000);
+    }
+    etapaDesdeEscaner = false;
+    abrirEtapaModal(f.platesArray[f.plateIdx].plate);
+  }
+  function tallerListo(plate, etapaKey){
+    const inp = document.getElementById("tallerPlaca");
+    if(inp){ inp.value = ""; }
+    const u = document.getElementById("tallerUltimo");
+    if(u) u.textContent = `✅ Último: ${plate} → ${etapaKey ? (etapaInfo(etapaKey) || {}).l : "sin etapa"}`;
+    if(inp) setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 250);
+  }
+  (function(){
+    const inp = document.getElementById("tallerPlaca");
+    inp.addEventListener("input", ()=>{ const p = inp.selectionStart; inp.value = inp.value.toUpperCase(); try{ inp.setSelectionRange(p, p); }catch(e){} });
+    inp.addEventListener("keydown", (ev)=>{ if(ev.key === "Enter") tallerAbrirPlaca(inp.value); });
+    document.getElementById("tallerGoBtn").addEventListener("click", ()=> tallerAbrirPlaca(inp.value));
+    document.getElementById("tallerQrBtn").addEventListener("click", ()=> abrirRecorridoQr("etapa"));
+  })();
 
   // ---- Tablero por etapas ----
   let etapaSel = null, etapaSoloMios = false, etapaBusqueda = "";
@@ -8132,7 +8381,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     card.scrollTop = 0;
     function onScrollFicha(){ if(stickWrap) stickWrap.classList.toggle("on", card.scrollTop > 150); }
     card.addEventListener("scroll", onScrollFicha);
-    const puedeMoverFicha = !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion" || currentUser.role === "consulta"));
+    const puedeMoverFicha = puedeMoverVehiculos();
     moveBtn.style.display = puedeMoverFicha ? "" : "none";
     function textoFicha(){
       return `Placa: ${entry.plate}\nZona: ${zonaConSector(zi.label, campoObj.campo)}\nCampo: ${campoObj.campo}${posTxt ? `\n${posTxt}` : ""}${diasTotalFicha !== null ? `\nDías en total: ${diasTotalFicha}` : ""}${(esPasillo(campoObj.campo) && entry.referencia) ? `\nReferencia: ${entry.referencia}` : ""}\nAsesor: ${entry.aseguradora || "—"}${entry.ot ? `\n# de OT: ${entry.ot}` : ""}\nModelo: ${entry.modelo || "—"}\nColor: ${entry.color || "—"}${entry.circulacion === "no" ? "\nSe recomienda que el vehículo no circule" : ""}${entry.llave === "tablero" ? `\nLlave en tablero${esPasillo(campoObj.campo) ? "" : " " + campoObj.campo}` : (entry.llave === "vehiculo" ? "\nLlave en el vehículo" : "")}`;
@@ -10728,7 +10977,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       <div class="chartCard">
         <h3>🗺️ Mapa del parqueo</h3>
         <div class="mapaParqueoFlow">
-          ${["Recepcion","Avaluo","AvaluoPuff","Maya","Atras","TallerPintura"].filter(zk => !(esLectura() && HIDDEN_FROM_BUSQUEDA.has(zk))).map((zk, i, arr)=>{
+          ${["Recepcion","Avaluo","AvaluoPuff","Maya","Atras","TallerPintura","Taller"].filter(zk => !(esLectura() && HIDDEN_FROM_BUSQUEDA.has(zk))).map((zk, i, arr)=>{
             const z = zoneInfo(zk);
             const totalZona = (state.zones[zk]||[]).reduce((a,c)=>a+c.plates.length,0);
             return `
@@ -11548,7 +11797,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     admin: "Administrador",
     consulta: "Búsqueda",
     actualizacion: "Actualización",
-    cc: "CC · Control de calidad"
+    cc: "CC · Control de calidad",
+    taller: "Taller"
   };
   function esLectura(){ return !!(currentUser && (currentUser.role === "consulta" || currentUser.role === "cc")); }
   function puedeCC(){ return !!(currentUser && (currentUser.role === "cc" || currentUser.role === "admin")); }
@@ -12293,7 +12543,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       btnEl.className = "roleLogoBtn";
       btnEl.setAttribute("data-featured-username", u.username);
       const nombreParejo = toTitleCaseEs(u.username);
-      const subtitulo = u.role === "consulta" ? "Solo consulta" : (u.role === "cc" ? "Control de calidad" : (u.role === "actualizacion" ? "Agregar y mover vehículos" : ""));
+      const subtitulo = u.role === "consulta" ? "Solo consulta" : (u.role === "cc" ? "Control de calidad" : (u.role === "actualizacion" ? "Agregar y mover vehículos" : (u.role === "taller" ? "Placa y etapa" : "")));
       btnEl.innerHTML = `
         <span class="roleLogoIcon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
@@ -12318,7 +12568,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       selectedTarget = target;
       failedAttemptsInARow = 0;
       roleHelpHint.style.display = "none";
-      const label = target.kind === "user" ? target.username : (target.role === "consulta" ? "Búsqueda" : (target.role === "cc" ? "CC" : "Actualización"));
+      const label = target.kind === "user" ? target.username : (target.role === "consulta" ? "Búsqueda" : (target.role === "cc" ? "CC" : (target.role === "taller" ? "Taller" : "Actualización")));
       roleLabel.textContent = `Acceso de ${label}`;
       logosBox.style.display = "none";
       roleForm.style.display = "block";
@@ -12435,6 +12685,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     admin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
     consulta: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
     actualizacion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
+    taller: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>`,
     cc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5L16 9.5"/></svg>`
   };
 
@@ -12486,12 +12737,19 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         console.error("Error cargando la pantalla de actualización", e);
         showToast("Ocurrió un error al cargar. Recargá la página e intentá de nuevo.", 5000);
       });
+    } else if(role === "taller"){
+      nav.style.display = "none";
+      main.style.display = "none";
+      searchWrap.style.display = "none";
+      updaterPanel.style.display = "none";
     } else {
       nav.style.display = "";
       main.style.display = "";
       searchWrap.style.display = "";
       updaterPanel.style.display = "none";
     }
+    document.getElementById("tallerPanel").style.display = role === "taller" ? "block" : "none";
+    if(role === "taller") setTimeout(()=>{ try{ document.getElementById("tallerPlaca").focus(); }catch(e){} }, 300);
     const avaBar = document.getElementById("avaTabsBar");
     if(role === "consulta"){
       if(avaVistaRol !== "consulta"){ avaVistaRol = "consulta"; avaVista = "busqueda"; }
@@ -12733,7 +12991,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(sessionData){
       const found = users.find(u => u.username.toLowerCase() === sessionData.username.toLowerCase() && u.active !== false);
       if(found && (found.sessionVersion || 0) === sessionData.v){
-        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn };
+        currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn, moverOn: found.moverOn };
         revealApp();
         return;
       } else if(found){
@@ -12753,7 +13011,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         return false;
       }
       if(storageAvailable && !modoSinConexion) await actualizarHashSiHaceFalta(found, password);
-      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn };
+      currentUser = { username: found.username, role: found.role, canExport: !!found.canExport, searchFocused: !!found.searchFocused, showMovedBy: !!found.showMovedBy, allowedZones: found.allowedZones || [], etapasPermitidas: found.etapasPermitidas || [], etapasOn: found.etapasOn, moverOn: found.moverOn };
       if(storageAvailable){
         await setSessionUsername(found.username, found.sessionVersion || 0);
         await logAccess(found.username, "login");
@@ -13433,6 +13691,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
             <div class="uSec">PERMISOS</div>
             <div class="uGrid">
               ${u.role!=="admin" ? `<button class="etapaPermBtn${etOn ? " on" : ""}" data-i="${i}" title="Elegir si esta cuenta puede cambiar etapas y cuáles">🧭 Etapas: ${etTxt}</button>` : ``}
+              ${u.role!=="admin" ? `<button class="moverPermBtn${puedeMoverVehiculosDe(u) ? " on" : ""}" data-i="${i}" title="Permite sacar vehículos de su lugar y ubicarlos en otra zona o espacio (también al cambiar de etapa)">🚗 Mover vehículos: ${sn(puedeMoverVehiculosDe(u))}</button>` : ``}
               ${u.role!=="admin" ? `<button class="exportPermBtn${u.canExport ? " on" : ""}" data-i="${i}">📥 Excel: ${sn(u.canExport)}</button>` : ``}
               <button class="featureUserBtn${u.featured ? " on" : ""}" data-i="${i}" title="Muestra a esta persona con su propio logo en la pantalla de inicio">🌟 Logo propio: ${sn(u.featured)}</button>
               ${u.role==="actualizacion" ? `<button class="zoneRestrictBtn${u.allowedZones && u.allowedZones.length ? " on" : ""}" data-i="${i}" title="Elegir en qué zonas puede trabajar esta cuenta">🔒 Zonas: ${u.allowedZones && u.allowedZones.length ? u.allowedZones.length : "todas"}</button>` : ``}
@@ -13561,6 +13820,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           });
         });
       });
+      listEl.querySelectorAll(".moverPermBtn").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const i = parseInt(b.getAttribute("data-i"),10);
+          users[i].moverOn = !puedeMoverVehiculosDe(users[i]);
+          const ok = await saveUsers(users);
+          if(ok){ draw(); showToast(`🚗 ${users[i].username}: ${users[i].moverOn ? "ahora puede mover vehículos" : "ya no puede mover vehículos"}`); }
+        });
+      });
       listEl.querySelectorAll(".revokeSessionBtn").forEach(b=>{
         b.addEventListener("click", async ()=>{
           const i = parseInt(b.getAttribute("data-i"),10);
@@ -13599,6 +13866,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       admin: "Acceso total: puede administrar usuarios, zonas, capacidades y exportar todo.",
       consulta: "Solo puede buscar y ver — no puede mover ni editar vehículos.",
       actualizacion: "Puede agregar, mover y editar vehículos en las zonas que tenga permitidas.",
+      taller: "Pantalla simple: escribe o escanea la placa y elige la etapa (y dónde queda). Si la placa no existe, la registra con solo la placa.",
       cc: "Busca vehículos (solo lectura) y reporta el control de calidad: \"Vehículo Listo CC\" o alerta con correcciones, con 1 foto para compartir."
     };
     function updateRoleHint(){ roleHint.textContent = ROLE_HINTS[roleSelect.value] || ""; }
@@ -15611,7 +15879,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
 
   async function updaterAddNew(zoneKey, campoRaw, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw, otRaw){
-    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin" || currentUser.role === "consulta"))){
+    if(!(currentUser && (currentUser.role === "actualizacion" || currentUser.role === "admin" || currentUser.role === "consulta" || currentUser.role === "taller"))){
       showToast("Tu usuario no tiene permiso para esta acción");
       return false;
     }
