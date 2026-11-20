@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventario de Parqueo</title>
@@ -3065,6 +3066,111 @@
     text-align:left;
     cursor:pointer;
   }
+
+  /* ===== Pulido visual v2: identidad de parqueo (asfalto + línea amarilla + matrícula) ===== */
+  :root{ --display:"Barlow Semi Condensed","Inter",ui-sans-serif,system-ui,sans-serif; }
+  header, header .meta, header h1, header .idName{ color:#f4f5f2; }
+  header h1{ font-family:var(--display); font-size:1.2rem; font-weight:700; letter-spacing:.01em; }
+  h2, .etTitle, .authCard h2{ font-family:var(--display); font-weight:700; letter-spacing:.005em; }
+  /* Botones del encabezado: un solo estilo; Excel queda como acento */
+  .headerBtns > button, .headerBtns .adminMenuWrap > button{
+    background:rgba(255,255,255,.08) !important; color:#fff !important;
+    border:1px solid rgba(255,255,255,.18) !important; border-radius:10px !important;
+    min-height:32px; font-weight:700 !important;
+  }
+  .headerBtns > button:active{ background:rgba(255,255,255,.18) !important; }
+  #exportBtn{ background:var(--line) !important; color:#1b1e21 !important; border-color:var(--line) !important; }
+  /* Pestañas: pista de parqueo — línea amarilla bajo la activa */
+  .ccTabsBar{ gap:2px; padding:8px 8px 0; background:var(--surface); border-bottom:1px solid var(--border); }
+  .ccTabsBar button, .ccTabsBar.cuatro button{
+    border:0; border-bottom:4px solid transparent; border-radius:10px 10px 0 0; background:transparent;
+    color:var(--muted); font-size:.8rem; font-weight:700; padding:8px 2px 7px; min-height:48px;
+    display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.15; text-wrap:balance;
+  }
+  .ccTabsBar button.active{ background:var(--surface-2); color:var(--ink); border-bottom-color:var(--line); }
+  /* Campo de placa con aspecto de matrícula */
+  #avaPanelPlaca, #ccPanelPlaca, #tallerPlaca{
+    font-family:var(--display); font-weight:800; text-align:center; text-transform:uppercase; letter-spacing:.14em;
+    font-size:1.7rem; line-height:1.1; background:#fff !important; color:#15181b !important; padding:10px 8px;
+    border:3px solid #15181b !important; border-radius:10px;
+    box-shadow:inset 0 0 0 2px #fff, inset 0 0 0 3px #c9ccc4;
+  }
+  #avaPanelPlaca::placeholder, #ccPanelPlaca::placeholder, #tallerPlaca::placeholder{ color:#b3b6ae; letter-spacing:.14em; }
+  #avaPanelPlaca:focus, #ccPanelPlaca:focus, #tallerPlaca:focus{ outline:3px solid var(--line); outline-offset:2px; }
+  /* Acción principal junto a la placa: amarillo de señalización */
+  .ccPlateRow button:not(#ccPanelScan):not(#avaPanelScan){ background:var(--line); color:#1b1e21; }
+  #tallerGoBtn{ background:var(--line) !important; color:#1b1e21 !important; }
+  /* Interruptores del dashboard como píldoras */
+  #dashViewToggle, #dashAllAreasBtn{ display:inline-flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:7px 14px; font-size:.8rem; }
+  /* Números grandes con la misma voz que los títulos */
+  .etCard b{ font-family:var(--display); font-weight:800; }
+  #ccPanelScan, #avaPanelScan{ background:var(--asphalt) !important; color:#fff; }
+  :focus-visible{ outline:3px solid var(--line); outline-offset:2px; }
+
+  /* ===== Ficha del vehículo v2 ===== */
+  #viewDetailModal .modalCard{ padding-bottom:14px; }
+  .cv2Top{ display:flex; align-items:center; gap:12px; margin:6px 0 10px; }
+  .cv2Top .cvPlate{ flex:1; min-width:0; margin:0; }
+  .cv2Qr{ width:62px; height:62px; flex:none; background:#fff; border-radius:10px; padding:3px; border:1px solid var(--border); cursor:zoom-in; }
+  .cv2Qr svg{ width:100%; height:100%; display:block; }
+  .cv2Qr.big{ position:fixed; z-index:200; left:50%; top:50%; transform:translate(-50%,-50%); width:min(82vw,320px); height:min(82vw,320px); padding:10px; box-shadow:0 0 0 100vmax rgba(0,0,0,.6); cursor:zoom-out; }
+  .cv2Veh{ display:flex; align-items:baseline; gap:10px; width:100%; text-align:left; background:transparent; border:0; border-bottom:1px solid var(--border); padding:4px 0 10px; margin:0 0 10px; color:inherit; font:inherit; cursor:pointer; }
+  .cv2Model{ flex:1; min-width:0; font-weight:800; font-size:1.05rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cv2Veh.open .cv2Model{ white-space:normal; }
+  .cv2Veh.open{ align-items:flex-start; }
+  .cv2Color{ flex:none; font-size:.85rem; color:var(--muted); font-weight:600; display:inline-flex; align-items:center; gap:6px; }
+  .cv2Status{ display:flex; align-items:stretch; justify-content:space-between; gap:10px; background:var(--surface-2); border-radius:14px; border-left:6px solid var(--zc,#4f8fd1); padding:10px 12px; margin-bottom:8px; }
+  .cv2Where{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .cv2Where strong{ font-size:1.05rem; line-height:1.2; }
+  .cv2Where span{ font-size:.85rem; color:var(--muted); font-weight:600; }
+  .cv2Where .cv2CC{ font-weight:800; } .cv2CC.ok{ color:#1b8a4f !important; } .cv2CC.bad{ color:#c4372c !important; }
+  .cv2Days{ flex:none; text-align:right; display:flex; flex-direction:column; justify-content:center; padding-left:10px; border-left:1px solid var(--border); }
+  .cv2Days b{ font-family:var(--display); font-size:1.5rem; line-height:1; }
+  .cv2Days small{ font-size:.7rem; color:var(--muted); font-weight:700; margin-top:2px; }
+  .cv2Status.warn .cv2Days b{ color:#b87400; } .cv2Status.bad{ background:#fde7e4; } .cv2Status.bad .cv2Days b{ color:#b3261e; } .cv2Status.bad .cv2Days small{ color:#b3261e; }
+  html[data-theme="dark"] .cv2Status.bad{ background:#3d1f1c; } html[data-theme="dark"] .cv2Status.warn .cv2Days b{ color:#f2c230; }
+  .cv2Data{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0; }
+  .cv2Cell{ background:var(--surface-2); border-radius:12px; padding:8px 10px; display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .cv2Cell small{ font-size:.72rem; color:var(--muted); font-weight:700; }
+  .cv2Cell b{ font-size:1.05rem; overflow-wrap:anywhere; } .cv2Cell b.empty{ color:var(--muted); font-weight:600; font-size:.95rem; }
+  .cv2Edit{ align-self:flex-start; margin-top:4px; border:0; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:3px 10px; font:inherit; font-size:.76rem; font-weight:700; color:inherit; cursor:pointer; }
+  .cvEtapa{ padding:8px 10px; margin:8px 0; }
+  .cvEtapaTop{ font-size:.95rem; }
+  .cv2Steps{ display:flex; gap:6px; overflow-x:auto; padding:8px 0 6px; scrollbar-width:none; }
+  .cv2Steps::-webkit-scrollbar{ display:none; }
+  .cv2Step{ flex:none; width:64px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:1px; padding:5px 3px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); }
+  .cv2StepI{ font-size:1.05rem; line-height:1.2; } .cv2Step b{ font-size:.62rem; line-height:1.1; font-weight:700; } .cv2Step small{ font-size:.6rem; color:var(--muted); font-weight:700; }
+  .cv2Step.done{ border-color:#2e9d5f; } .cv2Step.done b{ color:#1b6b3f; } html[data-theme="dark"] .cv2Step.done b{ color:#7fd6a2; }
+  .cv2Step.cur{ background:var(--line); border-color:var(--line); color:#1b1e21; } .cv2Step.cur small{ color:#3b3200; }
+  .cv2Step.todo{ border-style:dashed; opacity:.55; }
+  .cv2HistHead{ margin:12px 0 4px; font-weight:800; font-size:.9rem; }
+  .cv2H{ border-left:4px solid #9aa2ab; padding:4px 0 4px 10px; margin-bottom:6px; }
+  .cv2H.mov{ border-left-color:#4f8fd1; } .cv2H.etapa{ border-left-color:#8c5bd6; } .cv2H.ot{ border-left-color:#e2a21f; } .cv2H.renombre{ border-left-color:#e0529c; }
+  .cv2HLine{ font-weight:700; font-size:.9rem; line-height:1.25; overflow-wrap:anywhere; }
+  .cv2HMeta{ font-size:.75rem; color:var(--muted); margin-top:1px; }
+  .cv2HTag{ font-size:.68rem; font-weight:800; background:var(--surface-3); border-radius:999px; padding:1px 7px; margin-left:4px; }
+  .cv2More{ width:100%; border:1px dashed var(--border); background:transparent; color:inherit; border-radius:10px; padding:7px; font:inherit; font-weight:700; font-size:.82rem; cursor:pointer; margin-top:2px; }
+  .cv2Actions{ margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+  .cv2Actions .primaryBtn{ width:100%; padding:13px; }
+  .cv2Share{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .cv2Share button{ padding:10px 4px; font-size:.84rem; margin:0; }
+  .cvStickDays{ flex:none; font-style:normal; font-weight:800; font-size:.78rem; padding:3px 9px; border-radius:999px; background:#2e9d5f; color:#fff; }
+  .cvStickDays.warn{ background:#f2c230; color:#1b1e21; } .cvStickDays.bad{ background:#d6453a; }
+  #viewDetailBody .cvChips{ margin:6px 0; gap:5px; }
+  #viewDetailBody .cvChip{ font-size:.76rem; padding:4px 9px; }
+
+  /* Escáner QR: ayudas para poca luz, QR gastados y manos con guantes */
+  .qrScanTorch.on{ background:#f2c230; color:#1b1e21; box-shadow:0 0 0 3px rgba(242,194,48,.45); }
+  .qrScanTorch.pulse{ animation:qrPulse 1.1s ease-in-out infinite; }
+  @keyframes qrPulse{ 50%{ box-shadow:0 0 0 8px rgba(242,194,48,.5); } }
+  @media (prefers-reduced-motion:reduce){ .qrScanTorch.pulse{ animation:none; box-shadow:0 0 0 4px rgba(242,194,48,.6); } }
+  .qrScanHint{ position:absolute; left:12px; right:68px; top:12px; background:rgba(0,0,0,.72); color:#fff; border-radius:12px; padding:9px 12px; font-size:.82rem; line-height:1.35; }
+  .qrScanHint strong{ color:#f2c230; }
+  .qrScanZoomBox{ position:absolute; left:14px; right:14px; bottom:14px; display:flex; align-items:center; gap:10px; background:rgba(0,0,0,.55); border-radius:999px; padding:6px 14px; color:#fff; }
+  .qrScanZoomBox input{ flex:1; height:34px; accent-color:#f2c230; }
+  .qrScanFrame{ transition:border-color .15s, box-shadow .15s; }
+  .qrScanFrame.ok{ border-color:#5FB37A; box-shadow:0 0 0 999px rgba(0,0,0,0.38), 0 0 0 6px rgba(95,179,122,.45); }
+  .qrManualRow.ayuda input{ outline:3px solid #f2c230; outline-offset:2px; }
 </style>
 </head>
 <body>
@@ -3256,7 +3362,9 @@
     <video id="qrScanVideo" playsinline muted></video>
     <div class="qrScanFrame" id="qrScanFrame"></div>
     <div class="qrScanCamMsg" id="qrScanCamMsg" style="display:none;"></div>
-    <button type="button" class="qrScanTorch" id="qrScanTorchBtn" title="Linterna">🔦</button>
+    <button type="button" class="qrScanTorch" id="qrScanTorchBtn" title="Linterna" aria-label="Linterna">🔦</button>
+    <div class="qrScanHint" id="qrScanHint" style="display:none;" role="status"></div>
+    <div class="qrScanZoomBox" id="qrScanZoomBox" style="display:none;"><span aria-hidden="true">🔍</span><input type="range" id="qrScanZoom" min="1" max="4" step="0.1" value="1" aria-label="Zoom de la cámara"></div>
   </div>
   <div class="qrScanBottom">
     <div class="qrScanCard" id="qrScanCard">Apuntá la cámara al QR del parabrisas. Cada lectura confirma que el vehículo sigue en su lugar.</div>
@@ -3595,12 +3703,14 @@
   <div class="modalCard">
     <button type="button" class="modalBackTop" id="viewDetailBackBtn">← Volver</button>
     <div id="viewDetailBody"></div>
-    <div class="modalActions" style="margin-top:16px;">
-      <button class="primaryBtn" id="viewDetailCopyBtn">Copiar info</button>
-      <button class="secondaryBtn" id="viewDetailWaBtn">📲 Enviar por WhatsApp</button>
-      <button class="secondaryBtn" id="viewDetailImgBtn">🖼️ Compartir como imagen</button>
-      <button class="secondaryBtn" id="viewDetailMoveBtn" style="display:none;">🔁 Moverlo de lugar</button>
-      <button class="secondaryBtn" id="viewDetailCloseBtn">← Volver</button>
+    <div class="cv2Actions">
+      <button class="primaryBtn" id="viewDetailMoveBtn" style="display:none;">🔁 Moverlo de lugar</button>
+      <div class="cv2Share">
+        <button class="secondaryBtn" id="viewDetailCopyBtn">📋 Copiar</button>
+        <button class="secondaryBtn" id="viewDetailWaBtn">📲 WhatsApp</button>
+        <button class="secondaryBtn" id="viewDetailImgBtn">🖼️ Imagen</button>
+      </div>
+      <button class="secondaryBtn" id="viewDetailCloseBtn" style="display:none;">← Volver</button>
     </div>
   </div>
 </div>
@@ -4867,6 +4977,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   let qrUltimoLeido = { plate: "", ts: 0 };
   let qrGuardando = false, qrSucio = false, qrSaveTimer = null;
   let qrTorchOn = false;
+  let qrSinLecturaDesde = 0, qrLuzTs = 0, qrPocaLuz = 0, qrFallos = 0, qrCanvasLuz = null;
 
   function qrFilasEnAlcance(){
     const permitidas = new Set(allowedZonesForCurrentUser().map(z => z.key));
@@ -5033,6 +5144,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   function qrAlLeer(texto){
     const ahora = Date.now();
+    qrSinLecturaDesde = ahora;
     let plate = qrParse(texto);
     if(plate){
       qrDatosExtra = null;
@@ -5043,6 +5155,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         const clave = "__sinplaca__" + datos.raw;
         if(qrUltimoLeido.plate !== clave || ahora - qrUltimoLeido.ts > 2500){
           qrUltimoLeido = { plate: clave, ts: ahora };
+          qrFallos++;
           qrMostrarTarjeta("bad", `Leí el código <strong>${escapeHtml(datos.raw.slice(0, 60))}</strong>, pero no encontré una placa dentro. Podés escribirla abajo.`);
         }
         return;
@@ -5053,6 +5166,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     // el mismo QR sigue frente a la cámara: se ignora por unos segundos
     if(plate === qrUltimoLeido.plate && ahora - qrUltimoLeido.ts < 4000){ qrUltimoLeido.ts = ahora; return; }
     qrUltimoLeido = { plate, ts: ahora };
+    qrOcultarAyuda();
     qrProcesarPlaca(plate, false);
   }
   // Lee códigos de barras (Code128, Code39, EAN, UPC, ITF, PDF417, DataMatrix, Aztec…) con ZXing
@@ -5107,6 +5221,46 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
     return out;
   }
+  function qrMostrarAyuda(html, conLinterna){
+    const h = document.getElementById("qrScanHint"); if(!h) return;
+    h.innerHTML = html; h.style.display = "";
+    const t = document.getElementById("qrScanTorchBtn"); if(t) t.classList.toggle("pulse", !!conLinterna && !qrTorchOn);
+  }
+  function qrOcultarAyuda(){
+    const h = document.getElementById("qrScanHint"); if(h) h.style.display = "none";
+    const t = document.getElementById("qrScanTorchBtn"); if(t) t.classList.remove("pulse");
+    const r = document.querySelector("#qrScanModal .qrManualRow"); if(r) r.classList.remove("ayuda");
+    qrSinLecturaDesde = Date.now(); qrFallos = 0;
+  }
+  // Cada ~1 s mide qué tan oscuro está el cuadro y, si cuesta leer, sugiere linterna, acercarse o escribir la placa.
+  function qrRevisarAyudas(video){
+    const ahora = Date.now();
+    if(qrPausa){ qrSinLecturaDesde = ahora; return; }
+    if(ahora - qrLuzTs > 1000 && video.videoWidth){
+      qrLuzTs = ahora;
+      try{
+        if(!qrCanvasLuz){ qrCanvasLuz = document.createElement("canvas"); qrCanvasLuz.width = 24; qrCanvasLuz.height = 18; }
+        const c = qrCanvasLuz.getContext("2d", { willReadFrequently:true });
+        c.drawImage(video, 0, 0, 24, 18);
+        const d = c.getImageData(0, 0, 24, 18).data; let suma = 0;
+        for(let i = 0; i < d.length; i += 4) suma += d[i] * 0.3 + d[i+1] * 0.59 + d[i+2] * 0.11;
+        qrPocaLuz = (suma / (d.length / 4)) < 55 ? qrPocaLuz + 1 : 0;
+      }catch(e){}
+    }
+    const t = document.getElementById("qrScanTorchBtn");
+    const tieneLinterna = t && t.style.display !== "none";
+    const espera = ahora - qrSinLecturaDesde;
+    if(qrPocaLuz >= 2 && !qrTorchOn && espera > 2500){
+      qrMostrarAyuda(tieneLinterna ? "<strong>Poca luz.</strong> Prendé la linterna 🔦 para leer mejor." : "<strong>Poca luz.</strong> Buscá más luz o alumbrá el código con otra linterna.", tieneLinterna);
+    } else if(espera > 15000 || qrFallos >= 3){
+      qrMostrarAyuda("<strong>Cuesta leer el código.</strong> Probá acercarte o alejarte un poco, limpiar la etiqueta o <strong>escribir la placa</strong> abajo.", true);
+      const r = document.querySelector("#qrScanModal .qrManualRow"); if(r) r.classList.add("ayuda");
+    } else if(espera > 8000){
+      qrMostrarAyuda("Mantené el código dentro del cuadro y la cámara quieta unos segundos.", false);
+    } else {
+      const h = document.getElementById("qrScanHint"); if(h && h.style.display !== "none" && qrPocaLuz < 2) qrOcultarAyuda();
+    }
+  }
   async function qrBucle(){
     const video = document.getElementById("qrScanVideo");
     if(!qrStream) return;
@@ -5129,6 +5283,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         }
         if(texto) qrAlLeer(texto);
       }
+      qrRevisarAyudas(video);
     }catch(err){ /* un cuadro que falla no detiene el recorrido */ }
     qrLoopTimer = setTimeout(qrBucle, 110);
   }
@@ -5141,7 +5296,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       return;
     }
     try{
-      qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false });
+      qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
       const video = document.getElementById("qrScanVideo");
       video.srcObject = qrStream;
       await video.play().catch(()=>{});
@@ -5156,7 +5311,16 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const track = qrStream.getVideoTracks()[0];
       const caps = track && track.getCapabilities ? track.getCapabilities() : {};
       document.getElementById("qrScanTorchBtn").style.display = caps && caps.torch ? "block" : "none";
+      document.getElementById("qrScanTorchBtn").classList.remove("on");
       qrTorchOn = false;
+      // Enfoque continuo (si el teléfono lo permite) y zoom táctil
+      try{ if(caps && caps.focusMode && caps.focusMode.includes("continuous")) await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); }catch(e){}
+      const zb = document.getElementById("qrScanZoomBox"), zr = document.getElementById("qrScanZoom");
+      if(caps && caps.zoom && caps.zoom.max > caps.zoom.min){
+        zr.min = caps.zoom.min; zr.max = Math.min(caps.zoom.max, caps.zoom.min * 6); zr.step = caps.zoom.step || 0.1; zr.value = caps.zoom.min;
+        zb.style.display = "";
+      } else { zb.style.display = "none"; }
+      qrOcultarAyuda(); qrPocaLuz = 0; qrLuzTs = 0;
       qrBucle();
     }catch(err){
       msg.style.display = "flex";
@@ -5168,6 +5332,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(qrStream){ qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
     const video = document.getElementById("qrScanVideo");
     if(video) video.srcObject = null;
+    qrTorchOn = false; qrOcultarAyuda();
+    const tb = document.getElementById("qrScanTorchBtn"); if(tb) tb.classList.remove("on");
   }
   function abrirRecorridoQr(modo){
     if(!puedeUsarQr() && !(modo === "etapa" && puedeVerBotonEtapa()) && !((modo === "buscar" || modo === "cc") && puedeCC()) && !(modo === "ava" && esBusquedaAgrega()) && !(modo === "buscar" && esBusquedaAgrega())) return;
@@ -5257,6 +5423,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(!track) return;
     qrTorchOn = !qrTorchOn;
     try{ await track.applyConstraints({ advanced: [{ torch: qrTorchOn }] }); }catch(e){ qrTorchOn = false; }
+    const tb = document.getElementById("qrScanTorchBtn"); tb.classList.toggle("on", qrTorchOn); tb.classList.remove("pulse");
+    if(qrTorchOn) qrOcultarAyuda();
+  });
+  document.getElementById("qrScanZoom").addEventListener("input", async (ev)=>{
+    const track = qrStream && qrStream.getVideoTracks()[0];
+    if(!track) return;
+    try{ await track.applyConstraints({ advanced: [{ zoom: parseFloat(ev.target.value) }] }); }catch(e){}
   });
   function qrMarcarManual(){
     const input = document.getElementById("qrManualPlate");
@@ -7102,6 +7275,19 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   let entregasCache = [];
   async function cargarEntregas(){ await cargarEtiquetasZonas(); if(!storageAvailable) return entregasCache; try{ entregasCache = (await readLog(ENTREGAS_KEY)) || []; }catch(e){} return entregasCache; }
   function etapaInfo(k){ return ETAPAS.find(x => x.k === k) || null; }
+  // Etapa que se asume por la zona cuando el vehículo no tiene una etapa propia.
+  // Neon Nieto, Maya y Atrás = Espera de reparación (salvo Atrás 33-36: listos para entregar).
+  const ETAPA_POR_ZONA = { Recepcion: "recepcion", Avaluo: "avaluo", AvaluoPuff: "avaluo", TallerPintura: "pintura", Maya: "espera", Atras: "espera", "Neon Nieto": "espera", "Parqueo Gash Externo": "estacionamiento" };
+  function etapaDeZona(zoneKey, campo){
+    const c = String(campo == null ? "" : campo).split(" › ")[0].trim();
+    if(zoneKey === "Atras"){ const n = parseInt(c, 10); if(n >= 33 && n <= 36) return etapaInfo("estacionamiento"); }
+    if(zoneKey === TALLER_KEY){ const k = etapaDeCampoTaller(c); return k ? etapaInfo(k) : null; }
+    const k = ETAPA_POR_ZONA[zoneKey];
+    return k ? etapaInfo(k) : null;
+  }
+  function etapaDeZonaDePlaca(plate){
+    try{ const f = findPlate(plate); if(!f) return null; const c = (state.zones[f.zoneKey] || [])[f.campoIdx]; return etapaDeZona(f.zoneKey, c ? c.campo : ""); }catch(e){ return null; }
+  }
   function etapaDiasEn(e){
     if(!e || !e.etapaTs) return null;
     const d = new Date(e.etapaTs);
@@ -7222,7 +7408,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const f = findPlate(plate);
       const e = f && f.platesArray[f.plateIdx];
       const inf = e && e.etapa ? etapaInfo(e.etapa) : null;
-      return inf ? ` · ${inf.i} ${inf.l}` : "";
+      if(inf) return ` · ${inf.i} ${inf.l}`;
+      const z = e ? etapaDeZonaDePlaca(plate) : null;
+      return z ? ` · ${z.i} ${z.l} (por zona)` : "";
     }catch(err){ return ""; }
   }
   function etapaFichaHtml(entry){
@@ -7230,15 +7418,28 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const dias = etapaDiasEn(entry);
     if(!entry.etapa){
       // Sin etapa: no se muestra el bloque de etapas; solo, si la persona puede asignar, un botón.
-      return (entry.responsable ? `<div class="cvResp">👤 Lo mueve: <strong>${escapeHtml(entry.responsable)}</strong></div>` : "")
+      const zInf = etapaDeZonaDePlaca(entry.plate);
+      return (zInf ? `<div class="cvResp" style="font-weight:600;">${escapeHtml(zInf.i + " " + zInf.l)} <small style="font-weight:400;opacity:.75;">· según su zona</small></div>` : "")
+        + (entry.responsable ? `<div class="cvResp">👤 Lo mueve: <strong>${escapeHtml(entry.responsable)}</strong></div>` : "")
         + (puedeVerBotonEtapa() ? `<button type="button" class="etBtn" data-etapa-plate="${escapeAttrLike(entry.plate)}">🧭 Actualizar etapa y ubicación</button>` : "");
     }
-    const dots = ETAPAS.map((x, i)=> `<span class="cvDot${x.k === entry.etapa ? " cur" : ""}" title="${escapeAttrLike(x.l)}">${x.k === entry.etapa ? x.i : i + 1}</span>`).join("");
+    // Línea de tiempo: etapas ya recorridas (con fecha), la actual resaltada y las que faltan en gris.
+    const fmtD = (ts)=>{ const d = new Date(ts); return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CR", { day:"2-digit", month:"2-digit" }); };
+    const idxAct = ETAPAS.findIndex(x => x.k === entry.etapa);
+    const ultimaFecha = {};
+    (entry.etapas || []).forEach(x => { if(x && x.e) ultimaFecha[x.e] = x.ts; });
+    if(entry.etapaTs) ultimaFecha[entry.etapa] = entry.etapaTs;
+    const ocultas = (currentUser && currentUser.role === "taller") ? ["recepcion","avaluo","espera","entrega"] : [];
+    const pasos = ETAPAS.map((x, i)=> ({ x, i })).filter(({ x, i })=> x.k === entry.etapa || ultimaFecha[x.k] || (i > idxAct && !ocultas.includes(x.k)));
+    const dots = pasos.map(({ x })=>{
+      const estado = x.k === entry.etapa ? "cur" : (ultimaFecha[x.k] ? "done" : "todo");
+      return `<div class="cv2Step ${estado}"><span class="cv2StepI">${x.i}</span><b>${escapeHtml(x.l)}</b><small>${ultimaFecha[x.k] ? fmtD(ultimaFecha[x.k]) : "—"}</small></div>`;
+    }).join("");
     return `<div class="cvEtapa">
-      <div class="cvEtapaTop"><span class="cvEtapaLbl">🧭 ETAPA</span> <strong>${inf ? escapeHtml(inf.i + " " + inf.l) : "Sin etapa"}</strong>${dias !== null ? ` <small>· ${dias === 0 ? "desde hoy" : dias + (dias === 1 ? " día" : " días") + " en esta etapa"}</small>` : ""}</div>
-      <div class="cvDots">${dots}</div>
+      <div class="cvEtapaTop"><strong>${inf ? escapeHtml(inf.i + " " + inf.l) : "Sin etapa"}</strong>${dias !== null ? ` <small>· ${dias === 0 ? "desde hoy" : dias + (dias === 1 ? " día" : " días") + " en esta etapa"}</small>` : ""}</div>
+      <div class="cv2Steps">${dots}</div>
       ${entry.responsable ? `<div class="cvResp">👤 Lo mueve: <strong>${escapeHtml(entry.responsable)}</strong></div>` : ""}
-      ${puedeVerBotonEtapa() ? `<button type="button" class="etBtn" data-etapa-plate="${escapeAttrLike(entry.plate)}">🧭 Actualizar etapa y ubicación</button>` : ""}
+      ${puedeVerBotonEtapa() ? `<button type="button" class="etBtn" data-etapa-plate="${escapeAttrLike(entry.plate)}">🧭 Cambiar etapa o ubicación</button>` : ""}
     </div>`;
   }
   function abrirFichaPlaca(plate){
@@ -8552,53 +8753,56 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const posTxt = posicionTexto(entry.plate);
     const chipPos = posTxt ? `<span class="cvChip cvInfo">🔢 ${escapeHtml(posTxt)}</span>` : "";
     const ubicCorta = `${zonaConSector(zi.label, campoObj.campo)} · Campo ${campoObj.campo}${posTxt ? " · " + posTxt : ""}`;
+    const dZona = zonaConSector(zi.label, campoObj.campo);
+    const nivel = tiempoAca.recency === "stale" ? "bad" : (tiempoAca.recency === "recent" ? "warn" : "ok");
+    const diasTxt = diasN === null ? "—" : (diasN === 0 ? "Hoy" : diasN + (diasN === 1 ? " día" : " días"));
+    const qrMini = (typeof qrcode === "function") ? (()=>{ try{ return `<div class="cv2Qr" data-qr-zoom="1" title="Tocá para agrandar el QR">${qrSvg(entry.plate)}</div>`; }catch(e){ return ""; } })() : "";
     body.innerHTML = `
-      <div class="cvStickWrap" id="cvStickWrap"><div class="cvStick"><button type="button" data-proxy="viewDetailBackBtn" aria-label="Volver">←</button><b>${escapeHtml(entry.plate)}</b><span>${escapeHtml(ubicCorta)}</span></div></div>
-      <div class="cvHeroWrap">
-      ${qrHeroHtml(entry.plate)}
-      <div class="cvHero" style="--cv:${acento};">
-        ${qrHeroHtml(entry.plate) ? "" : `<div class="cvHeroIcon">${icono}</div>`}
-        <div class="cvHeroTag">VEHÍCULO EN PARQUEO</div>
-        <div class="cvHeroModel">${entry.modelo ? escapeHtml(entry.modelo) : "Sin modelo"}</div>
-        <div class="cvHeroSub">${colorReal ? `<span class="plateColorDot" style="background:${colorReal}"></span> ` : ""}${entry.color ? escapeHtml(entry.color) : "Color sin registrar"}</div>
-      </div>
-      </div>
-      <div class="cvPlateRow">
+      <div class="cvStickWrap" id="cvStickWrap"><div class="cvStick"><button type="button" data-proxy="viewDetailBackBtn" aria-label="Volver">←</button><b>${escapeHtml(entry.plate)}</b><span>${escapeHtml(ubicCorta)}</span>${diasN === null ? "" : `<em class="cvStickDays ${nivel}">${diasN === 0 ? "hoy" : diasN + " d"}</em>`}</div></div>
+      <div class="cv2Top">
         <div class="cvPlate${placaClase}">
           <div class="cvPlateTop"><span>COSTA RICA</span><i class="cvFlag"></i></div>
-          <div class="cvPlateNum" style="font-size:min(${entry.plate.length <= 6 ? "2rem" : (entry.plate.length === 7 ? "1.7rem" : (entry.plate.length === 8 ? "1.45rem" : "1.2rem"))}, calc(min(100vw - 110px, 340px) / ${(Math.max(entry.plate.length, 4) * 0.95).toFixed(2)}));">${escapeHtml(entry.plate)}</div>
+          <div class="cvPlateNum" style="font-size:min(${entry.plate.length <= 6 ? "2rem" : (entry.plate.length === 7 ? "1.7rem" : (entry.plate.length === 8 ? "1.45rem" : "1.2rem"))}, calc(min(100vw - 170px, 300px) / ${(Math.max(entry.plate.length, 4) * 0.95).toFixed(2)}));">${escapeHtml(entry.plate)}</div>
           <div class="cvPlateBottom">CENTROAMERICA</div>
         </div>
-        <div class="cvSince recency-${tiempoAca.recency}" title="${escapeAttrLike(tiempoAca.diasTexto || "Sin registro")}">
-          ${diasN === null ? `<div class="cvDays"><b>—</b><span>sin dato</span></div>` : `<div class="cvDays"><b>${diasN === 0 ? "HOY" : diasN}</b><span>${diasN === 0 ? "llegó" : (diasN === 1 ? "día acá" : "días acá")}</span></div>`}
-          <small>desde el ${escapeHtml(tiempoAca.fecha)}</small>
+        ${qrMini}
+      </div>
+      <button type="button" class="cv2Veh" id="cv2Veh" aria-expanded="false" title="Tocá para ver el nombre completo">
+        <span class="cv2Model">${entry.modelo ? escapeHtml(entry.modelo) : "Sin modelo"}</span>
+        <span class="cv2Color">${colorReal ? `<span class="plateColorDot" style="background:${colorReal}"></span>` : ""}${entry.color ? escapeHtml(entry.color) : "Sin color"}</span>
+      </button>
+      <div class="cv2Status ${nivel}" style="--zc:${zi.color};">
+        <div class="cv2Where">
+          <strong>📍 ${escapeHtml(dZona)}</strong>
+          <span>Campo ${escapeHtml(campoObj.campo)}${posTxt ? " · " + escapeHtml(posTxt) : ""}</span>
+          ${(esPasillo(campoObj.campo) && entry.referencia) ? `<span class="cv2Ref">${escapeHtml(entry.referencia)}</span>` : ""}
+          ${entry.cc ? (entry.cc.estado === "ok" ? `<span class="cv2CC ok">✅ Listo CC</span>` : `<span class="cv2CC bad">🛡️ En CC, con correcciones</span>`) : ""}
+        </div>
+        <div class="cv2Days" title="${escapeAttrLike(tiempoAca.diasTexto || "Sin registro")}">
+          <b>${escapeHtml(diasTxt)}</b>
+          <small>${nivel === "bad" ? "sin moverse" : "en este espacio"}</small>
         </div>
       </div>
-      <div class="cvChips"><span class="cvChip cvInfo" id="cvTotalChip" style="display:none;"></span>${chipEtapa}${chipOT}${chipPos}${ccEstado}${llaveChip}${visto}${badgeLlegoHoy}${badgeStale}${badgeRef}</div>
+      <div class="cvChips"><span class="cvChip cvInfo" id="cvTotalChip" style="display:none;"></span>${ccEstado}${llaveChip}${visto}${badgeLlegoHoy}${badgeRef}</div>
+      <div class="cv2Data">
+        <div class="cv2Cell">
+          <small>Asesor</small>
+          <b class="${entry.aseguradora ? "" : "empty"}">${entry.aseguradora ? escapeHtml(entry.aseguradora) : "Sin registrar"}</b>
+        </div>
+        <div class="cv2Cell">
+          <small># de OT</small>
+          <b class="${entry.ot ? "" : "empty"}">${entry.ot ? escapeHtml(entry.ot) : "Falta la OT"}</b>
+          ${puedeEditarOT() ? `<button type="button" class="cv2Edit" data-ot-plate="${escapeAttrLike(entry.plate)}">${entry.ot ? "✏️ Cambiar" : "➕ Agregar"}</button>` : ""}
+        </div>
+      </div>
       ${etapaFichaHtml(entry)}
       ${ccTagHtml(entry)}${puedeCC() ? `<button type="button" class="ccMiniBtn" data-cc-plate="${escapeAttrLike(entry.plate)}">🛡️ Control de calidad</button>` : ""}
-      <div class="cvSectionTitle">UBICACIÓN ACTUAL</div>
-      <div class="cvLocBand" style="--zc:${zi.color};">
-        <div class="cvLocZone">📍 ${escapeHtml(zonaConSector(zi.label, campoObj.campo))}</div>
-        <div class="cvLocCampo">Campo ${escapeHtml(campoObj.campo)}</div>
-        <div class="cvLocPos">🔢 ${escapeHtml(posicionTexto(entry.plate))}</div>
-        ${entry.cc ? (entry.cc.estado === "ok" ? `<div class="cvLocCC cvLocCCOk">✅ Listo CC</div>` : `<div class="cvLocCC cvLocCCBad">🛡️ En CC — con correcciones</div>`) : ""}
-        ${(esPasillo(campoObj.campo) && entry.referencia) ? `<div class="cvLocRef">${escapeHtml(entry.referencia)}</div>` : ""}
-      </div>
-      <div class="cvInfoGrid">
-        <div class="cvInfoCard">
-          <div class="cvInfoLbl">👤 ASESOR</div>
-          <div class="cvInfoVal${entry.aseguradora ? "" : " empty"}">${entry.aseguradora ? escapeHtml(entry.aseguradora) : "Sin registrar"}</div>
-        </div>
-        <div class="cvInfoCard ot">
-          <div class="cvInfoLbl">#️⃣ # DE OT</div>
-          <div class="cvInfoVal${entry.ot ? "" : " empty"}">${entry.ot ? escapeHtml(entry.ot) : "Sin # de OT"}</div>
-          ${puedeEditarOT() ? `<button type="button" class="etBtn" data-ot-plate="${escapeAttrLike(entry.plate)}">✏️ ${entry.ot ? "Cambiar" : "Agregar"}</button>` : ""}
-        </div>
-      </div>
-      <div class="cvSectionTitle" id="cvHistTitle" style="display:none;">HISTORIAL DE MOVIMIENTOS</div>
+      <div class="cv2HistHead" id="cvHistTitle" style="display:none;"></div>
       <div id="cvHist" class="cvHist" style="display:none;"></div>
     `;
+    const vehBtn = document.getElementById("cv2Veh");
+    if(vehBtn) vehBtn.addEventListener("click", ()=>{ const on = vehBtn.classList.toggle("open"); vehBtn.setAttribute("aria-expanded", on ? "true" : "false"); });
+    setTimeout(()=>{ const cur = body.querySelector(".cv2Step.cur"), cont = body.querySelector(".cv2Steps"); if(cur && cont) cont.scrollLeft = Math.max(0, cur.offsetLeft - cont.clientWidth / 2 + cur.clientWidth / 2); }, 60);
     (async ()=>{
       const clave = normalizePlate(entry.plate);
       const todo = await readLog(HISTORY_KEY);
@@ -8626,8 +8830,33 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }catch(e){}
       if(!mios.length) return; // sin movimientos: no se muestra nada
       const titulo = document.getElementById("cvHistTitle");
-      titulo.textContent = `HISTORIAL DE MOVIMIENTOS · ${mios.length} REGISTRO${mios.length === 1 ? "" : "S"}`;
+      titulo.textContent = `Historial · ${mios.length} registro${mios.length === 1 ? "" : "s"}`;
       titulo.style.display = ""; box.style.display = "";
+      const VISIBLES = 3;
+      const lineaH = (h)=>{
+        if(h.desde === "Vehículo nuevo") return `➕ Agregado en ${h.hasta}`;
+        if(h.hasta === "Eliminado del inventario") return `🗑️ Eliminado · estaba en ${h.desde}`;
+        if(/^Sin ubicaci[oó]n/i.test(String(h.hasta || ""))){ const v = !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion")); return v ? `${h.desde} → ${h.hasta}` : `Retirado de ${h.desde}`; }
+        return `${h.desde} → ${h.hasta}`;
+      };
+      const quitarEm = (t)=> String(t == null ? "" : t);
+      box.innerHTML = mios.map((h, i)=>{
+        const tipo = h.tipo === "etapa" ? "etapa" : ((h.tipo === "ot" || h.tipo === "asesor" || h.tipo === "dato") ? "ot" : (h.tipo === "renombre" ? "renombre" : ""));
+        const etiqueta = h.nota === "deshacer" ? "↩️ deshacer" : (h.nota === "desplazado" ? "⤵️ desplazado" : (h.nota === "excel" ? "📥 por Excel" : ""));
+        return `<div class="cv2H ${tipo || "mov"}${i >= VISIBLES ? " extra" : ""}"${i >= VISIBLES ? " hidden" : ""}>
+          <div class="cv2HLine">${escapeHtml(quitarEm(lineaH(h)))}${etiqueta ? ` <span class="cv2HTag">${etiqueta}</span>` : ""}</div>
+          <div class="cv2HMeta">${escapeHtml(h.username || "—")} · ${escapeHtml(h.ts || "")}</div>
+        </div>`;
+      }).join("") + (mios.length > VISIBLES ? `<button type="button" class="cv2More" id="cv2More">Ver los ${mios.length} registros</button>` : "");
+      const more = document.getElementById("cv2More");
+      if(more) more.addEventListener("click", ()=>{
+        const abierto = more.dataset.open === "1";
+        box.querySelectorAll(".cv2H.extra").forEach(el => { el.hidden = abierto; });
+        more.dataset.open = abierto ? "0" : "1";
+        more.textContent = abierto ? `Ver los ${mios.length} registros` : "Ver menos";
+      });
+      return;
+      /* detalle anterior (sin uso) */
       box.innerHTML = mios.map((h, i)=>{
         const nuevo = h.desde === "Vehículo nuevo";
         const tipo = h.tipo === "etapa" ? "etapa" : ((h.tipo === "ot" || h.tipo === "asesor" || h.tipo === "dato") ? "ot" : (h.tipo === "renombre" ? "renombre" : ""));
@@ -11789,6 +12018,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
 
   function buildInventoryWorkbook(zoneKeysFilter){
+    invalidateResumenRowsCache(); // nunca exportar con la lista en caché desactualizada
     const wb = XLSX.utils.book_new();
     const now = new Date();
     const fechaLarga = now.toLocaleDateString("es-CR", {day:"2-digit", month:"long", year:"numeric"});
@@ -11806,6 +12036,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
 
     const resumenRows = buildResumenRows().filter(r => !zoneKeysFilter || zoneKeysFilter.includes(r.zoneKey));
+    // Los vehículos "Sin ubicación" no están en ZONES, así que no entraban al Resumen: se agregan para que ninguna placa falte.
+    if(!zoneKeysFilter || zoneKeysFilter.length >= ZONES.length){
+      (state.zones[SIN_UBICACION_KEY] || []).forEach(c=>{
+        const add = (arr)=> (arr || []).forEach(e=> resumenRows.push({ zoneKey: SIN_UBICACION_KEY, zoneLabel: "Sin ubicación", campo: c.campo, placa: e.plate, aseguradora: e.aseguradora || "", modelo: e.modelo || "", vehicleColor: e.color || "", lastUpdated: e.lastUpdated, ot: e.ot || "" }));
+        add(c.plates); (c.areas || []).forEach(ar=>{ add(ar.plates); (ar.filas || []).forEach(f=> add(f.plates)); });
+      });
+    }
     const resumenData = [
       ["Resumen general — Inventario de Parqueo", "", "", "", "", "", "", ""],
       [`Generado ${fechaLarga}, ${horaLarga} · ${resumenRows.length} vehículo(s) en total`, "", "", "", "", "", "", ""],
@@ -11946,6 +12183,59 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       ];
       wsDup["!cols"] = [{ wch: 16 }, { wch: 24 }, { wch: 14 }, { wch: 20 }];
       XLSX.utils.book_append_sheet(wb, wsDup, "Placas duplicadas");
+    }
+
+    // ---- Excel simple: una hoja "Inventario" con TODAS las placas + una hoja "Movimientos" ----
+    {
+      const claves = new Set(zonasAExportar.map(z => z.key));
+      if(!zoneKeysFilter || zoneKeysFilter.length >= ZONES.length) claves.add(SIN_UBICACION_KEY);
+      const etapaDeZonaTxt = (p)=>{ const inf = etapaDeZona(p.zoneKey, p.campo); return inf ? inf.l : ""; };
+      const hdr = ["Placa","Zona","Campo","Asesor","Modelo","Color","# de OT","Etapa","Días en la etapa","Control de calidad","Circulación","Llave","Última actualización"];
+      const inv = [hdr];
+      const fechaHoraCorta = (iso)=>{ const f = new Date(iso); return isNaN(f) ? "" : f.toLocaleDateString("es-CR", { day:"2-digit", month:"2-digit", year:"numeric" }) + " " + f.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit" }); };
+      todasLasPlacas().filter(p => claves.has(p.zoneKey) && !(p.zoneKey === SIN_UBICACION_KEY && !p.e.etapa)).forEach(p=>{ // Sin ubicación solo sale si ya tiene etapa
+        const e = p.e, inf = e.etapa ? etapaInfo(e.etapa) : null, d = etapaDiasEn(e);
+        inv.push([e.plate, p.zoneKey === SIN_UBICACION_KEY ? "Sin ubicación" : p.zoneLabel, String(p.campo), e.aseguradora || "", e.modelo || "", e.color || "", e.ot || "", inf ? inf.l : etapaDeZonaTxt(p), d === null ? "" : d, e.cc ? (e.cc.estado === "ok" ? "Listo CC" : "Con correcciones") : "", e.circulacion || "", e.llave || "", fechaHoraCorta(e.lastUpdated)]);
+      });
+      const cab = inv.shift();
+      inv.sort((x, y)=> String(x[1]).localeCompare(String(y[1]), "es") || String(x[2]).localeCompare(String(y[2]), "es", { numeric: true }) || String(x[0]).localeCompare(String(y[0])));
+      inv.unshift(cab);
+      const wsInv = XLSX.utils.aoa_to_sheet(inv);
+      wsInv["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 10 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 18 }];
+      wsInv["!autofilter"] = { ref: `A1:M${inv.length}` };
+      wsInv["!freeze"] = { xSplit: 0, ySplit: 1 };
+      // ---- Datos importantes: totales y conteos clave ----
+      const filasInv = inv.slice(1);
+      const cuenta = (idx, vacio)=>{ const m = new Map(); filasInv.forEach(r=>{ const k = String(r[idx] || "").trim() || vacio; if(k) m.set(k, (m.get(k) || 0) + 1); }); return [...m.entries()].sort((x, y)=> y[1] - x[1]); };
+      const ahora = new Date(), mesNombre = ahora.toLocaleDateString("es-CR", { month: "long", year: "numeric" });
+      const delMes = (r)=>{ const d = new Date(r.fecha || r.tsMillis || 0); return !isNaN(d) && d.getFullYear() === ahora.getFullYear() && d.getMonth() === ahora.getMonth(); };
+      const entregasMes = entregasCache.filter(delMes).sort((x, y)=> (x.tsMillis || 0) - (y.tsMillis || 0));
+      const dat = [["Datos importantes — Inventario de Parqueo", ""], [`Generado ${fechaLarga}, ${horaLarga}`, ""], [],
+        ["Vehículos en el inventario", filasInv.length],
+        ["En alguna etapa", filasInv.filter(r => r[7]).length],
+        ["Sin etapa", filasInv.filter(r => !r[7]).length],
+        ["Control de calidad: listos", filasInv.filter(r => r[9] === "Listo CC").length],
+        ["Control de calidad: con correcciones", filasInv.filter(r => r[9] === "Con correcciones").length],
+        [`Entregados en ${mesNombre}`, entregasMes.length]];
+      const bloque = (titulo, pares)=>{ dat.push([], [titulo, "Vehículos"]); pares.forEach(x => dat.push(x)); };
+      bloque("Por zona", cuenta(1, ""));
+      bloque("Por etapa", cuenta(7, ""));
+      bloque("Por asesor", cuenta(3, "Sin asesor"));
+      bloque("Por modelo (los 15 más frecuentes)", cuenta(4, "Sin modelo").slice(0, 15));
+      const wsDat = XLSX.utils.aoa_to_sheet(dat);
+      wsDat["!cols"] = [{ wch: 40 }, { wch: 14 }];
+      wsDat["!merges"] = [{ s:{r:0,c:0}, e:{r:0,c:1} }, { s:{r:1,c:0}, e:{r:1,c:1} }];
+      // ---- Entregados: solo los del mes en curso (al cambiar el mes empieza de cero) ----
+      const fmtFH2 = (ms)=>{ const f = new Date(ms); return isNaN(f) ? ["",""] : [f.toLocaleDateString("es-CR", { day:"2-digit", month:"2-digit", year:"numeric" }), f.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit" })]; };
+      const entRows = [["Fecha","Hora","Placa","Asesor","Modelo","Color","# de OT","Zona de salida","Campo","Entregó","Días en proceso"]];
+      entregasMes.forEach(r=>{ const [fd, fh] = fmtFH2(r.fecha || r.tsMillis); entRows.push([fd, fh, r.placa, r.aseguradora || "", r.modelo || "", r.color || "", r.ot || "", r.zona || "", r.campo || "", r.entregadoPor || "", r.diasTotales == null ? "" : r.diasTotales]); });
+      const wsEnt = XLSX.utils.aoa_to_sheet(entRows);
+      wsEnt["!cols"] = [{ wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 10 }, { wch: 16 }, { wch: 12 }];
+      if(entRows.length > 1) wsEnt["!autofilter"] = { ref: `A1:K${entRows.length}` };
+      const movs = wb.Sheets["Movimientos"];
+      wb.SheetNames = ["Inventario", "Datos importantes", "Entregados"].concat(movs ? ["Movimientos"] : []);
+      const keep = { Inventario: wsInv, "Datos importantes": wsDat, Entregados: wsEnt }; if(movs) keep.Movimientos = movs;
+      wb.Sheets = keep;
     }
 
     const fecha = now.toISOString().slice(0,10);
@@ -13443,11 +13733,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     // antes: si trae nombre completo, solo se guarda la primera palabra.
     return (limpio.split(/\s+/)[0] || "").toUpperCase();
   }
+  // Una placa real tiene letras/números, al menos un dígito y 3–9 caracteres.
+  // Descarta rótulos ("NOMBRE"), errores ("#REF!") y textos sueltos.
+  function placaPlausible(p){ return !!p && p.length >= 3 && p.length <= 9 && /\d/.test(p) && (/[A-Z]/i.test(p) || p.length === 6); }
   function parseExcelParaImportar(workbook){
     const filas = [];
     let huboEncabezadoValido = false;
     workbook.SheetNames.forEach(nombreHoja=>{
       const hoja = workbook.Sheets[nombreHoja];
+      if(/^(movimientos|entregados|datos importantes|placas duplicadas|control de calidad)$/i.test(nombreHoja.trim())) return; // son registros, no inventario
       const filasCrudo = XLSX.utils.sheet_to_json(hoja, { header: 1, blankrows: false, defval: "" });
       // Busca la fila de encabezados: la primera que tenga una columna
       // reconocible como "Placa" — así no importa si arriba hay un título
@@ -13472,13 +13766,49 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           break;
         }
       }
-      if(filaEncabezado === -1) return; // esta hoja no tiene una columna Placa reconocible, se ignora
+      if(filaEncabezado === -1){
+        // Hoja tipo cuadrícula (una hoja por zona, sin encabezado "Placa"): se toman
+        // solo las celdas con formato claro de placa (ej. ABC123, AB-1234, 123456).
+        const vistas = new Set();
+        filasCrudo.forEach(fila=> fila.forEach(v=>{
+          const t = String(v == null ? "" : v).trim();
+          if(!/^([A-Za-z]{1,3}[- ]?\d{3,6}|\d{6})$/.test(t)) return;
+          const plate = normalizePlate(t);
+          if(!placaPlausible(plate) || vistas.has(plate)) return;
+          vistas.add(plate);
+          filas.push({ plate, modelo: "", asesor: "", color: "", ot: "" });
+          huboEncabezadoValido = true;
+        }));
+        return;
+      }
       huboEncabezadoValido = true;
+      // Diseño HORIZONTAL (hoja transpuesta): "Placa" es el rótulo de una FILA
+      // y las placas van hacia la derecha (con "Nombre"/"Asesor" en otra fila).
+      const hdr = filasCrudo[filaEncabezado].map(normalizarEncabezado);
+      const colMasDatos = filasCrudo[filaEncabezado].slice(colPlaca + 1).filter(v => String(v).trim() !== "").length;
+      const esHorizontal = colPlaca === 0 && colMasDatos >= 3 && !hdr.slice(1).some(c => c === "modelo" || c === "asesor" || c === "color");
+      if(esHorizontal){
+        const rotulo = (r)=> normalizarEncabezado((filasCrudo[r] || [])[0]);
+        let rNom = -1, rMod = -1, rCol = -1, rOT = -1;
+        for(let r=0; r<Math.min(filasCrudo.length, 12); r++){
+          const t = rotulo(r);
+          if(t === "nombre" || t === "asesor" || t === "aseguradora") rNom = r;
+          else if(t === "modelo") rMod = r; else if(t === "color") rCol = r;
+          else if(t === "ot" || /orden.*trabajo/.test(t)) rOT = r;
+        }
+        const celda = (r, c)=> r === -1 ? "" : String((filasCrudo[r] || [])[c] == null ? "" : filasCrudo[r][c]).trim();
+        for(let c=1; c<filasCrudo[filaEncabezado].length; c++){
+          const plate = normalizePlate(filasCrudo[filaEncabezado][c]);
+          if(!placaPlausible(plate)) continue;
+          filas.push({ plate, modelo: celda(rMod, c).toUpperCase(), asesor: rNom !== -1 ? resolverAsesorImportado(celda(rNom, c)) : "", color: celda(rCol, c).toUpperCase(), ot: rOT !== -1 ? normalizarOT(celda(rOT, c)).toUpperCase() : "" });
+        }
+        return;
+      }
       for(let r=filaEncabezado+1; r<filasCrudo.length; r++){
         const fila = filasCrudo[r];
         const plateRaw = fila[colPlaca];
         const plate = normalizePlate(plateRaw);
-        if(!plate) continue;
+        if(!placaPlausible(plate)) continue;
         filas.push({
           plate,
           modelo: colModelo !== -1 ? String(fila[colModelo] || "").trim().toUpperCase() : "",
@@ -13531,10 +13861,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           "first"
         );
         rememberPlateInfo(fila.plate, fila.asesor, fila.modelo, fila.color).catch(()=>{});
+        anotar(fila.plate, "", "Vehículo nuevo", "Sin ubicación (importado de Excel)");
         agregados++;
       }
     });
     pushUndo(snap, `Importar Excel: ${agregados} nuevo(s), ${actualizados} actualizado(s)`);
+    invalidateResumenRowsCache();
     return { agregados, actualizados, sinCambios, logs };
   }
 
@@ -13882,7 +14214,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       await runGuarded(confirmBtn, "Importando…", async ()=>{
         const resultado = applyExcelImport(filasParaImportar);
         await saveState(true);
-        try{ await appendLogLote(HISTORY_KEY, (resultado.logs || []).slice(-150), 300); }catch(e){}
+        try{ await appendLogLote(HISTORY_KEY, resultado.logs || [], 300); }catch(e){}
         renderAll();
         showToast(`Importado: ${resultado.agregados} nuevo(s), ${resultado.actualizados} actualizado(s)${resultado.sinCambios ? `, ${resultado.sinCambios} sin cambios` : ""}`, 5000);
         onClose();
