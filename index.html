@@ -1144,27 +1144,27 @@
   .ccPhotoSlot input{ display:none; }
   /* Etapas */
   .ccTabsBar.cuatro button{ font-size:.78rem; padding:10px 3px; }
-  .etapaPanel{ padding:12px 14px 30px; }
-  .etTitle{ margin:6px 0 10px; }
-  .etTop{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-  .etChip{ border:2px solid #d7d8d3; background:var(--surface); color:inherit; border-radius:999px; padding:7px 14px; font-weight:800; font-size:.85rem; cursor:pointer; }
+  .etapaPanel{ padding:8px 10px 24px; }
+  .etTitle{ margin:2px 0 6px; font-size:1.05rem; }
+  .etTop{ display:flex; gap:5px; flex-wrap:wrap; margin-bottom:7px; }
+  .etChip{ border:1.5px solid #d7d8d3; background:var(--surface); color:inherit; border-radius:999px; padding:4px 10px; font-weight:800; font-size:.74rem; cursor:pointer; }
   .etScan{ border-color:#1b6b3f; color:#1b6b3f; }
   .etChip.on{ border-color:#1b6b3f; background:#e3f5ea; color:#1b6b3f; }
-  .etCards{ display:grid; grid-template-columns:repeat(auto-fill,minmax(98px,1fr)); gap:8px; margin-bottom:14px; }
-  .etCard{ display:flex; flex-direction:column; align-items:center; gap:1px; padding:9px 4px; border-radius:14px; border:2px solid #d7d8d3; background:var(--surface); color:inherit; cursor:pointer; text-align:center; }
+  .etCards{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:8px; }
+  .etCard{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:0; padding:4px 2px 5px; min-height:0; border-radius:10px; border:1.5px solid #d7d8d3; background:var(--surface); color:inherit; cursor:pointer; text-align:center; }
   .etCard.sel{ border-color:#1b6b3f; background:#e3f5ea; color:#1b6b3f; }
-  .etCardI{ font-size:1.3rem; } .etCard b{ font-size:1.25rem; } .etCard small{ font-size:.68rem; font-weight:700; line-height:1.1; }
-  .etListHead{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap; }
+  .etCardI{ font-size:.95rem; line-height:1.1; } .etCard b{ font-size:1rem; line-height:1.15; } .etCard small{ font-size:.58rem; font-weight:700; line-height:1.05; }
+  .etListHead{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin:4px 0; flex-wrap:wrap; font-size:.9rem; }
   .etSearch{ flex:1; min-width:140px; padding:8px 10px; border-radius:10px; border:2px solid #d7d8d3; font:inherit; }
-  .etRow{ display:flex; align-items:center; gap:10px; padding:10px; border-radius:14px; border:1px solid #d7d8d3; background:var(--surface); margin-bottom:8px; cursor:pointer; }
+  .etRow{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:11px; border:1px solid #d7d8d3; background:var(--surface); margin-bottom:5px; cursor:pointer; }
   .etRow.etDone{ cursor:default; }
-  .etPlate{ font-weight:900; letter-spacing:.06em; font-size:1.05rem; min-width:84px; }
-  .etMeta{ flex:1; font-size:.85rem; } .etMeta small{ opacity:.75; }
+  .etPlate{ font-weight:900; letter-spacing:.05em; font-size:.92rem; min-width:70px; }
+  .etMeta{ flex:1; font-size:.76rem; line-height:1.25; } .etMeta small{ opacity:.75; }
   .etTags{ display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
   .etDias{ border-radius:999px; padding:2px 10px; font-weight:800; font-size:.78rem; background:#e3f5ea; color:#1b6b3f; }
   .etDias.warn{ background:#fff0cc; color:#8a5b00; } .etDias.bad{ background:#fde7e4; color:#a1281f; }
   .etResp{ font-size:.75rem; font-weight:700; opacity:.85; }
-  .etMove{ border:0; background:var(--surface-2); border-radius:10px; font-size:1.2rem; padding:8px 10px; cursor:pointer; }
+  .etMove{ border:0; background:var(--surface-2); border-radius:9px; font-size:1.05rem; padding:5px 8px; cursor:pointer; }
   .cvEtapa{ margin:12px 0; padding:10px 12px; border-radius:14px; background:rgba(127,127,127,.12); }
   .cvEtapaLbl{ font-size:.72rem; font-weight:800; letter-spacing:.1em; opacity:.7; }
   .cvDots{ display:flex; gap:4px; flex-wrap:wrap; margin:8px 0; }
@@ -7186,7 +7186,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(!u) return "Sin sesión";
     if(u.role === "admin") return "";
     if(!etapasHabilitadasDe(u)) return "Tu usuario solo puede consultar las etapas";
-    if(u.role === "cc" || u.role === "taller") return "";
+    if(u.role === "cc" || u.role === "taller" || u.role === "actualizacion") return "";
     const yo = String(u.username || "").toLowerCase();
     if(e.responsable){
       return String(e.responsable).toLowerCase() === yo ? "" : `Este vehículo lo mueve ${e.responsable}`;
@@ -7306,12 +7306,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     await logEtapa(e.plate, etapaAntes, etapaKey || "");
     return true;
   }
-  async function entregarVehiculo(plate){
+  async function entregarVehiculo(plate, opts){
     const found = findPlate(plate);
     if(!found) return false;
     const e = found.platesArray[found.plateIdx];
     const u = currentUser;
-    const permitido = u && (u.role === "admin" || (u.role === "actualizacion" && !etapaBloqueo(e) && e.etapa === "entrega"));
+    // Al elegir "Entrega al cliente" como etapa se entrega directo (forzar); el botón 🏁 pide que ya esté en esa etapa.
+    const permitido = u && (u.role === "admin" || (u.role === "actualizacion" && !etapaBloqueo(e) && (e.etapa === "entrega" || (opts && opts.forzar))));
     if(!permitido){ showToast("Solo se entrega desde la etapa «Entrega al cliente» (o Admin)", 4000); return false; }
     const campoObj = state.zones[found.zoneKey][found.campoIdx];
     const ok = await confirmGrande("🏁 ¿Entregar este vehículo al cliente?",
@@ -7320,10 +7321,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(!ok) return false;
     const snap = snapshotZones();
     const ini = (e.etapas && e.etapas[0] && e.etapas[0].ts) ? new Date(e.etapas[0].ts) : null;
+    const fmtRec = (ts)=>{ const d = new Date(ts); return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CR", { day:"2-digit", month:"2-digit" }) + " " + d.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit" }); };
+    const recorrido = (e.etapas || []).map(x => `${(etapaInfo(x.e) || {}).l || x.e} (${fmtRec(x.ts)}${x.por ? " · " + x.por : ""})`).join(" › ");
     const rec = {
       ts: nowStamp(), tsMillis: Date.now(), fecha: new Date().toISOString(), placa: e.plate, aseguradora: e.aseguradora || "", modelo: e.modelo || "", color: e.color || "",
-      entregadoPor: u.username, zona: zoneInfo(found.zoneKey).label, campo: String(campoObj.campo), responsable: e.responsable || "",
-      etapas: e.etapas || [], diasTotales: (ini && !isNaN(ini.getTime())) ? Math.max(0, Math.floor((Date.now() - ini.getTime()) / 86400000)) : null,
+      ot: e.ot || "", entregadoPor: u.username, zona: zoneInfo(found.zoneKey).label, campo: String(campoObj.campo), responsable: e.responsable || "",
+      recorrido, diasTotales: (ini && !isNaN(ini.getTime())) ? Math.max(0, Math.floor((Date.now() - ini.getTime()) / 86400000)) : null,
       cc: e.cc ? e.cc.estado : ""
     };
     removePlateEntryByRef(found.zoneKey, found.platesArray, e);
@@ -7335,7 +7338,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       showToast("⚠️ Alguien más guardó al mismo tiempo: la entrega NO se guardó. Actualizá y probá de nuevo.", 5000);
       return false;
     }
-    await appendLog(ENTREGAS_KEY, rec, 1500);
+    await appendLog(ENTREGAS_KEY, rec, 6000);
     entregasCache.push(rec);
     await appendLog(HISTORY_KEY, { ts: nowStamp(), tsMillis: Date.now(), username: u.username, placa: e.plate, desde: `${rec.zona} · campo ${rec.campo}`, hasta: "🏁 Entregado al cliente" }, 300);
     showToast(`🏁 ${e.plate} entregado al cliente`, 3500);
@@ -7517,6 +7520,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       grid.innerHTML = ((esTaller || etapasRestringidasDe(currentUser)) ? [] : [{ k:"", l:"Sin etapa", i:"➖" }]).concat(etapasElegiblesDe(currentUser).filter(x => !(esTaller && TALLER_OCULTAS.includes(x.k)))).map(x => `<button type="button" class="etapaOpt${sel === x.k ? " sel" : ""}" data-k="${x.k}" ${bloqueo ? "disabled" : ""}><span>${x.i}</span>${escapeHtml(x.l)}</button>`).join("");
       pintarLugar();
       if(esTaller) pintarTiles();
+      if(!esTaller) saveBtn.textContent = (sel === "entrega" && puedeEntregarDirecto) ? "🏁 Entregar y sacar del sistema" : "Guardar";
       const puedeEntregar = currentUser.role === "admin" || (currentUser.role === "actualizacion" && !bloqueo && e.etapa === "entrega");
       delBtn.style.display = puedeEntregar ? "" : "none";
     }
@@ -7551,7 +7555,16 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       renderAll();
       if(typeof avaVista !== "undefined" && avaVista === "etapas") etapasRenderPanelAva();
     }
+    const puedeEntregarDirecto = !!(currentUser && (currentUser.role === "admin" || currentUser.role === "actualizacion") && !bloqueo);
     async function onSave(){
+      if(sel === "entrega" && puedeEntregarDirecto){
+        // Elegir "Entrega al cliente" = entregar: sale de las zonas y queda en la base de entregas (y en el Excel).
+        cerrar();
+        const okE = await entregarVehiculo(plate, { forzar: true });
+        await refrescarVistas();
+        if(etapaDesdeEscaner) etapaVolverAlEscaner(); else if(!okE) abrirFichaPlaca(plate);
+        return;
+      }
       if(esTaller && !resp.value.trim()){ showToast("Escribí quién lo mueve", 3000); resp.focus(); return; }
       let destZ = "", destC = "";
       const tcAuto = TALLER_CAMPOS.find(x => x[1] === sel);
@@ -7682,9 +7695,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       <h2 class="etTitle">🧭 Etapas del proceso</h2>
       <div class="etTop">
         <button type="button" class="etChip${etapaSoloMios ? "" : " on"}" data-etf="todos">Todos</button>
-        <button type="button" class="etChip${etapaSoloMios ? " on" : ""}" data-etf="mios">👤 Los que muevo yo</button>
-        ${puedeVerBotonEtapa() ? `<button type="button" class="etChip etScan" data-etf="escanear">🔳 Escanear para cambiar etapa</button>` : ""}
-        ${(currentUser && currentUser.role === "admin" && sin > 0) ? `<button type="button" class="etChip" data-etf="sugerir">🪄 Sugerir etapas según la zona</button>` : ""}
+        <button type="button" class="etChip${etapaSoloMios ? " on" : ""}" data-etf="mios">👤 Los míos</button>
+        ${puedeVerBotonEtapa() ? `<button type="button" class="etChip etScan" data-etf="escanear">🔳 Escanear etapa</button>` : ""}
+        ${(currentUser && currentUser.role === "admin" && sin > 0) ? `<button type="button" class="etChip" data-etf="sugerir">🪄 Sugerir etapas</button>` : ""}
       </div>
       <div class="etCards">${cards.map(c => `<button type="button" class="etCard${etapaSel === c.k ? " sel" : ""}" data-etk="${c.k}"><span class="etCardI">${c.i}</span><b>${c.n}</b><small>${escapeHtml(c.l)}</small></button>`).join("")}</div>
       <div class="etListHead"><strong>${escapeHtml(titulo)}</strong>${etapaSel === "entregados" ? `<input type="text" class="etSearch" id="etSearch" placeholder="Buscar placa o asesor…" value="${escapeAttrLike(etapaBusqueda)}">` : ""}</div>
@@ -11851,9 +11864,29 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const wsE = XLSX.utils.aoa_to_sheet(et);
       wsE["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
       XLSX.utils.book_append_sheet(wb, wsE, "Etapas");
-      const en = [["Fecha","Placa","Asesor","Modelo","Color","Zona de salida","Campo","Entregó","Días en proceso"]];
-      entregasCache.forEach(r=>{ const f = new Date(r.fecha || r.tsMillis); en.push([isNaN(f) ? "" : f.toLocaleDateString("es-CR") + " " + f.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit" }), r.placa, r.aseguradora || "", r.modelo || "", r.color || "", r.zona || "", r.campo || "", r.entregadoPor || "", r.diasTotales == null ? "" : r.diasTotales]); });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(en), "Entregados");
+      const fmtFH = (ms)=>{ const f = new Date(ms); return isNaN(f) ? ["",""] : [f.toLocaleDateString("es-CR", { day:"2-digit", month:"2-digit", year:"numeric" }), f.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit", second:"2-digit" })]; };
+      const en = [["Fecha","Hora","Placa","Asesor","Modelo","Color","# de OT","Zona de salida","Campo","Entregó","Días en proceso","Recorrido por etapas"]];
+      entregasCache.slice().sort((a,b)=> (a.tsMillis||0) - (b.tsMillis||0)).forEach(r=>{ const [fd, fh] = fmtFH(r.fecha || r.tsMillis); en.push([fd, fh, r.placa, r.aseguradora || "", r.modelo || "", r.color || "", r.ot || "", r.zona || "", r.campo || "", r.entregadoPor || "", r.diasTotales == null ? "" : r.diasTotales, r.recorrido || ""]); });
+      const wsEn = XLSX.utils.aoa_to_sheet(en);
+      wsEn["!cols"] = [{ wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 70 }];
+      if(en.length > 1) wsEn["!autofilter"] = { ref: `A1:L${en.length}` };
+      XLSX.utils.book_append_sheet(wb, wsEn, "Entregados");
+      // ---- Hoja: Movimientos (cada movimiento con fecha y hora, para dar seguimiento a las placas) ----
+      const vistos = new Set(), movs = [];
+      movsCache.forEach(h=>{
+        if(!h) return;
+        const k = `${h.tsMillis}|${h.placa}|${h.desde}|${h.hasta}|${h.tipo || ""}`;
+        if(vistos.has(k)) return; vistos.add(k); movs.push(h);
+      });
+      movs.sort((a,b)=> (a.tsMillis||0) - (b.tsMillis||0));
+      const tipoTxt = (h)=> h.tipo === "etapa" ? "Cambio de etapa" : h.tipo === "ot" ? "# de OT" : h.tipo === "asesor" ? "Asesor" : h.tipo === "dato" ? "Datos del vehículo" : h.tipo === "renombre" ? "Cambio de placa" : (String(h.hasta || "").includes("Entregado al cliente") ? "Entrega al cliente" : (h.desde === "Vehículo nuevo" ? "Ingreso" : "Movimiento"));
+      const limpiarEm = (t)=> String(t == null ? "" : t).replace(/^[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]+\s*/, "");
+      const mv = [["Fecha","Hora","Usuario","Placa","Tipo","Desde","Hasta","Nota"]];
+      movs.forEach(h=>{ const [fd, fh] = fmtFH(h.tsMillis); mv.push([fd, fh, h.username || "", h.placa || "", tipoTxt(h), limpiarEm(h.desde), limpiarEm(h.hasta), h.nota || ""]); });
+      const wsMv = XLSX.utils.aoa_to_sheet(mv);
+      wsMv["!cols"] = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 18 }, { wch: 30 }, { wch: 30 }, { wch: 30 }];
+      if(mv.length > 1) wsMv["!autofilter"] = { ref: `A1:H${mv.length}` };
+      XLSX.utils.book_append_sheet(wb, wsMv, "Movimientos");
     }
 
     // ---- Hoja: conteo por Asesor y por Modelo ----
@@ -11969,7 +12002,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     function checks(){ return [...listEl.querySelectorAll('input[type="checkbox"]')]; }
     function onAll(){ checks().forEach(c=>c.checked = true); }
     function onNone(){ checks().forEach(c=>c.checked = false); }
-    function onExport(){
+    async function onExport(){
+      try{ await cargarMovimientos(); }catch(e){}
       const seleccionadas = checks().filter(c=>c.checked).map(c=>c.value);
       if(seleccionadas.length === 0){
         errorEl.textContent = "Marcá al menos una zona.";
@@ -12578,7 +12612,29 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     try{ localStorage.removeItem(PENDLOG_KEY); }catch(e){}
     for(const it of q){ await appendLog(it.key, it.entry, it.limit); }
   }
+  const MOVS_KEY = "inventario_parqueo_movimientos_v1"; // compartido: bitácora larga de movimientos (para el Excel de seguimiento)
+  const MOVS_LIMIT = 6000;
+  let movsCache = [];
+  async function cargarMovimientos(){
+    if(typeof storageAvailable !== "undefined" && !storageAvailable) return movsCache;
+    try{
+      const l = await readLog(MOVS_KEY), h = await readLog(HISTORY_KEY); // el historial corto trae lo anterior a la bitácora larga
+      const vistos = new Set(), todo = [];
+      [].concat(Array.isArray(h) ? h : [], Array.isArray(l) ? l : [], movsCache).forEach(x=>{ if(!x) return; const k = `${x.tsMillis}|${x.placa}|${x.desde}|${x.hasta}|${x.tipo || ""}`; if(vistos.has(k)) return; vistos.add(k); todo.push(x); });
+      todo.sort((a,b)=> (a.tsMillis||0) - (b.tsMillis||0));
+      movsCache = todo.slice(-MOVS_LIMIT);
+    }catch(e){}
+    return movsCache;
+  }
   async function appendLog(key, entry, limit){
+    await appendLogBase(key, entry, limit);
+    // Todo lo que entra al historial corto también queda en la bitácora larga (la que se exporta a Excel).
+    if(key === HISTORY_KEY){
+      movsCache.push(entry); if(movsCache.length > MOVS_LIMIT) movsCache = movsCache.slice(-MOVS_LIMIT);
+      if(!(typeof storageAvailable !== "undefined" && !storageAvailable)) await appendLogBase(MOVS_KEY, entry, MOVS_LIMIT);
+    }
+  }
+  async function appendLogBase(key, entry, limit){
     if(typeof storageAvailable !== "undefined" && !storageAvailable){
       try{ const q = pendLogLeer(); q.push({ key, entry, limit }); localStorage.setItem(PENDLOG_KEY, JSON.stringify(q.slice(-200))); }catch(e){}
       return;
@@ -12596,6 +12652,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   // Igual que appendLog pero para varias entradas de una sola vez (una lectura y una escritura).
   async function appendLogLote(key, entries, limit){
+    if(!entries || !entries.length) return;
+    if(key === HISTORY_KEY && !(typeof storageAvailable !== "undefined" && !storageAvailable)){
+      movsCache = movsCache.concat(entries).slice(-MOVS_LIMIT);
+      await appendLogLoteBase(MOVS_KEY, entries, MOVS_LIMIT);
+    }
+    return appendLogLoteBase(key, entries, limit);
+  }
+  async function appendLogLoteBase(key, entries, limit){
     if(!entries || !entries.length) return;
     if(typeof storageAvailable !== "undefined" && !storageAvailable){
       for(const entry of entries){ await appendLog(key, entry, limit); }
@@ -13199,6 +13263,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
 
   function revealApp(){
+    try{ if(canExport()) cargarMovimientos(); }catch(e){}
     document.getElementById("authGate").style.display = "none";
     document.getElementById("appRoot").style.display = "block";
     try{
@@ -16156,6 +16221,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         return false;
       }
     }
+    if(newZone === TALLER_KEY) ensureTallerCampos(); // las etapas del Taller siempre existen como espacios
     if(currentUser.role === "actualizacion" && !SINGLE_BUCKET_ZONES.has(newZone)){
       // Actualización nunca crea un campo/zona nuevo al mover un vehículo —
       // si se escribe mal el destino, antes se creaba uno nuevo por error en
@@ -16172,6 +16238,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const entry = campoObj.plates[pi];
     const fromCampo = campoObj.campo;
     const newPlate = newPlateRaw ? normalizePlate(newPlateRaw) : entry.plate;
+    let etapaCambioUpd = null;
     if(!newPlate){ showToast("Ingresá una placa válida"); return false; }
 
     const plateChanged = newPlate !== entry.plate;
@@ -16224,6 +16291,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       removePlateEntryByRef(zoneKey, campoObj.plates, entry);
       insertPlateAtPosition(getOrCreateCampo(newZone, newCampo), entry, position || "first");
       eliminarOtrasCopiasDePlaca(entry);
+      // Mover a una etapa del Taller = cambiar de etapa (y salir del Taller hacia un estacionamiento = "Estacionamiento").
+      if(etapasHabilitadasDe(currentUser)){
+        let kNueva = "";
+        if(newZone === TALLER_KEY) kNueva = etapaDeCampoTaller(newCampo);
+        else if(zoneKey === TALLER_KEY && ESTAC_ZONAS.includes(newZone)) kNueva = "estacionamiento";
+        if(kNueva && entry.etapa !== kNueva){ etapaCambioUpd = [entry.etapa || "", kNueva]; aplicarEtapa(entry, kNueva, currentUser.username); }
+      }
     }
     const descripcion = locationChanged
       ? `Mover ${newPlate} a ${zoneInfo(newZone).label} campo ${newCampo}`
@@ -16232,6 +16306,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     await saveState(true);
     if(locationChanged){
       await logUpdate(entry.plate, zoneKey, fromCampo, newZone, newCampo);
+      if(etapaCambioUpd) await logEtapa(entry.plate, etapaCambioUpd[0], etapaCambioUpd[1]);
     }
     rememberPlateInfo(entry.plate, entry.aseguradora, entry.modelo, entry.color).catch(()=>{});
     return true;
