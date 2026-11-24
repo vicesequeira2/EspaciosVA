@@ -3331,6 +3331,44 @@ html, body{ max-width:100%; overflow-x:hidden; }
 /* Objetivos táctiles mínimos en controles pequeños */
 .capacityEditBtn, [id^="zoneRenameBtn_"], .etChip, .updaterZoneChip, #kioskToggleBtn{ min-height:36px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding-top:6px; padding-bottom:6px; }
 .capacityEditBtn{ padding-left:10px; padding-right:10px; }
+/* ===== MENÚ CENTRAL DEL VEHÍCULO ===== */
+.vopPlate{ font-size:1.9rem; font-weight:900; letter-spacing:.08em; margin:2px 0 4px; }
+.vopSub{ color:var(--muted); font-size:.92rem; margin-bottom:10px; }
+.vopFacts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.vopFact{ background:var(--surface-2); border-radius:var(--r-md); padding:8px 10px; min-width:0; }
+.vopFact small{ display:block; color:var(--muted); font-size:.7rem; font-weight:600; }
+.vopFact b{ display:block; font-size:.9rem; overflow-wrap:anywhere; }
+.vopFact.wide{ grid-column:1/-1; }
+.vopGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.vopBtn{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:84px; padding:12px 8px; border:1px solid var(--border); border-radius:var(--r-lg); background:var(--surface); color:var(--ink); font-weight:700; font-size:.95rem; cursor:pointer; text-align:center; }
+.vopBtn .vopIc{ font-size:1.6rem; line-height:1; }
+.modalCard .vopBtn{ background:var(--surface) !important; border:1px solid var(--border) !important; color:var(--ink) !important; border-radius:var(--r-lg) !important; box-shadow:var(--shadow-1); }
+.modalCard .vopBtn:hover{ background:var(--surface-2) !important; }
+.modalCard .vopBtn.main{ background:var(--brand) !important; border-color:var(--brand) !important; color:#fff !important; }
+.modalCard .vopBtn.danger{ color:var(--danger) !important; border-color:color-mix(in srgb, var(--danger) 45%, transparent) !important; }
+.vopBtn.main{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.vopBtn.danger{ color:var(--danger); border-color:color-mix(in srgb, var(--danger) 45%, transparent); }
+.vopBtn:disabled{ opacity:.55; cursor:default; }
+@media (max-width:360px){ .vopGrid{ grid-template-columns:1fr; } }
+/* ===== BUSCADOR UNIVERSAL: mismo diseño en toda la app ===== */
+.srchWrap{ position:relative; display:flex; align-items:center; flex:1 1 auto; min-width:0; width:100%; }
+.srchWrap > input{ width:100% !important; padding-right:38px !important; min-height:44px; box-sizing:border-box; margin-bottom:0; }
+.srchClear{ position:absolute; right:6px; top:50%; transform:translateY(-50%); width:32px; height:32px; border:0; border-radius:50%; background:var(--surface-2); color:var(--muted); cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; font-size:14px; line-height:1; }
+.srchClear.on{ display:inline-flex; }
+.srchClear:hover{ background:var(--surface-3); color:var(--ink); }
+#globalSearch{ color:#0f172a !important; background:#fff !important; caret-color:#0f172a; }
+#globalSearch::placeholder{ color:#64748b; opacity:1; }
+#searchWrap .srchClear{ background:rgba(15,23,42,.08); right:60px; }
+#searchWrap .srchWrap > input{ padding-right:96px !important; }
+body.busFocus #searchWrap .srchClear{ right:92px; }
+body.busFocus #searchWrap .srchWrap > input{ padding-right:128px !important; }
+.searchItem, .updSearchResultRow{ min-height:44px; gap:10px; }
+.searchItem .plate, .updSearchResultRow .plate{ font-weight:800; letter-spacing:.04em; flex:0 0 auto; }
+.searchItem .tag, .updSearchResultMeta{ text-align:right; min-width:0; overflow-wrap:anywhere; }
+.searchItem.exact, .updSearchResultRow.exact{ box-shadow:inset 3px 0 0 var(--brand); background:var(--brand-soft); }
+.searchEmpty, .searchMore{ color:var(--muted) !important; font-size:.82rem !important; justify-content:center !important; text-align:center; }
+mark.searchHighlight{ background:#fde68a; color:inherit; border-radius:3px; padding:0 1px; }
+html[data-theme="dark"] mark.searchHighlight{ background:#854d0e; color:#fff; }
 @media (prefers-reduced-motion:reduce){ *{ animation-duration:.01ms !important; transition-duration:.01ms !important; } }
 
 </style>
@@ -3600,6 +3638,14 @@ html, body{ max-width:100%; overflow-x:hidden; }
   </div>
 </div>
 
+<div class="modalOverlay" id="vehOpsModal" style="z-index:72;">
+  <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
+    <button type="button" class="modalBackTop" id="vopBack">← Volver</button>
+    <div id="vopInfo"></div>
+    <div id="vopBtns" class="vopGrid"></div>
+    <div class="modalActions" style="margin-top:12px;"><button class="secondaryBtn" id="vopCancel">Cancelar</button></div>
+  </div>
+</div>
 <div class="modalOverlay" id="multiMoveModal">
   <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
     <button type="button" class="modalBackTop" id="mmBack">← Volver</button>
@@ -5751,6 +5797,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     qrDibujarMover();
   }
   function abrirDatosModal(){
+    opsEditarVuelve = null;
     const f = qrMoveFound; if(!f) return;
     const esNuevo = !!f.nuevo;
     const e0 = esNuevo ? f.nuevo : f.platesArray[f.plateIdx];
@@ -5768,7 +5815,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
     function onCirc(ev){ const b = ev.target.closest(".ccOpt"); if(b){ circ = b.dataset.v; pintar(); } }
     function onLlave(ev){ const b = ev.target.closest(".ccOpt"); if(b){ llave = b.dataset.v; pintar(); } }
-    function cerrar(){ modal.classList.remove("show"); circBox.removeEventListener("click", onCirc); llaveBox.removeEventListener("click", onLlave); save.removeEventListener("click", onSave); cancel.removeEventListener("click", cerrar); }
+    function cerrar(){
+      modal.classList.remove("show"); circBox.removeEventListener("click", onCirc); llaveBox.removeEventListener("click", onLlave); save.removeEventListener("click", onSave); cancel.removeEventListener("click", cerrar);
+      if(opsEditarVuelve){ const p = opsEditarVuelve; opsEditarVuelve = null; setTimeout(()=> abrirMenuVehiculo(p), 200); } // canceló: vuelve al menú del vehículo
+    }
     async function onSave(){
       const nuevo = { modelo: iMod.value.trim().toUpperCase(), color: iCol.value.trim().toUpperCase(), aseguradora: iAse.value.trim().toUpperCase(), ot: normalizarOT(iOT.value), circulacion: circ, llave };
       if(esNuevo){
@@ -5788,7 +5838,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       invalidateResumenRowsCache();
       const r = await saveState(true);
       if(r === "conflict"){ state.zones = snap; invalidateResumenRowsCache(); err.textContent = "Alguien más guardó al mismo tiempo: NO se guardó. Probá de nuevo."; return; }
+      const vinoDelMenu = !!opsEditarVuelve; opsEditarVuelve = null; // guardó: sigue con otro vehículo
       cerrar();
+      if(vinoDelMenu) setTimeout(opsContinuar, 200);
       const nombres = { modelo:"Modelo", color:"Color", aseguradora:"Asesor", ot:"# OT", circulacion:"Circulación", llave:"Llave" };
       const ver = (k, v)=> k === "circulacion" ? (v === "no" ? "No circula" : v === "puede" ? "Puede circular" : "—") : (k === "llave" ? (v === "tablero" ? "En tablero" : v === "vehiculo" ? "Dentro del vehículo" : "—") : (v || "—"));
       for(const k of cambios){
@@ -5922,7 +5974,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       localStorage.setItem(RECENT_DEST_KEY, JSON.stringify(lista));
     }catch(e){}
   }
+  let opsDesdeMenu = null, opsEditarVuelve = null, etapaDesdeMenu = false, opsOcupado = false;
   function qrAbrirMover(found){
+    opsDesdeMenu = null;
     document.querySelector("#qrMoveModal h3").textContent = found.nuevo ? "¿En qué campo lo agregás?" : "¿A dónde lo movés?";
     document.getElementById("qrMoveStayBtn").textContent = found.nuevo ? "← Volver" : "← Volver (se queda aquí)";
     qrPausa = true;
@@ -5934,6 +5988,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     document.getElementById("qrMoveModal").classList.add("show");
   }
   function qrCerrarMover(){
+    opsDesdeMenu = null;
     document.getElementById("qrMoveModal").classList.remove("show");
     qrMoveFound = null;
     qrUltimoLeido.ts = Date.now(); // el mismo QR sigue frente a la cámara: no volver a abrir el cuadro enseguida
@@ -6030,7 +6085,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(etapaCambio) await logEtapa(e.plate, etapaCambio[0], etapaCambio[1]);
     return true;
   }
-  document.getElementById("qrMoveStayBtn").addEventListener("click", qrCerrarMover);
+  document.getElementById("qrMoveStayBtn").addEventListener("click", ()=>{
+    const volver = opsDesdeMenu; // si vino del menú del vehículo, "Volver" regresa a ese menú
+    qrCerrarMover();
+    if(volver) abrirMenuVehiculo(volver);
+  });
   document.getElementById("qrMoveConfirmBtn").addEventListener("click", async (ev)=>{
     if(!qrMoveFound || !qrMoveZone || !qrMoveCampo) return;
     const found = qrMoveFound, z = qrMoveZone, c = qrMoveCampo;
@@ -6083,6 +6142,81 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         qrActualizarProgreso();
       }
     });
+  });
+  // =================== Menú central del vehículo (acciones rápidas según permisos) ===================
+  // Reutiliza lo que ya existe: mover (qrAbrirMover), editar (abrirDatosModal), etapa (abrirEtapaModal) y entregar (entregarVehiculo).
+  // Cada una vuelve a validar permisos y estado actual por su cuenta; aquí solo se decide qué botones mostrar.
+  function opsPuedeEntregar(e){
+    const u = currentUser; if(!u || !e) return false;
+    if(u.role === "admin") return true;
+    if(u.role === "consulta") return puedeMoverVehiculos();
+    if(u.role === "actualizacion") return !etapaBloqueo(e) && e.etapa === "entrega";
+    return false;
+  }
+  function opsContinuar(){
+    try{
+      if(typeof avaRenderPanel === "function") avaRenderPanel(true);
+      const inp = document.getElementById("avaPanelPlaca");
+      if(inp){ inp.value = ""; setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 150); }
+    }catch(e){}
+  }
+  function abrirMenuVehiculo(plateRaw){
+    const found = findPlate(plateRaw);
+    if(!found){ showToast("Esa placa ya no está en el inventario."); return; }
+    const e = found.platesArray[found.plateIdx];
+    const co = state.zones[found.zoneKey][found.campoIdx];
+    const inf = e.etapa ? etapaInfo(e.etapa) : null;
+    const zInf = (!inf) ? etapaDeZonaDePlaca(e.plate) : null;
+    const etapaTxt = inf ? `${inf.i} ${inf.l}` : (zInf ? `${zInf.i} ${zInf.l} (por su zona)` : "Sin etapa");
+    const estado = e.cc ? (e.cc.estado === "ok" ? "✅ Listo en Control de Calidad" : "🛡️ En Control de Calidad") : "En inventario";
+    const fact = (t, v, wide)=> `<div class="vopFact${wide ? " wide" : ""}"><small>${t}</small><b>${v ? escapeHtml(String(v)) : "—"}</b></div>`;
+    document.getElementById("vopInfo").innerHTML = `
+      <div class="vopPlate">${iconoParaModelo(e.modelo)} ${escapeHtml(e.plate)}</div>
+      <div class="vopSub">${[e.modelo, e.color].filter(Boolean).map(escapeHtml).join(" · ") || "Sin modelo registrado"}</div>
+      <div class="vopFacts">
+        ${fact("📍 Ubicación actual", `${zoneInfo(found.zoneKey).label} · ${co.campo}`, true)}
+        ${fact("🧭 Etapa", etapaTxt)}
+        ${fact("Estado", estado)}
+        ${fact("🧑‍💼 Asesor", e.aseguradora)}
+        ${fact("# OT", e.ot)}
+      </div>`;
+    const btns = [];
+    if(puedeMoverVehiculos()) btns.push({ k:"mover", ic:"🔀", t:"Mover de lugar", main:true });
+    if(puedeEditarDatosVehiculo()) btns.push({ k:"editar", ic:"✏️", t:"Editar datos" });
+    if(puedeVerBotonEtapa() && puedeCambiarEtapa(e)) btns.push({ k:"etapa", ic:"🧭", t:"Pasar a otra etapa" });
+    if(opsPuedeEntregar(e)) btns.push({ k:"entregar", ic:"🏁", t:"Entregar a cliente", danger:true });
+    const box = document.getElementById("vopBtns");
+    box.innerHTML = btns.length ? btns.map(b => `<button type="button" class="vopBtn${b.main ? " main" : ""}${b.danger ? " danger" : ""}" data-vop="${b.k}"><span class="vopIc">${b.ic}</span>${b.t}</button>`).join("") : `<div class="dashEmptyNote" style="grid-column:1/-1;">Tu cuenta no tiene acciones disponibles para este vehículo.</div>`;
+    const plate = e.plate;
+    box.querySelectorAll("[data-vop]").forEach(b => b.addEventListener("click", async ()=>{
+      if(opsOcupado) return;
+      const k = b.getAttribute("data-vop");
+      const fr = findPlate(plate); // se vuelve a ubicar con los datos de ahora (otra persona pudo moverlo)
+      if(!fr){ cerrarMenuVehiculo(); showToast("Ese vehículo ya no está en el inventario (alguien más lo movió o entregó)."); opsContinuar(); return; }
+      if(k === "mover"){ cerrarMenuVehiculo(); qrAbrirMover(fr); opsDesdeMenu = plate; }
+      else if(k === "editar"){ cerrarMenuVehiculo(); qrMoveFound = fr; abrirDatosModal(); opsEditarVuelve = plate; }
+      else if(k === "etapa"){ cerrarMenuVehiculo(); abrirEtapaModal(plate); etapaDesdeMenu = true; }
+      else if(k === "entregar"){
+        opsOcupado = true; b.disabled = true;
+        try{
+          cerrarMenuVehiculo();
+          const rol = currentUser.role;
+          const ok = await entregarVehiculo(plate, rol === "consulta" ? { forzar: true, desdeBusqueda: true } : (rol === "admin" ? { forzar: true } : {}));
+          if(ok){ try{ renderAll(); }catch(err){} opsContinuar(); } else abrirMenuVehiculo(plate);
+        } finally { opsOcupado = false; }
+      }
+    }));
+    document.getElementById("vehOpsModal").classList.add("show");
+  }
+  function cerrarMenuVehiculo(){ document.getElementById("vehOpsModal").classList.remove("show"); }
+  document.getElementById("vopCancel").addEventListener("click", ()=>{ cerrarMenuVehiculo(); opsContinuar(); });
+  document.getElementById("vopBack").addEventListener("click", ()=>{ cerrarMenuVehiculo(); opsContinuar(); });
+  document.addEventListener("click", (ev)=>{
+    const b = ev.target.closest && ev.target.closest("[data-ops-abrir]");
+    if(!b) return;
+    const p = b.getAttribute("data-ops-abrir");
+    const no = document.getElementById("dupModalCancel"); if(no) no.click(); // cierra el aviso de "¿otra placa?" sin registrar nada
+    setTimeout(()=> abrirMenuVehiculo(p), 200);
   });
   // =================== Mover varios vehículos a un mismo destino ===================
   // Cada placa se mueve con la MISMA función de siempre (permisos, validaciones, guardado e historial individual).
@@ -7565,12 +7699,74 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // Envuelve en <mark> la parte del texto que coincide con la búsqueda, para
   // que se vea de un vistazo por qué apareció ese resultado. filterText ya
   // debe venir en mayúsculas (así se comparan los filtros en toda la app).
+  // ===== MOTOR UNIVERSAL DE BÚSQUEDA (lo usan el buscador global, Resumen y Actualización) =====
+  // Mismos criterios en todos lados: placa, campo, lugar, asesor, modelo, color y OT. Sin tildes ni mayúsculas;
+  // la placa también se encuentra sin guiones/espacios (AB-123 = AB123). Varias palabras = todas deben coincidir.
+  // Los resultados salen ordenados por relevancia (placa exacta > empieza con > contiene > otros datos).
+  const Busq = (()=>{
+    const sinAcentos = v => String(v == null ? "" : v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    const compacto = v => sinAcentos(v).replace(/[^A-Z0-9]/g, "");
+    function tokens(q){ return sinAcentos(q).split(/\s+/).filter(Boolean); }
+    function prep(r){
+      if(r._bq) return r._bq;
+      const b = { placa: sinAcentos(r.placa), pc: compacto(r.placa), campo: sinAcentos(r.campo), zona: sinAcentos(r.zoneLabel), aseg: sinAcentos(r.aseguradora), modelo: sinAcentos(r.modelo), color: sinAcentos(r.vehicleColor), ot: sinAcentos(r.ot) };
+      try{ Object.defineProperty(r, "_bq", { value: b, enumerable: false }); }catch(e){}
+      return b;
+    }
+    function puntoToken(b, t){
+      const tc = t.replace(/[^A-Z0-9]/g, "");
+      let m = 0;
+      const up = (v)=>{ if(v > m) m = v; };
+      if(b.placa === t) up(1000); else if(b.placa.startsWith(t)) up(800); else if(b.placa.includes(t)) up(600);
+      if(tc.length >= 2 && b.pc){ if(b.pc === tc) up(990); else if(b.pc.startsWith(tc)) up(790); else if(b.pc.includes(tc)) up(590); }
+      if(b.ot){ if(b.ot === t) up(500); else if(t.length >= 2 && b.ot.includes(t)) up(250); }
+      if(b.campo){ if(b.campo === t) up(350); else if(b.campo.startsWith(t)) up(250); else if(b.campo.includes(t)) up(150); }
+      if(b.modelo){ if(b.modelo.startsWith(t)) up(300); else if(b.modelo.includes(t)) up(200); }
+      if(b.aseg){ if(b.aseg.startsWith(t)) up(300); else if(b.aseg.includes(t)) up(200); }
+      if(b.color && b.color.includes(t)) up(100);
+      if(b.zona && b.zona.includes(t)) up(100);
+      return m;
+    }
+    function puntaje(r, ts){
+      const b = prep(r); let total = 0;
+      for(const t of ts){ const p = puntoToken(b, t); if(!p) return 0; total += p; }
+      return total;
+    }
+    // Devuelve las filas que coinciden, ordenadas por relevancia (a igual relevancia se respeta el orden original).
+    function filtrar(rows, q){
+      const ts = tokens(q);
+      if(!ts.length) return rows;
+      const out = [];
+      for(let i = 0; i < rows.length; i++){ const p = puntaje(rows[i], ts); if(p) out.push({ r: rows[i], p, i }); }
+      out.sort((a, b) => (b.p - a.p) || (a.i - b.i));
+      return out.map(o => o.r);
+    }
+    function exacta(r, q){ const ts = tokens(q); return ts.length === 1 && (prep(r).placa === ts[0] || prep(r).pc === ts[0].replace(/[^A-Z0-9]/g, "")); }
+    return { filtrar, tokens, exacta, sinAcentos };
+  })();
+  function busqDebounce(fn, ms){
+    let t = null;
+    const d = function(){ const a = arguments; clearTimeout(t); t = setTimeout(()=> fn.apply(null, a), ms); };
+    d.ahora = function(){ clearTimeout(t); fn.apply(null, arguments); };
+    return d;
+  }
+  function busqVacioHtml(q){
+    return `Sin resultados para “${escapeHtml(String(q).trim())}”. Probá con otra parte de la placa, el modelo o el asesor.`;
+  }
   function highlightMatch(text, filterText){
     const escaped = escapeHtml(text == null ? "" : text);
     if(!filterText) return escaped;
-    const idx = escaped.toUpperCase().indexOf(filterText);
-    if(idx === -1) return escaped;
-    return escaped.slice(0, idx) + '<mark class="searchHighlight">' + escaped.slice(idx, idx+filterText.length) + '</mark>' + escaped.slice(idx+filterText.length);
+    const ts = String(filterText).toUpperCase().split(/\s+/).filter(Boolean).map(t => escapeHtml(t));
+    const up = escaped.toUpperCase();
+    const rangos = [];
+    ts.forEach(t => { const i = up.indexOf(t); if(i !== -1) rangos.push([i, i + t.length]); });
+    if(!rangos.length) return escaped;
+    rangos.sort((a, b) => a[0] - b[0]);
+    const mez = [rangos[0].slice()];
+    for(let k = 1; k < rangos.length; k++){ const u = mez[mez.length - 1]; if(rangos[k][0] <= u[1]) u[1] = Math.max(u[1], rangos[k][1]); else mez.push(rangos[k].slice()); }
+    let out = "", pos = 0;
+    mez.forEach(([a, b]) => { out += escaped.slice(pos, a) + '<mark class="searchHighlight">' + escaped.slice(a, b) + '</mark>'; pos = b; });
+    return out + escaped.slice(pos);
   }
 
   // Busca una placa en todas las zonas/campos. Devuelve {zoneKey, campoIdx, plateIdx} o null.
@@ -7951,6 +8147,21 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       `<div class="bigPlate">${escapeHtml(e.plate)}</div><div class="bigMoveBox"><small>SALE DE</small><b>${escapeHtml(zoneInfo(found.zoneKey).label)} · ${escapeHtml(String(campoObj.campo))}</b></div><div class="bigHint">Sale de las zonas y queda en el historial de entregados.</div>`,
       "Sí, entregado");
     if(!quien) return false;
+    // Antes de entregar, se confirma con el servidor que el vehículo siga ahí: si otra persona (otro dispositivo) ya lo entregó
+    // o lo sacó del inventario, NO se registra una segunda entrega.
+    try{
+      if(storageAvailable && !modoPrueba && typeof fsIndexar === "function"){
+        const srv = await Promise.race([window.storage.get(STORAGE_KEY, true).catch(()=>null), new Promise(r => setTimeout(()=> r(null), 2500))]);
+        if(srv && srv.value){
+          const idx = fsIndexar(JSON.parse(srv.value));
+          if(!idx.has(normalizePlate(e.plate))){
+            showToast(`⚠️ ${e.plate} ya no está en el inventario: otra persona lo entregó o lo sacó hace un momento. No se registró otra entrega.`, 6000, true);
+            try{ await loadState(); renderAll(); }catch(err){}
+            return false;
+          }
+        }
+      }
+    }catch(err){ /* sin respuesta: se sigue con el guardado normal, que también detecta choques */ }
     const snap = snapshotZones();
     const ini = (e.etapas && e.etapas[0] && e.etapas[0].ts) ? new Date(e.etapas[0].ts) : null;
     const fmtRec = (ts)=>{ const d = new Date(ts); return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CR", { day:"2-digit", month:"2-digit" }) + " " + d.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit" }); };
@@ -8253,7 +8464,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       quedaBtn.removeEventListener("click", onQueda); cambiaBtn.removeEventListener("click", onCambia);
       zonaSel.removeEventListener("change", onZona); sugBtn.removeEventListener("click", onSug);
     }
-    function cancelar(){ etapaDesdeEscaner = false; cerrar(); }
+    function cancelar(){ etapaDesdeEscaner = false; cerrar(); if(etapaDesdeMenu){ etapaDesdeMenu = false; setTimeout(()=> abrirMenuVehiculo(plate), 150); } }
     async function refrescarVistas(){
       ["viewDetailModal", "photoReportModal"].forEach(id=>{ const m = document.getElementById(id); if(m) m.classList.remove("show"); });
       renderAll();
@@ -8306,7 +8517,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       cerrar();
       showToast(`🧭 ${plate}: ${sel ? (etapaInfo(sel) || {}).l : "sin etapa"}${movido ? " · 📍 " + zoneInfo(destZ).label + " · " + destC : ""}`, 3500);
       await refrescarVistas();
-      if(currentUser && currentUser.role === "taller") tallerListo(plate, sel); else if(etapaDesdeEscaner) etapaVolverAlEscaner(); else abrirFichaPlaca(plate);
+      if(currentUser && currentUser.role === "taller") tallerListo(plate, sel); else if(etapaDesdeEscaner) etapaVolverAlEscaner(); else if(etapaDesdeMenu){ etapaDesdeMenu = false; opsContinuar(); } else abrirFichaPlaca(plate);
     }
     async function onDel(){
       cerrar();
@@ -8321,7 +8532,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   document.addEventListener("click", (ev)=>{
     const b = ev.target.closest && ev.target.closest("[data-etapa-plate]");
-    if(b) abrirEtapaModal(b.getAttribute("data-etapa-plate"));
+    if(b){ etapaDesdeMenu = false; abrirEtapaModal(b.getAttribute("data-etapa-plate")); }
   });
 
   // ---- Pantalla del usuario Taller: placa o QR → etapa ----
@@ -8759,7 +8970,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   async function avaConfirmarNoDuplicada(plate){
     const par = placasParecidas(plate);
     if(!par.length) return true;
-    const lista = par.map(r => `<div class="bigMoveBox" style="margin-bottom:8px;"><small>YA REGISTRADA</small><b>${escapeHtml(r.placa)}</b><small style="letter-spacing:0;">📍 ${escapeHtml(r.zoneLabel)} · ${escapeHtml(String(r.campo))}${r.modelo ? " · " + escapeHtml(r.modelo) : ""}</small></div>`).join("");
+    const lista = par.map(r => `<div class="bigMoveBox" style="margin-bottom:8px;"><small>YA REGISTRADA</small><b>${escapeHtml(r.placa)}</b><small style="letter-spacing:0;">📍 ${escapeHtml(r.zoneLabel)} · ${escapeHtml(String(r.campo))}${r.modelo ? " · " + escapeHtml(r.modelo) : ""}</small><button type="button" class="secondaryBtn" data-ops-abrir="${escapeAttrLike(r.placa)}" style="margin-top:8px;width:100%;">✅ Es este vehículo: ver sus acciones</button></div>`).join("");
     return await confirmGrande("🤔 ¿Seguro que es otra placa?", `<div class="bigPlate">${escapeHtml(plate)}</div><div class="bigHint" style="margin:0 0 10px;">Se parece a ${par.length === 1 ? "una placa" : "estas placas"} que ya ${par.length === 1 ? "está registrada" : "están registradas"}. Revisá que no sea un error al escribir:</div>${lista}`, "Sí, es otra placa");
   }
   async function avaContinuar(plateRaw){
@@ -8778,7 +8989,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         saveState(true);
         showToast("✨ Datos que faltaban completados desde el código", 3500);
       }
-      qrAbrirMover(found); return;
+      abrirMenuVehiculo(e0.plate); return;
     }
     if(!(await avaConfirmarNoDuplicada(plate))) return;
     avaAbrirNuevo(plate);
@@ -11797,7 +12008,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       let rows = buildResumenRows();
       const totalCount = rows.length;
       if(filterZone) rows = rows.filter(r=>r.zoneKey===filterZone);
-      if(filterText) rows = rows.filter(r=> r.placa.toUpperCase().includes(filterText) || String(r.campo).toUpperCase().includes(filterText) || (r.aseguradora||"").toUpperCase().includes(filterText) || (r.modelo||"").toUpperCase().includes(filterText) || (r.ot||"").toUpperCase().includes(filterText) || (r.vehicleColor||"").toUpperCase().includes(filterText));
+      if(filterText) rows = Busq.filtrar(rows, filterText); // misma búsqueda en toda la app: ordenada por relevancia
       if(onlyToday) rows = rows.filter(r=> wasUpdatedToday(r));
 
       if(sortState.key){
@@ -11934,8 +12145,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
       updateTableScrollShadow();
     }
-    filterInput.addEventListener("input", draw);
-    filterInput.addEventListener("keyup", draw);
+    const drawDeb = busqDebounce(draw, 45);
+    filterInput.addEventListener("input", ()=>{ if(!filterInput.value.trim()) draw(); else drawDeb(); });
     filterInput.addEventListener("change", draw);
     zoneSelect.addEventListener("change", draw);
     clearBtn.addEventListener("click", ()=>{
@@ -12291,16 +12502,17 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   function runSearch(q){
     q = q.trim().toUpperCase();
     if(!q){ searchResults.classList.remove("show"); searchResults.innerHTML=""; return; }
-    const rows = buildResumenRows().filter(r=>r.placa.toUpperCase().includes(q));
+    const rows = Busq.filtrar(buildResumenRows(), q);
     if(rows.length===0){
-      searchResults.innerHTML = `<div class="searchItem" style="cursor:default;">Sin coincidencias</div>`;
+      searchResults.innerHTML = `<div class="searchItem searchEmpty" style="cursor:default;">${busqVacioHtml(q)}</div>`;
     } else {
+      const unicaExacta = rows.length === 1 && Busq.exacta(rows[0], q);
       searchResults.innerHTML = rows.slice(0,25).map(r=>`
-        <div class="searchItem" data-zone="${r.zoneKey}">
-          <span class="plate">${escapeHtml(r.placa)}</span>
-          <span class="tag">${r.zoneLabel} · campo ${escapeHtml(r.campo)}${posicionCorta(r.placa)}${ccEtiquetaCorta(r.placa)}${etapaEtiquetaCorta(r.placa)}</span>
+        <div class="searchItem${unicaExacta ? " exact" : ""}" data-zone="${r.zoneKey}">
+          <span class="plate">${highlightMatch(r.placa, q)}</span>
+          <span class="tag">${escapeHtml(r.zoneLabel)} · campo ${escapeHtml(r.campo)}${r.modelo ? " · " + highlightMatch(r.modelo, q) : ""}${r.aseguradora ? " · " + highlightMatch(r.aseguradora, q) : ""}${posicionCorta(r.placa)}${ccEtiquetaCorta(r.placa)}${etapaEtiquetaCorta(r.placa)}</span>
         </div>
-      `).join("");
+      `).join("") + (rows.length > 25 ? `<div class="searchItem searchMore" style="cursor:default;">+${rows.length - 25} más: escribí un poco más para acotar</div>` : "");
       searchResults.querySelectorAll(".searchItem").forEach(el=>{
         el.addEventListener("click", ()=>{
           const zone = el.getAttribute("data-zone");
@@ -12341,8 +12553,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       qrBuscarPlaca(n);
     }, 600);
   }
-  searchInput.addEventListener("input", (e)=>{ runSearch(e.target.value); busquedaAutoAbrir(); });
-  searchInput.addEventListener("keyup", (e)=> runSearch(e.target.value));
+  const runSearchDeb = busqDebounce(runSearch, 45);
+  searchInput.addEventListener("input", (e)=>{ if(!e.target.value.trim()) runSearch(e.target.value); else runSearchDeb(e.target.value); busquedaAutoAbrir(); });
   searchInput.addEventListener("blur", ()=> setTimeout(()=>searchResults.classList.remove("show"), 150));
   searchInput.addEventListener("focus", (e)=> { if(e.target.value) runSearch(e.target.value); });
   searchInput.addEventListener("keydown", (e)=>{
@@ -15663,15 +15875,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const totalCount = rows.length;
       if(updSelectedListZone) rows = rows.filter(r => r.zoneKey === updSelectedListZone);
       const countAfterZone = rows.length;
-      if(q){
-        rows = rows.filter(r =>
-          r.placa.toUpperCase().includes(q) ||
-          String(r.campo).toUpperCase().includes(q) ||
-          r.zoneLabel.toUpperCase().includes(q) ||
-          (r.aseguradora||"").toUpperCase().includes(q) ||
-          (r.modelo||"").toUpperCase().includes(q)
-        );
-      }
+      if(q) rows = Busq.filtrar(rows, q);
       if(totalCount === 0){
         allListBox.innerHTML = `<div class="dashEmptyNote">Todavía no hay vehículos registrados.</div>`;
         return;
@@ -15740,8 +15944,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         });
       }
     }
-    listFilterInput.addEventListener("input", ()=>{ allListVisibleLimit = 60; drawAllList(); });
-    listFilterInput.addEventListener("keyup", drawAllList);
+    const drawAllListDeb = busqDebounce(()=>{ allListVisibleLimit = 60; drawAllList(); }, 45);
+    listFilterInput.addEventListener("input", ()=>{ if(!listFilterInput.value.trim()){ allListVisibleLimit = 60; drawAllList(); } else drawAllListDeb(); });
     // Si veníamos de un refresco con texto ya escrito en el buscador, se
     // restaura acá — si no, el filtro se perdía cada vez que la pantalla
     // se reconstruía entera al actualizar.
@@ -15996,26 +16200,19 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const qTrim = q.trim();
       const qUpper = qTrim.toUpperCase();
       if(!qUpper){ searchResultsBox.classList.remove("show"); searchResultsBox.innerHTML = ""; return; }
-      const rows = buildResumenRows().filter(r=>
-        r.placa.toUpperCase().includes(qUpper) ||
-        (r.aseguradora && r.aseguradora.toUpperCase().includes(qUpper)) ||
-        (r.modelo && r.modelo.toUpperCase().includes(qUpper))
-      );
+      const rows = Busq.filtrar(buildResumenRows(), qUpper);
       if(rows.length === 0){
-        searchResultsBox.innerHTML = `<div class="updSearchResultRow" style="cursor:default;">Sin coincidencias</div>`;
+        searchResultsBox.innerHTML = `<div class="updSearchResultRow searchEmpty" style="cursor:default;">${busqVacioHtml(qTrim)}</div>`;
       } else {
+        const unicaExacta = rows.length === 1 && Busq.exacta(rows[0], qUpper);
         searchResultsBox.innerHTML = rows.slice(0,20).map(r=>{
-          const matchoPorPlaca = r.placa.toUpperCase().includes(qUpper);
-          const detalle = matchoPorPlaca ? "" :
-            (r.aseguradora && r.aseguradora.toUpperCase().includes(qUpper)) ? ` · ${escapeHtml(r.aseguradora)}` :
-            (r.modelo && r.modelo.toUpperCase().includes(qUpper)) ? ` · ${escapeHtml(r.modelo)}` : "";
           return `
-            <div class="updSearchResultRow" data-plate="${escapeAttrLike(r.placa)}">
-              <span class="plate">${escapeHtml(r.placa)}</span>
-              <span class="updSearchResultMeta">${r.zoneLabel} · campo ${escapeHtml(r.campo)}${posicionCorta(r.placa)}${detalle}${ccEtiquetaCorta(r.placa)}${etapaEtiquetaCorta(r.placa)}</span>
+            <div class="updSearchResultRow${unicaExacta ? " exact" : ""}" data-plate="${escapeAttrLike(r.placa)}">
+              <span class="plate">${highlightMatch(r.placa, qUpper)}</span>
+              <span class="updSearchResultMeta">${escapeHtml(r.zoneLabel)} · campo ${escapeHtml(r.campo)}${r.modelo ? " · " + highlightMatch(r.modelo, qUpper) : ""}${r.aseguradora ? " · " + highlightMatch(r.aseguradora, qUpper) : ""}${posicionCorta(r.placa)}${ccEtiquetaCorta(r.placa)}${etapaEtiquetaCorta(r.placa)}</span>
             </div>
           `;
-        }).join("");
+        }).join("") + (rows.length > 20 ? `<div class="updSearchResultRow searchMore" style="cursor:default;">+${rows.length - 20} más: escribí un poco más para acotar</div>` : "");
         searchResultsBox.querySelectorAll(".updSearchResultRow[data-plate]").forEach(el=>{
           el.addEventListener("click", ()=>{
             searchInput.value = "";
@@ -16026,8 +16223,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
       searchResultsBox.classList.add("show");
     }
-    searchInput.addEventListener("input", (e)=> runUpdSearch(e.target.value));
-    searchInput.addEventListener("keyup", (e)=> runUpdSearch(e.target.value));
+    const runUpdSearchDeb = busqDebounce(runUpdSearch, 45);
+    searchInput.addEventListener("input", (e)=>{ if(!e.target.value.trim()) runUpdSearch(e.target.value); else runUpdSearchDeb(e.target.value); });
     searchInput.addEventListener("focus", (e)=> { if(e.target.value) runUpdSearch(e.target.value); });
     searchInput.addEventListener("blur", ()=> setTimeout(()=> searchResultsBox.classList.remove("show"), 150));
     searchInput.addEventListener("keydown", (e)=>{
@@ -17629,7 +17826,7 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
     return true;
   }
   var pend = [], sched = false;
-  function flush(){ sched = false; var l = pend; pend = []; obs.disconnect(); try{ l.forEach(function(n){ if(n.isConnected) walk(n); }); }finally{ obs.observe(document.body, { childList:true, subtree:true, characterData:true }); } try{ homeSync(); }catch(e){} }
+  function flush(){ sched = false; var l = pend; pend = []; obs.disconnect(); try{ l.forEach(function(n){ if(n.isConnected) walk(n); }); }finally{ obs.observe(document.body, { childList:true, subtree:true, characterData:true }); } try{ homeSync(); srchSync(); }catch(e){} }
   var obs = new MutationObserver(function(muts){
     muts.forEach(function(m){
       if(m.type === "characterData"){ pend.push(m.target); }
@@ -17683,7 +17880,31 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
     btn.style.display = t ? "inline-flex" : "none";
     btn.classList.toggle("isHome", !!(t && t.classList.contains("active")));
   }
-  function start(){ walk(document.body); pw(); homeSync(); obs.observe(document.body, { childList:true, subtree:true, characterData:true }); }
+
+  /* Buscador universal: botón para limpiar en todos los campos de búsqueda (sin tocar su lógica) */
+  var SRCH_SEL = "#globalSearch, #usersSearch, #historySearchInput, #resumenFilter, #updSearchInput, #qrBatchSearch, #etSearch, [id^=zonePlateFilterInput_], #spacePlateFilterInput";
+  function srchSync(){
+    var els = document.querySelectorAll(SRCH_SEL);
+    for(var i = 0; i < els.length; i++){
+      var inp = els[i];
+      if(!inp.parentNode || !inp.offsetParent && !inp.closest("#searchWrap")) { /* oculto: igual se prepara */ }
+      var wrap = inp.parentNode;
+      if(!wrap.classList || !wrap.classList.contains("srchWrap")){
+        wrap = document.createElement("span"); wrap.className = "srchWrap";
+        if(inp.style.flex) wrap.style.flex = inp.style.flex;
+        inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+        var b = document.createElement("button"); b.type = "button"; b.className = "srchClear"; b.setAttribute("aria-label", "Limpiar búsqueda"); b.title = "Limpiar";
+        b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+        b.addEventListener("mousedown", function(e){ e.preventDefault(); });
+        b.addEventListener("click", (function(inp){ return function(){ inp.value = ""; inp.dispatchEvent(new Event("input", { bubbles:true })); inp.dispatchEvent(new Event("change", { bubbles:true })); inp.focus(); }; })(inp));
+        wrap.appendChild(b);
+      }
+      var btn = wrap.querySelector(".srchClear");
+      if(btn) btn.classList.toggle("on", !!inp.value);
+    }
+  }
+  document.addEventListener("input", function(e){ if(e.target && e.target.matches && e.target.matches(SRCH_SEL)) srchSync(); }, true);
+  function start(){ walk(document.body); pw(); homeSync(); srchSync(); obs.observe(document.body, { childList:true, subtree:true, characterData:true }); }
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
 
