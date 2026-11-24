@@ -3284,6 +3284,53 @@ header .identityRow .idName, header .idName{ color:#f1f5f9 !important; }
 .dashCard .dashCardValue{ letter-spacing:-.03em; }
 .toast-success::before, .toast-error::before, .toast-warn::before{ content:"" !important; display:inline-block; width:1.05em; height:1.05em; margin-right:.55em; vertical-align:-.18em; background:currentColor; -webkit-mask:var(--ti) center/contain no-repeat; mask:var(--ti) center/contain no-repeat; }
 .toast-success::before{ --ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22M20 6 9 17l-5-5%22/%3E%3C/svg%3E"); } .toast-error::before{ --ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d=%22m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3%22/%3E%3Cpath d=%22M12 9v4%22/%3E%3Cpath d=%22M12 17h.01%22/%3E%3C/svg%3E"); } .toast-warn::before{ --ti:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%2210%22/%3E%3Cpath d=%22M12 16v-4%22/%3E%3Cpath d=%22M12 8h.01%22/%3E%3C/svg%3E"); }
+/* ===== FASE 2: navegación, alineación y consistencia ===== */
+:root{ --r-sm:8px; --r-md:10px; --r-lg:14px; --h-btn:40px; --pad:16px; --maxw:1120px; }
+/* Ancho de lectura en pantallas grandes (el fondo del encabezado sigue a todo el ancho) */
+header{ padding-left:max(14px, calc((100% - var(--maxw)) / 2)) !important; padding-right:max(14px, calc((100% - var(--maxw)) / 2)) !important; }
+nav#tabs{ padding-left:max(12px, calc((100% - var(--maxw)) / 2 + 12px)) !important; padding-right:max(12px, calc((100% - var(--maxw)) / 2 + 12px)) !important; }
+main#mainArea{ max-width:var(--maxw); margin-left:auto; margin-right:auto; padding:var(--pad) !important; }
+.ccTabsBar{ padding-left:max(8px, calc((100% - 640px) / 2)) !important; padding-right:max(8px, calc((100% - 640px) / 2)) !important; }
+#busHero{ max-width:640px; margin-left:auto; margin-right:auto; }
+/* Botón Inicio y Salir en el encabezado */
+#homeBtn{ order:-1; }
+#homeBtn.isHome{ opacity:.55; }
+#homeBtn .ic, #logoutBtn .ic{ width:1.1em; height:1.1em; }
+#logoutBtn{ display:inline-flex !important; align-items:center; gap:6px; }
+#logoutBtn::after{ content:"Salir"; font-weight:600; }
+.headerBtns > button, .headerBtns .adminMenuWrap > button{ min-height:36px; }
+/* Botón Volver unificado (arriba a la izquierda del contenido) */
+.modalBackTop, .linkBackBtn[id*="Back"], .linkBackBtn[id$="Back"], button[data-et-volver]{
+  display:inline-flex !important; align-items:center; gap:6px; width:auto !important; min-height:38px;
+  padding:7px 14px !important; margin:0 0 12px !important; border:1px solid var(--border) !important; border-radius:var(--r-md) !important;
+  background:var(--surface) !important; color:var(--ink) !important; font-weight:600 !important; font-size:.86rem !important;
+  text-decoration:none !important; box-shadow:var(--shadow-1); cursor:pointer; text-align:left; }
+.modalBackTop:hover, .linkBackBtn[id*="Back"]:hover, button[data-et-volver]:hover{ background:var(--surface-2) !important; border-color:#b8c3d4 !important; }
+.linkBackBtn#roleLoginBack, .linkBackBtn#adminLoginBack{ display:flex !important; justify-content:center; width:100% !important; margin:10px 0 0 !important; box-shadow:none; background:transparent !important; border-color:transparent !important; color:var(--muted) !important; }
+/* Acciones secundarias de texto (agregar campo, reordenar, marcar todas…) */
+.linkBackBtn:not([id*="Back"]){ display:inline-flex; align-items:center; gap:6px; min-height:38px; padding:7px 12px; border-radius:var(--r-sm); color:var(--brand) !important; font-weight:600; background:transparent; border:0; cursor:pointer; text-decoration:none !important; }
+.linkBackBtn:not([id*="Back"]):hover{ background:var(--brand-soft); }
+/* Jerarquía de botones: tamaños y radios */
+.primaryBtn, .secondaryBtn, .modalCard button, .authBtn{ min-height:var(--h-btn); border-radius:var(--r-md); }
+.modalCard .modalActions{ gap:10px !important; }
+.modalCard .dangerBtn, .dangerBtn{ color:var(--danger) !important; background:transparent !important; border:1px solid color-mix(in srgb, var(--danger) 45%, transparent) !important; border-radius:var(--r-md) !important; text-decoration:none !important; padding:9px 14px !important; font-weight:600 !important; }
+.dangerBtn:hover{ background:color-mix(in srgb, var(--danger) 10%, transparent) !important; }
+/* Tarjetas: radios y bordes uniformes */
+.zoneHeadCard, .cvBlock, .ccPanel .card, .dashCard, .authCard, .modalCard{ border-radius:var(--r-lg) !important; }
+.zoneHeadCard{ border:1px solid var(--border); border-left:5px solid var(--zone-color,var(--brand)); box-shadow:var(--shadow-1); }
+/* Títulos de módulo consistentes */
+.ccPanel h2, .dashTitle, #etapasPanel h2, main h2{ font-size:1.2rem; font-weight:700; letter-spacing:-.018em; margin:0 0 6px; display:flex; align-items:center; gap:8px; }
+.ccPanel .ccSub{ margin-bottom:14px; line-height:1.45; }
+/* Móvil: sin desbordes y objetivos táctiles cómodos */
+html, body{ max-width:100%; overflow-x:hidden; }
+@media (max-width:700px){
+  .headerBtns > button, .headerBtns .adminMenuWrap > button{ min-height:40px; padding:7px 12px !important; }
+  .ccTabsBar button, .ccTabsBar.cuatro button{ min-height:48px; }
+  .modalCard{ max-height:92vh; overflow-y:auto; }
+}
+/* Objetivos táctiles mínimos en controles pequeños */
+.capacityEditBtn, [id^="zoneRenameBtn_"], .etChip, .updaterZoneChip, #kioskToggleBtn{ min-height:36px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding-top:6px; padding-bottom:6px; }
+.capacityEditBtn{ padding-left:10px; padding-right:10px; }
 @media (prefers-reduced-motion:reduce){ *{ animation-duration:.01ms !important; transition-duration:.01ms !important; } }
 
 </style>
@@ -17320,7 +17367,7 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
     return true;
   }
   var pend = [], sched = false;
-  function flush(){ sched = false; var l = pend; pend = []; obs.disconnect(); try{ l.forEach(function(n){ if(n.isConnected) walk(n); }); }finally{ obs.observe(document.body, { childList:true, subtree:true, characterData:true }); } }
+  function flush(){ sched = false; var l = pend; pend = []; obs.disconnect(); try{ l.forEach(function(n){ if(n.isConnected) walk(n); }); }finally{ obs.observe(document.body, { childList:true, subtree:true, characterData:true }); } try{ homeSync(); }catch(e){} }
   var obs = new MutationObserver(function(muts){
     muts.forEach(function(m){
       if(m.type === "characterData"){ pend.push(m.target); }
@@ -17349,7 +17396,32 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
       card.insertBefore(br, card.firstChild);
     }
   }
-  function start(){ walk(document.body); pw(); obs.observe(document.body, { childList:true, subtree:true, characterData:true }); }
+
+  /* Botón Inicio: lleva a la primera pestaña de cada rol (no cierra sesión ni cancela nada) */
+  function visible(e){ return e && e.offsetParent !== null; }
+  function homeTarget(){
+    var ids = ["avaTabsBar", "ccTabsBar", "tabs"];
+    for(var i = 0; i < ids.length; i++){
+      var bar = document.getElementById(ids[i]);
+      if(visible(bar)){ var b = [].slice.call(bar.querySelectorAll("button")).filter(visible)[0]; if(b) return b; }
+    }
+    return null;
+  }
+  function homeSync(){
+    var box = document.querySelector(".headerBtns"); if(!box) return;
+    var btn = document.getElementById("homeBtn");
+    if(!btn){
+      btn = document.createElement("button"); btn.type = "button"; btn.id = "homeBtn"; btn.title = "Ir al inicio"; btn.setAttribute("aria-label", "Inicio");
+      btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" style="width:1.1em;height:1.1em;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg><span>Inicio</span>';
+      btn.style.cssText = "display:inline-flex;align-items:center;gap:6px;";
+      btn.addEventListener("click", function(){ var t = homeTarget(); if(t) t.click(); });
+      box.insertBefore(btn, box.firstChild);
+    }
+    var t = homeTarget();
+    btn.style.display = t ? "inline-flex" : "none";
+    btn.classList.toggle("isHome", !!(t && t.classList.contains("active")));
+  }
+  function start(){ walk(document.body); pw(); homeSync(); obs.observe(document.body, { childList:true, subtree:true, characterData:true }); }
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
 
