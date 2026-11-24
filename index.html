@@ -3436,6 +3436,7 @@ html, body{ max-width:100%; overflow-x:hidden; }
         <div class="adminMenuDropdown" id="adminMenuDropdown">
           <div class="amSec">GESTIÓN</div>
           <button id="usersBtn"><span class="amIc">👤</span><span class="amTx">Usuarios<small>Cuentas, permisos y etapas</small></span></button>
+          <button id="multiMoveAdminBtn"><span class="amIc">🚚</span><span class="amTx">Mover varios<small>Varias placas a un mismo destino</small></span></button>
           <button id="historyBtn"><span class="amIc">🕒</span><span class="amTx">Historial<small>Movimientos y accesos</small></span></button>
           <button id="guestLinksBtn"><span class="amIc">🔗</span><span class="amTx">Invitados<small>Enlaces temporales de solo lectura</small></span></button>
           <div class="amSec">PRUEBAS</div>
@@ -3599,6 +3600,28 @@ html, body{ max-width:100%; overflow-x:hidden; }
   </div>
 </div>
 
+<div class="modalOverlay" id="multiMoveModal">
+  <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
+    <button type="button" class="modalBackTop" id="mmBack">← Volver</button>
+    <h3>🚚 Mover varios vehículos</h3>
+    <div class="etStepT"><span class="etStepN">1</span> ¿Cuáles placas?</div>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="mmPlaca" placeholder="Placa y Enter" autocomplete="off" autocapitalize="characters" style="flex:1; min-width:0;">
+      <button type="button" class="secondaryBtn" id="mmAddBtn">Agregar</button>
+    </div>
+    <div id="mmList" style="display:flex; flex-wrap:wrap; gap:6px; margin:10px 0;"></div>
+    <div class="etStepT"><span class="etStepN">2</span> ¿A dónde van todos?</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <select id="mmZona" style="flex:1; min-width:140px;"></select>
+      <select id="mmCampo" style="flex:1; min-width:120px;"></select>
+    </div>
+    <div id="mmMsg" class="dashEmptyNote" style="padding:8px 0; display:none;"></div>
+    <div class="modalActions" style="margin-top:14px;">
+      <button class="primaryBtn" id="mmGo" disabled>Elegí placas y destino</button>
+      <button class="secondaryBtn" id="mmCancel">Cerrar</button>
+    </div>
+  </div>
+</div>
 <div class="modalOverlay" id="qrMoveModal">
   <div class="modalCard" style="max-height:92vh; overflow-y:auto;">
     <button type="button" class="modalBackTop" data-proxy="qrMoveStayBtn">← Volver</button>
@@ -4308,6 +4331,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // ni al almacenamiento del teléfono, y al salir se descarta.
   let modoPrueba = false;
   const pruebaMem = new Map();
+  // Control de versiones por clave compartida: cada escritura lleva un token ("rev") al final del texto cifrado.
+  // Al guardar con {guard:true} se usa una transacción de Firebase: solo se escribe si la clave sigue en la
+  // versión que ESTA sesión leyó por última vez — si otro dispositivo guardó en medio, no se pisa: se avisa (CONFLICT_REV).
+  const revMap = new Map();
+  function revDe(raw){ if(typeof raw !== "string" || !raw.startsWith("ENC1:")) return ""; return raw.split(":")[3] || ""; }
+  function nuevaRev(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   const storage = {
     async get(key, shared){
       if(modoPrueba){
@@ -4321,19 +4350,35 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
       if(!fbReady) throw new Error("Firebase no está listo todavía");
       const snap = await fbDb.ref(key).once("value");
-      if(!snap.exists()) throw new Error("Clave no encontrada: " + key);
+      if(!snap.exists()){ revMap.set(key, ""); throw new Error("Clave no encontrada: " + key); }
+      revMap.set(key, revDe(snap.val()));
       const decrypted = await decryptFromFirebase(snap.val());
       return { key, value: decrypted, shared: true };
     },
-    async set(key, value, shared){
+    async set(key, value, shared, opts){
       if(modoPrueba){ pruebaMem.set((shared ? "S:" : "L:") + key, value); return { key, value, shared: !!shared }; }
       if(!shared){
         localStorage.setItem("inv_local_" + key, value);
         return { key, value, shared: false };
       }
       if(!fbReady) throw new Error("Firebase no está listo todavía");
-      const encrypted = await encryptForFirebase(value);
-      await fbDb.ref(key).set(encrypted);
+      const rev = nuevaRev();
+      const encrypted = (await encryptForFirebase(value)) + ":" + rev;
+      const ref = fbDb.ref(key);
+      if(opts && opts.guard && revMap.has(key) && typeof ref.transaction === "function"){
+        const esperada = revMap.get(key);
+        const res = await ref.transaction(cur => {
+          if(cur !== null && cur !== undefined && revDe(cur) !== esperada) return; // cambió en el medio: abortar, no pisar
+          return encrypted;
+        }, undefined, false);
+        if(!res || !res.committed){
+          try{ if(res && res.snapshot) revMap.set(key, revDe(res.snapshot.val())); }catch(e){}
+          const err = new Error("CONFLICT_REV"); err.code = "CONFLICT_REV"; throw err;
+        }
+      } else {
+        await ref.set(encrypted);
+      }
+      revMap.set(key, rev);
       return { key, value, shared: true };
     },
     async delete(key, shared){
@@ -5774,8 +5819,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const faseZona = !qrMoveZone;
     stepZ.style.display = chips.style.display = faseZona ? "" : "none";
     if(faseZona){
-      chips.innerHTML = qrZonasDestino().map(z => `
+      const recientes = destinosRecientes(found);
+      chips.innerHTML = (recientes.length ? `<div class="dashEmptyNote" style="grid-column:1/-1;padding:0 0 2px;font-weight:700;">⚡ Últimos destinos</div>` + recientes.map(r => `<button type="button" class="spaceGridBtn partial" data-rz="${escapeAttrLike(r.z)}" data-rc="${escapeAttrLike(r.c)}" style="grid-column:span 2;"><span class="spaceGridLabel">${escapeHtml(zoneInfo(r.z).label)}</span><span class="spaceGridCount">${escapeHtml(String(r.c))}</span></button>`).join("") + `<div class="dashEmptyNote" style="grid-column:1/-1;padding:6px 0 2px;">…o elegí otro lugar:</div>` : "") + qrZonasDestino().map(z => `
         <button type="button" class="spaceGridBtn zonaTile${z.key===SIN_UBICACION_KEY?" sinUbicacionChip":""}" data-zone="${escapeAttrLike(z.key)}" style="border-color:#${z.hex}"><span class="spaceGridLabel">${escapeHtml(z.label)}</span></button>`).join("");
+      chips.querySelectorAll("[data-rz]").forEach(b=>{
+        b.addEventListener("click", ()=>{ qrMoveZone = b.getAttribute("data-rz"); qrMoveCampo = b.getAttribute("data-rc"); qrMoveEstac = false; qrDibujarMover(); });
+      });
       chips.querySelectorAll("[data-zone]").forEach(b=>{
         b.addEventListener("click", ()=>{ qrMoveZone = b.getAttribute("data-zone"); qrMoveCampo = ""; qrMoveEstac = false; qrDibujarMover(); });
       });
@@ -5847,6 +5896,31 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     } else {
       btn.disabled = true; btn.textContent = "Elegí un espacio";
     }
+  }
+  // Últimos destinos usados en ESTE dispositivo (atajo de 1 toque para movimientos repetidos).
+  const RECENT_DEST_KEY = "inv_local_recent_dest_v1";
+  function destinosRecientes(found){
+    let lista = [];
+    try{ lista = JSON.parse(localStorage.getItem(RECENT_DEST_KEY) || "[]"); }catch(e){}
+    const permitidas = new Set(qrZonasDestino().map(z => z.key));
+    const out = [];
+    for(const r of lista){
+      if(!r || !permitidas.has(r.z)) continue;
+      const ok = SINGLE_BUCKET_ZONES.has(r.z) || (state.zones[r.z] || []).some(c => c.campo === r.c);
+      if(!ok) continue;
+      if(found && !found.nuevo && found.zoneKey === r.z && state.zones[found.zoneKey][found.campoIdx] && state.zones[found.zoneKey][found.campoIdx].campo === r.c) continue;
+      out.push(r);
+      if(out.length >= 4) break;
+    }
+    return out;
+  }
+  function recordarDestino(z, c){
+    try{
+      if(modoPrueba || !z || !c) return;
+      let lista = JSON.parse(localStorage.getItem(RECENT_DEST_KEY) || "[]");
+      lista = [{ z, c: String(c) }].concat(lista.filter(r => !(r.z === z && String(r.c) === String(c)))).slice(0, 8);
+      localStorage.setItem(RECENT_DEST_KEY, JSON.stringify(lista));
+    }catch(e){}
   }
   function qrAbrirMover(found){
     document.querySelector("#qrMoveModal h3").textContent = found.nuevo ? "¿En qué campo lo agregás?" : "¿A dónde lo movés?";
@@ -5972,6 +6046,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         const ok = await updaterAddNew(z, c, d.plate, d.aseguradora, d.modelo, "first", d.color, d.circulacion, d.llave, d.ot);
         qrCerrarMover();
         if(ok){
+          recordarDestino(z, c);
           pushUndo(snap, `Agregar ${d.plate} en ${zoneInfo(z).label} · ${c}`);
           try{ navigator.vibrate && navigator.vibrate([40,40,40]); }catch(err){}
           showToast(`✓ ${d.plate} agregado en ${zoneInfo(z).label} · ${c}`);
@@ -5996,6 +6071,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const placa = e.plate;
       qrCerrarMover();
       if(ok){
+        recordarDestino(z, c);
         if(!document.getElementById("qrScanModal").classList.contains("show")){
           showToast(`✓ ${placa} movido a ${zoneInfo(z).label} · ${c}`);
           const inpA = document.getElementById("avaPanelPlaca"); if(inpA) inpA.value = "";
@@ -6008,6 +6084,108 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
     });
   });
+  // =================== Mover varios vehículos a un mismo destino ===================
+  // Cada placa se mueve con la MISMA función de siempre (permisos, validaciones, guardado e historial individual).
+  let mmPlacas = [];
+  function mmEl(id){ return document.getElementById(id); }
+  function abrirMoverVarios(){
+    if(!puedeMoverVehiculos()){ showToast("Tu cuenta no tiene permiso para mover vehículos."); return; }
+    mmPlacas = [];
+    const zs = qrZonasDestino();
+    mmEl("mmZona").innerHTML = `<option value="">Lugar…</option>` + zs.map(z => `<option value="${escapeAttrLike(z.key)}">${escapeHtml(z.label)}</option>`).join("");
+    mmEl("mmCampo").innerHTML = `<option value="">Espacio…</option>`;
+    mmEl("mmPlaca").value = ""; mmEl("mmMsg").style.display = "none";
+    mmDibujar();
+    mmEl("multiMoveModal").classList.add("show");
+    setTimeout(()=>{ try{ mmEl("mmPlaca").focus(); }catch(e){} }, 150);
+  }
+  function mmCampos(){
+    const z = mmEl("mmZona").value;
+    if(!z) return [];
+    if(SINGLE_BUCKET_ZONES.has(z)) return [SIN_UBICACION_CAMPO];
+    return (state.zones[z] || []).map(c => c.campo);
+  }
+  function mmDibujar(){
+    const lista = mmEl("mmList");
+    lista.innerHTML = mmPlacas.length ? mmPlacas.map((p, i) => {
+      const f = findPlate(p);
+      const donde = f ? `${zoneInfo(f.zoneKey).label} · ${state.zones[f.zoneKey][f.campoIdx].campo}` : "?";
+      return `<span class="etChip on" style="display:inline-flex;align-items:center;gap:6px;"><b>${escapeHtml(p)}</b><small>${escapeHtml(donde)}</small><button type="button" data-mmx="${i}" aria-label="Quitar ${escapeAttrLike(p)}" style="border:0;background:transparent;font-size:1rem;cursor:pointer;">✕</button></span>`;
+    }).join("") : `<span class="dashEmptyNote" style="padding:4px 0;">Todavía no agregaste placas.</span>`;
+    lista.querySelectorAll("[data-mmx]").forEach(b => b.addEventListener("click", ()=>{ mmPlacas.splice(+b.getAttribute("data-mmx"), 1); mmDibujar(); }));
+    const z = mmEl("mmZona").value, c = mmEl("mmCampo").value, go = mmEl("mmGo");
+    if(mmPlacas.length && z && c){
+      go.disabled = false;
+      go.textContent = `Mover ${mmPlacas.length} a ${zoneInfo(z).label} · ${c}`;
+    } else {
+      go.disabled = true; go.textContent = "Elegí placas y destino";
+    }
+  }
+  function mmAgregarPlaca(){
+    const inp = mmEl("mmPlaca"), msg = mmEl("mmMsg");
+    const p = normalizePlate(inp.value);
+    if(!p) return;
+    const f = findPlate(p);
+    if(!f){ msg.textContent = `${p} no está en el inventario.`; msg.style.display = ""; inp.select(); return; }
+    msg.style.display = "none";
+    const real = f.platesArray[f.plateIdx].plate;
+    if(!mmPlacas.some(x => normalizePlate(x) === normalizePlate(real))) mmPlacas.push(real);
+    inp.value = ""; inp.focus();
+    mmDibujar();
+  }
+  async function mmConfirmar(ev){
+    const z = mmEl("mmZona").value, c = mmEl("mmCampo").value;
+    if(!mmPlacas.length || !z || !c) return;
+    const btn = ev.currentTarget;
+    const dest = (state.zones[z] || []).find(x => x.campo === c);
+    let aviso = "";
+    if(dest && dest.capacidad && dest.plates.length + mmPlacas.length > dest.capacidad) aviso = `\n\n⚠️ ${zoneInfo(z).label} · ${c} quedaría por encima de su capacidad (${dest.plates.length + mmPlacas.length}/${dest.capacidad}).`;
+    if(!(await confirmUI(`¿Mover ${mmPlacas.length} vehículo(s) a ${zoneInfo(z).label} · ${c}?\n\n${mmPlacas.join(", ")}${aviso}`))) return;
+    await runGuarded(btn, "Moviendo…", async ()=>{
+      const fallaron = [], hechos = [];
+      for(const p of mmPlacas.slice()){
+        let ok = false;
+        try{
+          const f = findPlate(p);
+          if(f){
+            const dc = state.zones[f.zoneKey][f.campoIdx].campo;
+            if(f.zoneKey === z && String(dc) === String(c)){ ok = true; } // ya está ahí
+            else ok = await qrMoverVehiculo(f, z, c);
+          }
+        }catch(e){ console.error("Mover varios", p, e); ok = false; }
+        if(ok) hechos.push(p); else fallaron.push(p);
+      }
+      if(hechos.length) recordarDestino(z, c);
+      mmPlacas = fallaron;
+      try{ navigator.vibrate && navigator.vibrate([40,40,40]); }catch(e){}
+      const msg = mmEl("mmMsg");
+      if(fallaron.length){
+        msg.textContent = `✓ ${hechos.length} movido(s). ⚠️ No se pudieron mover: ${fallaron.join(", ")}. Quedaron en la lista para reintentar.`;
+        msg.style.display = "";
+        showToast(`⚠️ ${fallaron.length} no se movió: ${fallaron.join(", ")}`, 6000, true);
+      } else {
+        showToast(`✓ ${hechos.length} vehículo(s) movido(s) a ${zoneInfo(z).label} · ${c}`);
+        mmEl("multiMoveModal").classList.remove("show");
+      }
+      mmDibujar();
+      try{ if(typeof avaRenderPanel === "function") avaRenderPanel(true); }catch(e){}
+      try{ if(currentUser.role === "actualizacion") renderUpdaterPanel(); else renderAll(); }catch(e){}
+    });
+  }
+  mmEl("mmAddBtn").addEventListener("click", mmAgregarPlaca);
+  mmEl("mmPlaca").addEventListener("keydown", ev => { if(ev.key === "Enter"){ ev.preventDefault(); mmAgregarPlaca(); } });
+  mmEl("mmZona").addEventListener("change", ()=>{
+    const campos = mmCampos();
+    mmEl("mmCampo").innerHTML = `<option value="">Espacio…</option>` + campos.map(c => `<option value="${escapeAttrLike(String(c))}">${escapeHtml(String(c))}</option>`).join("");
+    if(campos.length === 1) mmEl("mmCampo").value = String(campos[0]);
+    mmDibujar();
+  });
+  mmEl("mmCampo").addEventListener("change", mmDibujar);
+  mmEl("mmGo").addEventListener("click", mmConfirmar);
+  mmEl("mmCancel").addEventListener("click", ()=> mmEl("multiMoveModal").classList.remove("show"));
+  mmEl("mmBack").addEventListener("click", ()=> mmEl("multiMoveModal").classList.remove("show"));
+  const mmAdminBtn = document.getElementById("multiMoveAdminBtn");
+  if(mmAdminBtn) mmAdminBtn.addEventListener("click", ()=>{ const dd = document.getElementById("adminMenuDropdown"); if(dd) dd.classList.remove("show"); abrirMoverVarios(); });
   // =================== fin Recorrido con QR ===================
 
   function snapshotZones(){
@@ -6651,6 +6829,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
 
   async function loadState(){
+    // Si este dispositivo está en medio de un guardado, se espera a que termine antes de recargar (así no se pisa el cambio recién hecho).
+    for(let w = 0; saveEnVuelo > 0 && w < 100; w++) await new Promise(r => setTimeout(r, 100));
     // storageAvailable ya fue calculado por runAuthGate() al arrancar la app,
     // antes de que revealApp() invoque esta función; se reutiliza en vez de
     // repetir la verificación (evita una escritura de "sonda" extra).
@@ -6849,7 +7029,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
     }catch(e){ console.error("Limpieza automática", e); }
   }
-  async function saveState(silent){
+  // Mientras ESTE dispositivo está guardando, no se recarga el estado desde el servidor (eso podía pisar el cambio recién hecho antes de que llegue a guardarse).
+  let saveEnVuelo = 0;
+  async function saveState(silent, _depth){
+    saveEnVuelo++;
+    try{ return await saveStateInner(silent, _depth); }
+    finally{ saveEnVuelo--; }
+  }
+  async function saveStateInner(silent, _depth){
     try{ limpiezaAutomatica(); }catch(e){ console.error("Limpieza automática", e); }
     state.updatedAt = new Date().toISOString();
 
@@ -6901,7 +7088,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       // el guardado más adelante).
       try{ limpiezaAutomatica(); }catch(e){} // por si la unión con otro celular trajo algo repetido
       const setTimeoutPromise = new Promise((_, reject)=> setTimeout(()=> reject(new Error("timeout")), 8000));
-      const result = await Promise.race([window.storage.set(STORAGE_KEY, JSON.stringify(state), true), setTimeoutPromise]);
+      const result = await Promise.race([window.storage.set(STORAGE_KEY, JSON.stringify(state), true, { guard: true }), setTimeoutPromise]);
       if(!result || typeof result !== "object"){
         throw new Error("Unexpected response type");
       }
@@ -6918,6 +7105,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         showToast("Conexión recuperada: los cambios pendientes ya se guardaron.", 4000);
       }
     }catch(e){
+      // Otra sesión guardó justo entre la lectura y la escritura: se vuelve a leer, se une (por vehículo) y se reintenta.
+      if(e && e.code === "CONFLICT_REV" && (_depth || 0) < 6){
+        await new Promise(r => setTimeout(r, 120 + Math.random() * 380));
+        return saveState(silent, (_depth || 0) + 1);
+      }
       // No apagamos storageAvailable de forma permanente: la próxima acción
       // vuelve a intentar guardar sola. Además, programamos un reintento de
       // fondo para el cambio que quedó pendiente, por si la persona no
@@ -13245,16 +13437,29 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       try{ const q = pendLogLeer(); q.push({ key, entry, limit }); localStorage.setItem(PENDLOG_KEY, JSON.stringify(q.slice(-200))); }catch(e){}
       return;
     }
-    let list = [];
-    try{
-      const res = await conLimiteDeTiempo(window.storage.get(key, true), 2500);
-      if(res && res.value) list = JSON.parse(res.value);
-    }catch(e){ /* la clave todavía no existe, o no hubo respuesta a tiempo: arrancamos con lista vacía */ }
-    list.push(entry);
-    if(list.length > limit) list = list.slice(list.length - limit);
-    try{
-      await conLimiteDeTiempo(window.storage.set(key, JSON.stringify(list), true), 2500);
-    }catch(e){ /* el registro de historial nunca debe romper la acción principal */ }
+    try{ if(entry && typeof entry === "object" && !entry.disp) entry.disp = dispositivoId().slice(0, 6); }catch(e){}
+    await modificarListaCompartida(key, limit, list => { list.push(entry); });
+  }
+  // Lee la lista, la modifica y la guarda solo si nadie más la cambió en el medio; si la cambiaron, repite sobre la versión nueva.
+  async function modificarListaCompartida(key, limit, mutar){
+    for(let intento = 0; intento < 8; intento++){
+      let list = [];
+      try{
+        const res = await conLimiteDeTiempo(window.storage.get(key, true), 2500);
+        if(res && res.value) list = JSON.parse(res.value);
+      }catch(e){ /* la clave todavía no existe, o no hubo respuesta a tiempo: arrancamos con lista vacía */ }
+      if(!Array.isArray(list)) list = [];
+      mutar(list);
+      if(list.length > limit) list = list.slice(list.length - limit);
+      try{
+        await conLimiteDeTiempo(window.storage.set(key, JSON.stringify(list), true, { guard: true }), 2500);
+        return true;
+      }catch(e){
+        if(e && e.code === "CONFLICT_REV"){ await new Promise(r => setTimeout(r, 60 + Math.random() * 240)); continue; }
+        return false; /* el registro de historial nunca debe romper la acción principal */
+      }
+    }
+    return false;
   }
   // Igual que appendLog pero para varias entradas de una sola vez (una lectura y una escritura).
   async function appendLogLote(key, entries, limit){
@@ -13271,14 +13476,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       for(const entry of entries){ await appendLog(key, entry, limit); }
       return;
     }
-    let list = [];
-    try{
-      const res = await conLimiteDeTiempo(window.storage.get(key, true), 2500);
-      if(res && res.value) list = JSON.parse(res.value);
-    }catch(e){}
-    list = list.concat(entries);
-    if(list.length > limit) list = list.slice(list.length - limit);
-    try{ await conLimiteDeTiempo(window.storage.set(key, JSON.stringify(list), true), 2500); }catch(e){}
+    try{ const d = dispositivoId().slice(0, 6); entries.forEach(en => { if(en && typeof en === "object" && !en.disp) en.disp = d; }); }catch(e){}
+    await modificarListaCompartida(key, limit, list => { entries.forEach(en => list.push(en)); });
   }
   async function readLog(key){
     try{
@@ -13768,7 +13967,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // Vuelve a leer el inventario desde el almacenamiento compartido (por si
   // otra persona hizo cambios mientras esta pestaña seguía abierta) y
   // refresca la vista sin perder el filtro que ya tenías escrito.
-  async function refreshDataFromStorage(silent){
+  async function refreshDataFromStorage(silent, _esp){
+    if((saveEnVuelo > 0 || fusionEnCurso) && (_esp || 0) < 40){
+      setTimeout(()=> refreshDataFromStorage(silent, (_esp || 0) + 1), 1200);
+      return;
+    }
     if(!storageAvailable){
       if(!silent) showToast("Sin conexión al almacenamiento compartido");
       return;
@@ -13855,6 +14058,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // El rol Búsqueda es de solo lectura: se puede refrescar solo, de fondo,
   // sin riesgo de pisar algo que alguien esté editando en ese momento.
   function startAutoRefreshIfNeeded(){
+    try{ iniciarEscuchaTiempoReal(); latidoDispositivo(); }catch(e){}
     if(autoRefreshInterval){ clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
     if(esLectura()){
       autoRefreshInterval = setInterval(()=> refreshDataFromStorage(true), 20000);
@@ -13876,6 +14080,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     try{ if(canExport()) cargarMovimientos(); }catch(e){}
     document.getElementById("authGate").style.display = "none";
     document.getElementById("appRoot").style.display = "block";
+    try{ setTimeout(()=>{ try{ latidoDispositivo(); iniciarEscuchaTiempoReal(); }catch(e){} }, 1500); }catch(e){}
     try{
       applyRoleUI();
     }catch(e){
@@ -15380,6 +15585,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           <h2 style="margin:0;">Actualizar ubicación</h2>
           <div style="display:flex; gap:8px;">
             ${avaluoModo ? `` : `<button type="button" id="updAllAreasBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🗂️ Ver todas mis áreas</button>`}
+            ${puedeMoverVehiculos() ? `<button type="button" id="multiMoveBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🚚 Mover varios</button>` : ``}
             <button type="button" id="kioskToggleBtn" class="kioskModeBtn" style="flex:0 0 auto;">🖥️ Modo kiosco</button>
           </div>
         </div>
@@ -16792,6 +16998,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     drawZoneFilterRow();
     drawAllList();
 
+    const mmBtn = holder.querySelector("#multiMoveBtn");
+    if(mmBtn) mmBtn.addEventListener("click", ()=> abrirMoverVarios());
     const kioskBtn = holder.querySelector("#kioskToggleBtn");
     if(kioskBtn){
       updateKioskButtonLabel();
@@ -17048,6 +17256,59 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
   // Cierra esta sesión si el Admin cambió la clave (o cerró sesiones / desactivó la cuenta)
   // mientras la app estaba abierta en este dispositivo.
+  // Identificador propio de ESTE dispositivo (no se comparte con otros aunque usen el mismo usuario).
+  function dispositivoId(){
+    try{
+      let id = localStorage.getItem("inv_local_deviceId");
+      if(!id){ id = "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem("inv_local_deviceId", id); }
+      return id;
+    }catch(e){ return window.__devFallback || (window.__devFallback = "d" + Math.random().toString(36).slice(2, 10)); }
+  }
+  const DEV_PATH = "inventario_parqueo_dispositivos_v1";
+  let devIngreso = null;
+  // Registro de sesiones activas: cada dispositivo escribe SOLO su propio nodo (nunca pisa a otro).
+  function latidoDispositivo(estado){
+    try{
+      if(modoPrueba || !fbReady || !fbDb || !currentUser) return;
+      if(!devIngreso) devIngreso = new Date().toISOString();
+      const ref = fbDb.ref(DEV_PATH + "/" + dispositivoId());
+      Promise.resolve(ref.set({ u: currentUser.username || "", rol: currentUser.role || "", ingreso: devIngreso, ultima: new Date().toISOString(), estado: estado || "en línea" })).catch(()=>{});
+      if(typeof ref.onDisconnect === "function" && !latidoDispositivo._od){ latidoDispositivo._od = true; try{ ref.onDisconnect().update({ estado: "desconectado" }); }catch(e){} }
+    }catch(e){}
+  }
+  setInterval(()=>{ if(currentUser && !document.hidden) latidoDispositivo(); }, 60000);
+  // Sincronización casi en tiempo real: si otro dispositivo guarda, se refresca pronto (sin pisar formularios en uso).
+  let escuchaTR = null, trTimer = null, trIntentos = 0, ultimaRevRemota = "";
+  function iniciarEscuchaTiempoReal(){
+    try{
+      if(escuchaTR || !fbReady || !fbDb) return;
+      const ref = fbDb.ref(STORAGE_KEY);
+      if(typeof ref.on !== "function") return;
+      escuchaTR = true;
+      ref.on("value", snap => {
+        try{
+          if(!currentUser || modoPrueba || !snap || !snap.exists()) return;
+          const r = revDe(snap.val());
+          if(!r || r === revMap.get(STORAGE_KEY)) return; // es lo que ya tenemos (o nuestro propio guardado)
+          ultimaRevRemota = r; trIntentos = 0; programarRefrescoTR(1500);
+        }catch(e){}
+      });
+    }catch(e){}
+  }
+  function programarRefrescoTR(ms){
+    if(trTimer) clearTimeout(trTimer);
+    trTimer = setTimeout(async ()=>{
+      trTimer = null;
+      if(!currentUser || !storageAvailable) return;
+      if(ultimaRevRemota && ultimaRevRemota === revMap.get(STORAGE_KEY)) return; // ya estamos al día
+      const ocupado = document.querySelector(".modalOverlay.show") || hayFormularioSinGuardar() || (Date.now() - ultimaInteraccion < 4000 && !esLectura());
+      const ae = document.activeElement;
+      const escribiendo = ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.value;
+      if((ocupado || escribiendo) && trIntentos++ < 40){ programarRefrescoTR(4000); return; }
+      if(ocupado || escribiendo) return;
+      try{ await refreshDataFromStorage(true); }catch(e){}
+    }, ms);
+  }
   let verificandoSesion = false;
   async function verificarSesionViva(){
     if(verificandoSesion || !currentUser || currentUser.isGuest || typeof currentUser.sessionVersion !== "number") return;
@@ -17106,6 +17367,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if(modoPrueba){ if(await confirmUI("Estás en modo prueba. ¿Salir? Se descarta todo lo que probaste.")) location.reload(); return; }
     if(!(await confirmUI("¿Cerrar sesión?"))) return;
     if(currentUser) await logAccess(currentUser.username, "logout");
+    try{ latidoDispositivo("desconectado"); }catch(e){}
     if(clockInterval) clearInterval(clockInterval);
     if(autoRefreshInterval) clearInterval(autoRefreshInterval);
     await clearSession();
