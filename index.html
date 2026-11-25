@@ -3371,6 +3371,50 @@ mark.searchHighlight{ background:#fde68a; color:inherit; border-radius:3px; padd
 html[data-theme="dark"] mark.searchHighlight{ background:#854d0e; color:#fff; }
 @media (prefers-reduced-motion:reduce){ *{ animation-duration:.01ms !important; transition-duration:.01ms !important; } }
 
+
+  /* ===== FASE 7 · Actualizar ubicación: campo ===== */
+  .campoHead{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .campoHeadTop{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .campoBackBtn{ min-height:36px; padding:0 12px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--surface-2); color:var(--ink); font-weight:700; font-size:.82rem; cursor:pointer; }
+  .campoZoneTag{ font-size:.74rem; font-weight:800; color:var(--brand); background:color-mix(in srgb,var(--brand) 10%,transparent); padding:4px 10px; border-radius:999px; max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #updSpaceInfo .spaceNavRow, .spaceNavRow{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr); gap:6px; margin-bottom:0; align-items:stretch; }
+  .spaceNavRow .navSide{ min-height:44px; font-size:.82rem; }
+  .campoNavCur{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-width:0; padding:4px 6px; border-radius:var(--r-sm); background:var(--surface); border:1px solid var(--border); }
+  .campoNavCur.solo{ padding:8px; }
+  .campoNavCur small{ font-size:.68rem; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .campoNavCur strong{ font-size:1.05rem; line-height:1.15; overflow:hidden; text-overflow:ellipsis; max-width:100%; white-space:nowrap; }
+  .occCard{ --occ:var(--ok); border:1px solid color-mix(in srgb,var(--occ) 35%,var(--border)); background:color-mix(in srgb,var(--occ) 7%,var(--surface)); border-radius:var(--r-md); padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+  .occ-parcial{ --occ:#d97706; } .occ-lleno{ --occ:var(--danger); } .occ-sobre{ --occ:#7c1d1d; } .occ-libre{ --occ:var(--muted); } .occ-disp{ --occ:var(--ok); }
+  .occTop{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .occCount{ font-size:.9rem; } .occCount b{ font-size:1.25rem; }
+  .occPct{ font-weight:800; color:var(--occ); font-size:.9rem; }
+  .occChip{ margin-left:auto; background:var(--occ); color:#fff; font-weight:800; font-size:.72rem; padding:3px 10px; border-radius:999px; }
+  .occBar{ height:8px; border-radius:99px; background:var(--surface-3); overflow:hidden; }
+  .occBar i{ display:block; height:100%; background:var(--occ); border-radius:99px; transition:width .45s cubic-bezier(.2,.8,.2,1); }
+  .occFoot{ font-size:.74rem; color:var(--muted); font-weight:600; }
+  .occMsg{ font-size:.76rem; font-weight:700; color:var(--occ); line-height:1.3; }
+  .spacePlateRow.vCard{ display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-areas:"ord info" "act act"; gap:8px 10px; padding:10px; margin-bottom:8px; border:1px solid var(--border); border-radius:var(--r-md); background:var(--surface); box-shadow:0 1px 2px rgba(0,0,0,.04); transition:box-shadow .2s, background .3s; }
+  .spacePlateRow.vCard:last-of-type{ border-bottom:1px solid var(--border); }
+  .vCard .orderBadgeGroup{ grid-area:ord; flex-direction:column; align-items:center; gap:2px; }
+  .vCard .orderMoveBtn{ width:38px; height:30px; font-size:.8rem; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .vCard .orderMoveBtn:disabled{ opacity:.3; }
+  .vCard .orderBadge{ font-weight:800; font-size:1rem; min-width:30px; text-align:center; color:var(--brand); }
+  .vCard .spacePlateInfoWrap{ grid-area:info; gap:4px; }
+  .vCard .platePlateText{ font-size:1.2rem; letter-spacing:.06em; text-decoration:none; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:2px 10px; display:inline-block; }
+  .vCard .spacePlateInfo{ display:flex; flex-wrap:wrap; gap:4px 6px; align-items:center; }
+  .vChip{ background:var(--surface-3); border-radius:999px; padding:1px 8px; font-size:.74rem; }
+  .vCard .lastMovedLabel{ border-top:none; padding-top:0; }
+  .rowActions{ grid-area:act; display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px; }
+  .rowActions button{ min-height:42px; display:flex; align-items:center; justify-content:center; gap:6px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--surface-2); color:var(--ink); font-weight:700; font-size:.8rem; cursor:pointer; padding:0 6px; margin:0; }
+  .rowActions button .raIc{ display:inline-flex; width:18px; height:18px; }
+  .rowActions .spaceRemoveBtn{ color:var(--danger); }
+  .rowActions button:active{ transform:scale(.97); }
+  .spacePlateRow.rowHighlight{ animation:rowPulse 2.4s ease-out 1; border-color:var(--brand); }
+  @keyframes rowPulse{ 0%,35%{ background:color-mix(in srgb,var(--brand) 18%,var(--surface)); box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 35%,transparent);} 100%{ background:var(--surface); box-shadow:none; } }
+  @media (prefers-reduced-motion:reduce){ .spacePlateRow.rowHighlight, .occBar i{ animation:none; transition:none; } }
+  .updToolsRow > button{ flex:1 1 auto !important; min-height:38px; }
+  .vCard .orderBadge{ background:none !important; border:none !important; padding:0 !important; border-radius:0 !important; width:auto; }
+  #updSpaceInfo .spacePlateRow .spacePlateInfoWrap{ overflow:hidden; }
 </style>
 </head>
 <body>
@@ -4777,6 +4821,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   let adminNestedMovingIdx = null;
   let adminNestedCampoKeyTracked = null; // a qué campo corresponde adminSelectedAreaIdx/FilaIdx
   let updSelectedCampo = "";
+  let updHighlightPlate = "";
+  let updGoToPlateFn = null; // lo define el panel Actualizar ubicación; lo usa el menú del vehículo ("Ver en su campo")
   let updEditingPlateIdx = null;
   let updMovingPlateIdx = null;
   let updArmedZoneKey = null;
@@ -6183,6 +6229,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const btns = [];
     if(puedeMoverVehiculos()) btns.push({ k:"mover", ic:"🔀", t:"Mover de lugar", main:true });
     if(puedeEditarDatosVehiculo()) btns.push({ k:"editar", ic:"✏️", t:"Editar datos" });
+    if(currentUser && currentUser.role === "actualizacion" && !isAvaluoUser() && document.getElementById("avaTabZona") && document.getElementById("avaTabZona").style.display !== "none") btns.push({ k:"ver", ic:"📍", t:"Ver en su campo" });
     if(puedeVerBotonEtapa() && puedeCambiarEtapa(e)) btns.push({ k:"etapa", ic:"🧭", t:"Pasar a otra etapa" });
     if(opsPuedeEntregar(e)) btns.push({ k:"entregar", ic:"🏁", t:"Entregar a cliente", danger:true });
     const box = document.getElementById("vopBtns");
@@ -6196,6 +6243,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       if(k === "mover"){ cerrarMenuVehiculo(); qrAbrirMover(fr); opsDesdeMenu = plate; }
       else if(k === "editar"){ cerrarMenuVehiculo(); qrMoveFound = fr; abrirDatosModal(); opsEditarVuelve = plate; }
       else if(k === "etapa"){ cerrarMenuVehiculo(); abrirEtapaModal(plate); etapaDesdeMenu = true; }
+      else if(k === "ver"){ cerrarMenuVehiculo(); avaSetVista("zona"); setTimeout(()=>{ if(updGoToPlateFn) updGoToPlateFn(plate); }, 200); }
       else if(k === "entregar"){
         opsOcupado = true; b.disabled = true;
         try{
@@ -6476,9 +6524,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // cambia de campo).
   function plateRowsLegendHtml(){
     if(plateRowsLegendExpanded){
-      return `<div class="plateRowsLegend">🔀 Mover　✏️ Editar　✕ Quitar　·　el numerito es el orden de llegada　<button type="button" class="plateRowsLegendToggle" title="Ocultar la ayuda">✕</button></div>`;
+      return `<div class="plateRowsLegend">🔀 Mover　✏️ Editar　📤 Retirar (pasa a Sin ubicación, no se borra)　·　▲▼ cambian la posición　<button type="button" class="plateRowsLegendToggle" title="Ocultar la ayuda">✕</button></div>`;
     }
-    return `<button type="button" class="plateRowsLegendToggle plateRowsLegendCollapsed" title="Ver qué hace cada ícono">❓ ¿Qué hace cada ícono?</button>`;
+    return `<button type="button" class="plateRowsLegendToggle plateRowsLegendCollapsed" title="Ver qué hace cada botón">❓ ¿Qué hace cada botón?</button>`;
   }
   function wirePlateRowsLegendToggle(container, redraw){
     const btn = container.querySelector(".plateRowsLegendToggle");
@@ -15795,7 +15843,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       <div class="updaterCard">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
           <h2 style="margin:0;">Actualizar ubicación</h2>
-          <div style="display:flex; gap:8px;">
+          <div class="updToolsRow" style="display:flex; gap:8px; flex-wrap:wrap; max-width:100%;">
             ${avaluoModo ? `` : `<button type="button" id="updAllAreasBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🗂️ Ver todas mis áreas</button>`}
             ${puedeMoverVehiculos() ? `<button type="button" id="multiMoveBtn" class="secondaryBtn" style="flex:0 0 auto; padding:6px 10px; font-size:0.76rem;">🚚 Mover varios</button>` : ``}
             <button type="button" id="kioskToggleBtn" class="kioskModeBtn" style="flex:0 0 auto;">🖥️ Modo kiosco</button>
@@ -16187,12 +16235,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
       updSpaceZone = found.zoneKey;
       updArmedZoneKey = null;
+      updHighlightPlate = q;
       drawSpaceZoneChips();
       const campoLabel = state.zones[found.zoneKey][found.campoIdx].campo;
       refreshSpaceGrid(campoLabel);
       if(typeof spaceInfoBox.scrollIntoView === "function") spaceInfoBox.scrollIntoView({behavior:"smooth", block:"start"});
     }
 
+    updGoToPlateFn = goToPlate;
     // Sugerencias en vivo mientras se escribe (antes solo reaccionaba a Enter
     // con coincidencia exacta, lo que parecía "no filtrar" al escribir).
     const searchResultsBox = holder.querySelector("#updSearchResults");
@@ -16369,20 +16419,22 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           `;
         }
         return `
-          <div class="spacePlateRow" data-idx="${idx}" data-search="${escapeAttrLike((p.plate + " " + (p.aseguradora||"") + " " + (p.modelo||"")).toLowerCase())}">
+          <div class="spacePlateRow vCard${updHighlightPlate && normalizePlate(p.plate)===updHighlightPlate ? " rowHighlight" : ""}" data-plate="${escapeAttrLike(p.plate)}" data-idx="${idx}" data-search="${escapeAttrLike((p.plate + " " + (p.aseguradora||"") + " " + (p.modelo||"")).toLowerCase())}">
             <div class="orderBadgeGroup">
-              <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="up" ${idx===0 ? "disabled" : ""} title="Mover antes">▲</button>
-              <span class="orderBadge" title="Orden de llegada — se puede cambiar con las flechas">${idx+1}</span>
-              <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===entry.plates.length-1 ? "disabled" : ""} title="Mover después">▼</button>
+              <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="up" ${idx===0 ? "disabled" : ""} title="Subir una posición" aria-label="Subir una posición">▲</button>
+              <span class="orderBadge" title="Posición ${idx+1} de ${entry.plates.length} — se cambia con las flechas">${idx+1}</span>
+              <button type="button" class="orderMoveBtn" data-idx="${idx}" data-dir="down" ${idx===entry.plates.length-1 ? "disabled" : ""} title="Bajar una posición" aria-label="Bajar una posición">▼</button>
             </div>
             <div class="spacePlateInfoWrap">
-              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${llaveRowIcon(p, campoLabel)}${currentUser.showMovedBy ? ` <span class="plateMuted">· ${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted">· ${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText">· ${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted">· ${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${updSpaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
+              <span class="spacePlateInfo"><span class="platePlateText platePlateTextClickable" data-idx="${idx}" title="Tocá la placa para reportar con fotos">${escapeHtml(p.plate)}</span>${llaveRowIcon(p, campoLabel)}${currentUser.showMovedBy ? ` <span class="plateMuted vChip">${escapeHtml(movedByText(p.plate))}</span>` : (p.aseguradora ? ` <span class="plateMuted vChip">${escapeHtml(p.aseguradora)}</span>` : "")}${p.modelo ? ` <span class="plateMuted plateModelText vChip">${escapeHtml(p.modelo)}</span>` : ""}${p.color ? ` <span class="plateMuted vChip">${escapeHtml(p.color)}${guessColorHex(p.color) ? ` <span class="plateColorDot" style="background:${guessColorHex(p.color)}"></span>` : ""}</span>` : ""}${wasUpdatedToday(p) ? ' <span class="updatedTodayTag" title="Se actualizó hoy">✓ hoy</span>' : ''}${updSpaceZone===CHECKIN_ZONE_KEY ? (()=>{ const s = checkinSummary(p); return s ? ` <span class="checkinSummaryTag ${s.completo?'complete':'incomplete'}">${s.completo ? '✓ Completo' : `⚠️ ${s.presentes}/${s.total}`}</span>` : ""; })() : ""}</span>
               <span class="lastMovedLabel recency-${lastMovedLabel(p).recency}">🕓 ${escapeHtml(lastMovedLabel(p).fecha)}</span>
             </div>
-            ${updSpaceZone===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo">🩺</button>` : ``}
-            <button type="button" class="spaceMoveBtn" data-idx="${idx}" title="Mover a otro espacio">🔀</button>
-            <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar">✏️</button>
-            <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Quitar">✕</button>
+            <div class="rowActions">
+              ${updSpaceZone===CHECKIN_ZONE_KEY ? `<button type="button" class="spaceCheckinBtn" data-idx="${idx}" title="Check-in del vehículo"><span class="raIc">🩺</span><span class="raTx">Check-in</span></button>` : ``}
+              <button type="button" class="spaceMoveBtn" data-idx="${idx}" title="Mover a otro espacio"><span class="raIc">🔀</span><span class="raTx">Mover</span></button>
+              <button type="button" class="spaceEditBtn" data-idx="${idx}" title="Editar los datos del vehículo"><span class="raIc">✏️</span><span class="raTx">Editar</span></button>
+              <button type="button" class="spaceRemoveBtn" data-idx="${idx}" title="Retirar de este espacio (queda en Sin ubicación, no se borra)"><span class="raIc">📤</span><span class="raTx">Retirar</span></button>
+            </div>
           </div>
         `;
       }).join("") : `<div class="dashEmptyNote">Sin vehículos en este ${labelLower} todavía.</div>`;
@@ -16429,17 +16481,35 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       spaceInfoBox.classList.toggle("formOnlyMode", updEditingPlateIdx !== null);
       const esSinUbicacion = SINGLE_BUCKET_ZONES.has(updSpaceZone);
       spaceInfoBox.innerHTML = `
-        <button type="button" class="linkBackBtn" id="spaceBackBtn" style="margin-bottom:8px; text-decoration:none; font-weight:700;">${esSinUbicacion ? "← Volver / cambiar de zona" : "← Volver a la lista de espacios"}</button>
-        ${esSinUbicacion ? "" : `<div class="spaceNavRow">
-          <button type="button" id="spacePrevBtn" ${anterior ? "" : "disabled"}>← ${anterior ? escapeHtml(anterior.campo) : "—"}${anterior && campoFillHex(anterior) ? ` <span class="plateColorDot" style="background:${campoFillHex(anterior)}"></span>` : ""}</button>
-          <button type="button" id="spaceNextBtn" ${siguiente ? "" : "disabled"}>${siguiente && campoFillHex(siguiente) ? `<span class="plateColorDot" style="background:${campoFillHex(siguiente)}"></span> ` : ""}${siguiente ? escapeHtml(siguiente.campo) : "—"} →</button>
-        </div>`}
-        <div class="spaceInfoHeader">
-          <strong>${zoneInfo(updSpaceZone).label} · ${escapeHtml(campoLabel)}</strong>
-          ${cap ? `<span class="spaceCapBadge${full ? " full" : ""}" title="${occ} de ${cap} lugares ocupados en este ${labelLower}">${occ}/${cap} vehículos</span>` : ``}
+        <div class="campoHead">
+          <div class="campoHeadTop">
+            <button type="button" class="campoBackBtn" id="spaceBackBtn" title="${esSinUbicacion ? "Volver / cambiar de zona" : "Volver a la lista de espacios"}">← ${esSinUbicacion ? "Zonas" : "Espacios"}</button>
+            <span class="campoZoneTag">${escapeHtml(zoneInfo(updSpaceZone).label)}</span>
+          </div>
+          ${esSinUbicacion ? `<div class="campoNavCur solo"><small>${escapeHtml(zoneInfo(updSpaceZone).label)}</small><strong>${escapeHtml(campoLabel)}</strong></div>` : `<div class="spaceNavRow">
+            <button type="button" id="spacePrevBtn" class="navSide" ${anterior ? "" : "disabled"} title="Campo anterior">‹ ${anterior ? escapeHtml(anterior.campo) : "—"}${anterior && campoFillHex(anterior) ? ` <span class="plateColorDot" style="background:${campoFillHex(anterior)}"></span>` : ""}</button>
+            <div class="campoNavCur" aria-live="polite"><small>${escapeHtml(zoneInfo(updSpaceZone).label)} · ${idxActual+1}/${camposArr.length}</small><strong>${escapeHtml(campoLabel)}</strong></div>
+            <button type="button" id="spaceNextBtn" class="navSide" ${siguiente ? "" : "disabled"} title="Campo siguiente">${siguiente && campoFillHex(siguiente) ? `<span class="plateColorDot" style="background:${campoFillHex(siguiente)}"></span> ` : ""}${siguiente ? escapeHtml(siguiente.campo) : "—"} ›</button>
+          </div>`}
+          ${(()=>{
+            // Estado de ocupación — solo informa; no cambia ninguna regla de capacidad.
+            if(!cap){
+              return `<div class="occCard occ-libre"><div class="occTop"><span class="occCount"><b>${occ}</b> vehículo${occ===1?"":"s"}</span><span class="occChip">${occ===0 ? "Vacío" : "Sin límite definido"}</span></div></div>`;
+            }
+            const pct = Math.round(occ*100/cap);
+            const cls = occ > cap ? "sobre" : (occ === cap ? "lleno" : (occ === 0 ? "disp" : "parcial"));
+            const chip = {sobre:"Sobrecargado", lleno:"Lleno", disp:"Disponible", parcial:"Parcial"}[cls];
+            const libres = Math.max(0, cap-occ);
+            const msg = cls==="sobre" ? `Hay ${occ-cap} vehículo${occ-cap===1?"":"s"} de más (${occ}/${cap}). Se pueden agregar, pero conviene reubicar.`
+              : cls==="lleno" ? `Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta — se te va a pedir confirmación.` : "";
+            return `<div class="occCard occ-${cls}" title="${occ} de ${cap} lugares ocupados en este ${labelLower}">
+              <div class="occTop"><span class="occCount"><b>${occ}</b>/${cap} vehículos</span><span class="occPct">${pct}%</span><span class="occChip">${chip}</span></div>
+              <div class="occBar" role="progressbar" aria-valuemin="0" aria-valuemax="${cap}" aria-valuenow="${occ}"><i style="width:${Math.min(100,pct)}%"></i></div>
+              <div class="occFoot">${libres>0 ? `${libres} lugar${libres===1?"":"es"} disponible${libres===1?"":"s"}` : "Sin lugares disponibles"}</div>
+              ${msg ? `<div class="occMsg">⚠️ ${msg}</div>` : ""}
+            </div>`;
+          })()}
         </div>
-        ${cap && cap > 1 && !full ? `<div class="spaceFreeSpotsHint">${cap-occ} lugar${cap-occ===1?"":"es"} libre${cap-occ===1?"":"s"} acá</div>` : ``}
-        ${full ? `<div class="similarWarn spaceFullWarn"><span class="dupWarnIcon">⚠️</span> Este ${labelLower} está lleno (${occ}/${cap}). Podés agregar igual si hace falta.</div>` : ``}
         ${entry.plates.length > 5 ? `<input type="text" id="spacePlateFilterInput" class="plate" placeholder="Filtrar los vehículos de este espacio…" style="margin-bottom:8px;">` : ``}
         ${entry.plates.length > 0 ? plateRowsLegendHtml() : ``}
         ${plateRowsHtml}
@@ -16501,6 +16571,11 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           </div>
         </div>
       `;
+      if(updHighlightPlate){
+        const hlRow = spaceInfoBox.querySelector(".spacePlateRow.rowHighlight");
+        updHighlightPlate = "";
+        if(hlRow && typeof hlRow.scrollIntoView === "function") setTimeout(()=>{ try{ hlRow.scrollIntoView({behavior:"smooth", block:"center"}); }catch(_){} }, 60);
+      }
       const spaceFilterInput = spaceInfoBox.querySelector("#spacePlateFilterInput");
       if(spaceFilterInput){
         spaceFilterInput.addEventListener("input", ()=>{
@@ -17018,6 +17093,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           autocompletarCampo(asegInput, dupEntry.aseguradora);
           autocompletarCampo(modInput, dupEntry.modelo);
           autocompletarCampo(colInput, dupEntry.color);
+          // No se vuelve a pedir lo que ya está registrado: circula / llave.
+          [["#updSpaceNewCirculacionToggle","#updSpaceNewCirculacion",dupEntry.circulacion],["#updSpaceNewLlaveToggle","#updSpaceNewLlave",dupEntry.llave]].forEach(([tg,hid,val])=>{
+            const h = spaceInfoBox.querySelector(hid);
+            if(val && h && !h.value){
+              const bt = spaceInfoBox.querySelector(tg + ` [data-value="${val}"]`);
+              if(bt) bt.click();
+            }
+          });
           const yaAca = dup.zoneKey === updSpaceZone && dupCampo === campoLabel;
           const haceRato = minutesAgoText(dupEntry.lastUpdated);
           if(yaAca){
@@ -17114,6 +17197,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         }
         const plateForReport = normalizePlate(plateRaw);
         const zoneLabelForReport = zoneInfo(updSpaceZone).label;
+        {
+          const ent = (state.zones[updSpaceZone] || []).find(c => c.campo === campoLabel);
+          if(ent && ent.capacidad && ent.plates.length >= ent.capacidad && !ent.plates.some(x => normalizePlate(x.plate) === plateForReport)){
+            if(!(await confirmUI(`Este ${labelLower} ya está ${ent.plates.length > ent.capacidad ? "sobrecargado" : "lleno"} (${ent.plates.length}/${ent.capacidad}). ¿Agregar ${plateForReport} igual?`))) return;
+          }
+        }
         await runGuarded(spaceAddBtn, "Guardando…", async ()=>{
           const snap = snapshotZones();
           const ok = await updaterAddNew(updSpaceZone, campoLabel, plateRaw, aseguradora, modelo, "first", color, circulacion, llave);
