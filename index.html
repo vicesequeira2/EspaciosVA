@@ -8479,6 +8479,18 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         recordarQuienEntrega(quien);
         okB.disabled = true;
         try{
+          // Esta pantalla pudo abrirse con datos viejos: si en el servidor la placa SÍ está en el inventario, no se registra
+          // como "sin inventario" (quedaría entregada y a la vez ocupando posición). Se recarga y se entrega normal.
+          try{
+            if(storageAvailable && !modoPrueba){
+              const srv = await Promise.race([window.storage.get(STORAGE_KEY, true).catch(()=>null), new Promise(r => setTimeout(()=> r(null), 2500))]);
+              if(srv && srv.value && fsIndexar(JSON.parse(srv.value)).has(normalizePlate(plate))){
+                showToast(`⚠️ ${plate} sí está en el inventario (tu pantalla estaba desactualizada). Se actualizó: volvé a entregarla.`, 6500, true);
+                try{ await loadState(); renderAll(); }catch(er){}
+                fin(false); return;
+              }
+            }
+          }catch(er){}
           const u = currentUser;
           const up = (el)=> String(el.value || "").trim().toUpperCase();
           const rec = { ts: nowStamp(), tsMillis: Date.now(), fecha: new Date().toISOString(), placa: plate, aseguradora: up(ids[2]), modelo: up(ids[0]), color: up(ids[1]),
@@ -15910,41 +15922,48 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       content.querySelectorAll(".dataHealthItemBtn").forEach(b=>{
         b.addEventListener("click", ()=> goToZoneAndClose(b.getAttribute("data-zone"), overlay));
       });
-      // Vehículos que YA figuran entregados (registro en Entregados) y no se tocaron después: siguen ocupando una posición.
+      // Vehículos que YA figuran entregados (registro en Entregados, incluso "sin inventario") y siguen ocupando una posición.
       const pendientes = [];
       try{
         const vistos = new Set();
         todasLasPlacas().forEach(p=>{
           const k = normalizePlate(p.e.plate); if(vistos.has(k)) return;
-          const ultimaEntrega = entregasCache.filter(r => normalizePlate(r.placa) === k && !r.sinInventario).sort((a,b)=> (b.tsMillis||0) - (a.tsMillis||0))[0];
+          const ultimaEntrega = entregasCache.filter(r => normalizePlate(r.placa) === k).sort((a,b)=> (b.tsMillis||0) - (a.tsMillis||0))[0];
           if(!ultimaEntrega) return;
           const tocado = Math.max(new Date(p.e.lastUpdated || 0).getTime() || 0, new Date(p.e.etapaTs || 0).getTime() || 0, ...(p.e.etapas || []).map(x => new Date(x.ts || 0).getTime() || 0));
-          if(tocado && (ultimaEntrega.tsMillis || 0) + 2000 >= tocado){ vistos.add(k); pendientes.push({ p, rec: ultimaEntrega }); }
+          const despues = !!(tocado && (ultimaEntrega.tsMillis || 0) + 2000 < tocado);
+          vistos.add(k); pendientes.push({ p, rec: ultimaEntrega, despues });
         });
       }catch(err){ console.error(err); }
       if(pendientes.length){
+        const sinTocar = pendientes.filter(x => !x.despues);
         content.insertAdjacentHTML("afterbegin", `<div class="dataHealthSection" id="dhEntregados"><h4>🏁 Entregados que siguen en el inventario (${pendientes.length})</h4>
-          <p class="historyMeta">Ya tienen una entrega registrada y no se modificaron después. Si ya salieron, se pueden sacar de su posición (el registro de la entrega queda en el Excel).</p>
-          ${pendientes.map(x => `<div class="historyMeta"><b>${escapeHtml(x.p.e.plate)}</b> — ${escapeHtml(x.p.zoneLabel)} · ${escapeHtml(String(x.p.campo))} · entregado ${escapeHtml(new Date(x.rec.fecha || x.rec.tsMillis).toLocaleDateString("es-CR"))}</div>`).join("")}
-          <button type="button" class="secondaryBtn" id="dhQuitarEntregados" style="width:100%;margin-top:8px;">Sacar ${pendientes.length} del inventario</button></div>`);
-        document.getElementById("dhQuitarEntregados").addEventListener("click", async ()=>{
-          if(!(await confirmUI(`¿Sacar ${pendientes.length} vehículo(s) del inventario? Ya figuran como entregados. El registro de entrega se conserva.`))) return;
+          <p class="historyMeta">Ya tienen una entrega registrada y siguen ocupando una posición. Al sacarlos, el registro de la entrega queda en el Excel. Los marcados con ⚠️ se modificaron después de entregarse (revisá si volvieron a entrar).</p>
+          ${pendientes.map((x, i) => `<div class="historyMeta" style="display:flex;gap:8px;align-items:center;justify-content:space-between;"><span><b>${escapeHtml(x.p.e.plate)}</b> — ${escapeHtml(x.p.zoneLabel)} · ${escapeHtml(String(x.p.campo))}${x.p.area ? " · " + escapeHtml(String(x.p.area)) : ""} · entregado ${escapeHtml(new Date(x.rec.fecha || x.rec.tsMillis).toLocaleDateString("es-CR"))}${x.despues ? " ⚠️" : ""}${x.rec.sinInventario ? " (entrega sin inventario)" : ""}</span><button type="button" class="secondaryBtn dhQuitar1" data-i="${i}" style="padding:4px 10px;">Sacar</button></div>`).join("")}
+          ${sinTocar.length ? `<button type="button" class="secondaryBtn" id="dhQuitarEntregados" style="width:100%;margin-top:8px;">Sacar ${sinTocar.length} del inventario (sin ⚠️)</button>` : ""}</div>`);
+        const sacar = async (lista)=>{
+          if(!lista.length) return;
+          if(!(await confirmUI(`¿Sacar ${lista.length} vehículo(s) del inventario? Ya figuran como entregados. El registro de entrega se conserva.`))) return;
           const snap = snapshotZones();
           let quitadas = 0;
-          pendientes.forEach(x => { quitadas += quitarTodasLasCopias(x.p.e.plate) ? 1 : 0; });
+          lista.forEach(x => { quitadas += quitarTodasLasCopias(x.p.e.plate) ? 1 : 0; });
           pushUndo(snap, `Sacar ${quitadas} entregado(s) del inventario`);
           invalidateResumenRowsCache();
           const r = await saveState(true);
           if(r === "conflict"){ state.zones = snap; invalidateResumenRowsCache(); showToast("⚠️ Alguien más guardó al mismo tiempo: no se sacó nada. Probá de nuevo.", 5000); return; }
-          for(const x of pendientes){ try{ await appendLog(HISTORY_KEY, { ts: nowStamp(), tsMillis: Date.now(), username: currentUser.username, placa: x.p.e.plate, desde: `${x.p.zoneLabel} · campo ${x.p.campo}`, hasta: "🏁 Sacado del inventario (ya figuraba entregado)" }, 300); }catch(err){} }
+          for(const x of lista){ try{ await appendLog(HISTORY_KEY, { ts: nowStamp(), tsMillis: Date.now(), username: currentUser.username, placa: x.p.e.plate, desde: `${x.p.zoneLabel} · campo ${x.p.campo}`, hasta: "🏁 Sacado del inventario (ya figuraba entregado)" }, 300); }catch(err){} }
           showToast(`🏁 ${quitadas} vehículo(s) sacados del inventario`, 4000);
           try{ renderAll(); }catch(err){}
           computeAndRenderHealth();
-        });
+        };
+        const bAll = document.getElementById("dhQuitarEntregados");
+        if(bAll) bAll.addEventListener("click", ()=> sacar(sinTocar));
+        content.querySelectorAll(".dhQuitar1").forEach(b => b.addEventListener("click", ()=> sacar([pendientes[+b.dataset.i]])));
       }
     }
 
     computeAndRenderHealth();
+    cargarEntregas().then(()=>{ if(overlay.classList.contains("show") && !document.getElementById("dhEntregados")) computeAndRenderHealth(); }).catch(()=>{});
     overlay.classList.add("show");
     document.getElementById("dataHealthRefreshBtn").onclick = ()=>{
       computeAndRenderHealth();
