@@ -4092,6 +4092,7 @@ html[data-theme="dark"] mark.searchHighlight{ background:#854d0e; color:#fff; }
       <button class="secondaryBtn" id="editLocCancel">Cancelar</button>
       <button class="dangerBtn" id="editLocDelete">Eliminar esta placa</button>
     </div>
+    <button type="button" class="secondaryBtn tarjetaBtn" id="editLocTarjetaBtn" style="width:100%;margin-top:10px;">🖼️ Compartir tarjeta del vehículo</button>
   </div>
 </div>
 
@@ -4133,6 +4134,7 @@ html[data-theme="dark"] mark.searchHighlight{ background:#854d0e; color:#fff; }
     <div class="modalActions" style="margin-top:16px;">
       <button class="primaryBtn" id="photoReportShareBtn" disabled>Compartir</button>
       <button class="secondaryBtn" id="photoReportCloseBtn">Cerrar</button>
+      <button class="secondaryBtn tarjetaBtn" id="photoReportTarjetaBtn" type="button">🖼️ Tarjeta</button>
     </div>
     <p class="reqFieldHint" id="photoReportShareHint" style="text-align:center; margin-top:6px;">Elegí al menos una foto para poder compartir</p>
     <p class="reqFieldHint" id="photoReportWhatsappHint" style="text-align:center; margin-top:4px;">"Compartir" abre el menú del celular — ahí elegís WhatsApp (u otra app) y las fotos van juntas</p>
@@ -9736,6 +9738,39 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     c.fillText("Inventario de Parqueo  ·  " + new Date().toLocaleString("es-CR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }), pad, H - 36);
     return await new Promise((res, rej)=> cv.toBlob(b => b ? res(b) : rej(new Error("toBlob")), "image/png"));
   }
+  // Comparte SOLO la imagen de la tarjeta del vehículo (sin texto), para cualquier rol.
+  async function compartirTarjetaPlaca(plate, btn){
+    const f = findPlate(normalizePlate(plate));
+    if(!f){ showToast("Esa placa ya no está en el inventario."); return; }
+    const campoObj = state.zones[f.zoneKey][f.campoIdx];
+    const entry = f.platesArray[f.plateIdx];
+    const zi = zoneInfo(f.zoneKey);
+    const t0 = btn ? btn.textContent : ""; if(btn){ btn.disabled = true; btn.textContent = "Preparando imagen…"; }
+    try{
+      let diasTotal = null;
+      try{
+        const clave = normalizePlate(entry.plate);
+        const propios = (await readLog(HISTORY_KEY)).filter(h => normalizePlate(h.placa) === clave);
+        const tiempos = propios.map(h => h.tsMillis).filter(t => typeof t === "number" && t > 0);
+        let inicio = tiempos.length ? Math.min(...tiempos) : null;
+        const pe = (entry.etapas && entry.etapas[0] && entry.etapas[0].ts) ? new Date(entry.etapas[0].ts).getTime() : null;
+        if(pe && !isNaN(pe) && (inicio === null || pe < inicio)) inicio = pe;
+        if(inicio !== null) diasTotal = (propios.some(h => h.desde === "Vehículo nuevo") ? "" : "+") + Math.max(0, Math.floor((Date.now() - inicio) / 86400000));
+      }catch(e){}
+      const blob = await crearTarjetaFichaPng(entry, { zona: zonaConSector(zi.label, campoObj.campo), campo: campoObj.campo, pos: posicionTexto(entry.plate), color: zi.hex ? "#" + zi.hex : "#4f8fd1", infEtapa: entry.etapa ? etapaInfo(entry.etapa) : null, diasTotal, tiempoAca: lastMovedLabel(entry) });
+      const file = new File([blob], `${entry.plate}.png`, { type: "image/png" });
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        try{ await navigator.share({ files: [file] }); }
+        catch(e){ if(!e || e.name !== "AbortError") throw e; }
+      } else {
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${entry.plate}.png`;
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(a.href), 5000);
+        showToast("Imagen descargada");
+      }
+    }catch(e){ console.error(e); showToast("No se pudo crear la imagen"); }
+    if(btn){ btn.disabled = false; btn.textContent = t0; }
+  }
+  document.addEventListener("click", ev=>{ const b = ev.target.closest && ev.target.closest(".tarjetaBtn"); if(b && b.dataset.plate) compartirTarjetaPlaca(b.dataset.plate, b); });
   function openViewDetailModal(zoneKey, ci, pi){
     const arr = state.zones[zoneKey];
     if(!arr || !arr[ci] || pi >= arr[ci].plates.length){
@@ -9909,7 +9944,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         const blob = await crearTarjetaFichaPng(entry, { zona: zonaConSector(zi.label, campoObj.campo), campo: campoObj.campo, pos: posTxt, color: zi.hex ? "#" + zi.hex : "#4f8fd1", infEtapa, diasTotal: diasTotalFicha, tiempoAca });
         const file = new File([blob], `${entry.plate}.png`, { type: "image/png" });
         if(navigator.canShare && navigator.canShare({ files: [file] })){
-          try{ await navigator.share({ files: [file], title: `Vehículo ${entry.plate}`, text: textoFicha() }); }
+          try{ await navigator.share({ files: [file] }); }
           catch(e){ if(!e || e.name !== "AbortError") throw e; }
         } else {
           const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${entry.plate}.png`;
@@ -9998,7 +10033,31 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       img.src = URL.createObjectURL(file);
     });
   }
-  async function createPhotoCollage(file1, file2){
+  // Placa con el mismo estilo de la tarjeta del vehículo (verde si puede circular, roja si no).
+  function dibujarPlacaSobreFoto(ctx, cx, cy, w, plate, circulacion){
+    const h = w * 190 / 520, x = cx - w/2, y = cy - h/2, k = w / 520;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 18 * k; ctx.shadowOffsetY = 6 * k;
+    rrect(ctx, x, y, w, h, 22 * k); ctx.fillStyle = circulacion === "no" ? "#f08c84" : "#4fcfa8"; ctx.fill();
+    ctx.shadowColor = "transparent";
+    rrect(ctx, x, y, w, h, 22 * k); ctx.lineWidth = 7 * k; ctx.strokeStyle = circulacion === "no" ? "#b3261e" : "#1d8a68"; ctx.stroke();
+    ctx.fillStyle = circulacion === "no" ? "#5a0f0a" : "#0f4a3a"; ctx.textAlign = "center";
+    ctx.font = `800 ${22 * k}px Arial, sans-serif`; ctx.fillText("C O S T A   R I C A", cx, y + 40 * k);
+    const txt = String(plate || "").toUpperCase();
+    let sz = 110 * k; do{ ctx.font = `900 ${sz}px "Arial Black", Arial, sans-serif`; if(ctx.measureText(txt).width <= w - 60 * k) break; sz -= 2; }while(sz > 40 * k);
+    ctx.fillText(txt, cx, y + 128 * k);
+    ctx.font = `800 ${17 * k}px Arial, sans-serif`; ctx.fillText("C E N T R O A M E R I C A", cx, y + 168 * k);
+    ctx.restore();
+  }
+  async function createPhotoCollage(file1, file2, plate, circulacion){
+    if(!file2){
+      const img = await loadImageFromFile(file1);
+      const tw = Math.min(img.width, 1400), th = img.height * (tw / img.width);
+      const cv = document.createElement("canvas"); cv.width = tw; cv.height = Math.round(th);
+      const cx = cv.getContext("2d"); cx.drawImage(img, 0, 0, tw, th);
+      if(plate) dibujarPlacaSobreFoto(cx, tw / 2, Math.min(th * 0.18 + 40, th / 2), tw * 0.6, plate, circulacion);
+      return new Promise(resolve => cv.toBlob(blob => resolve(blob), "image/jpeg", 0.85));
+    }
     const [img1, img2] = await Promise.all([loadImageFromFile(file1), loadImageFromFile(file2)]);
     const targetWidth = Math.min(img1.width, img2.width, 1400);
     const h1 = img1.height * (targetWidth / img1.width);
@@ -10012,6 +10071,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img1, 0, 0, targetWidth, h1);
     ctx.drawImage(img2, 0, h1 + gap, targetWidth, h2);
+    if(plate) dibujarPlacaSobreFoto(ctx, targetWidth / 2, h1 + gap / 2, targetWidth * 0.6, plate, circulacion);
     return new Promise(resolve => canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.85));
   }
 
@@ -10060,6 +10120,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   function _openPhotoReportModalInner(plate, zoneLabel, campoLabel, isTest, isAutoPrompt, aseguradora, modelo, color, circulacion, llave, lastUpdated){
     const overlay = document.getElementById("photoReportModal");
     const summaryBox = document.getElementById("photoReportSummary");
+    { const tb = document.getElementById("photoReportTarjetaBtn"); if(tb){ tb.dataset.plate = plate; tb.style.display = (isTest || !findPlate(normalizePlate(plate))) ? "none" : ""; } }
     const fecha = new Date().toLocaleDateString("es-CR", { day:"2-digit", month:"short", year:"numeric" });
     const tiempoAqui = lastUpdated ? lastMovedLabel({ lastUpdated }) : null;
     const detalles = [
@@ -10186,17 +10247,12 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     async function tryNativeShare(text){
       if(!navigator.share) return false;
       let files;
-      if(file1 && file2){
-        // Dos fotos: se combinan en una sola imagen (collage), para
-        // compartir un solo archivo prolijo en vez de dos sueltas.
-        try{
-          const blob = await createPhotoCollage(file1, file2);
-          files = [new File([blob], `${plate}.jpg`, { type: "image/jpeg" })];
-        }catch(collageError){
-          console.error("No se pudo armar el collage, se comparten las 2 fotos sueltas", collageError);
-          files = [file1, file2];
-        }
-      } else {
+      // Una o dos fotos: se combinan en una sola imagen con la placa (mismo estilo de la tarjeta) en el centro / arriba.
+      try{
+        const blob = await createPhotoCollage(file1 || file2, file1 && file2 ? file2 : null, plate, circulacion);
+        files = [new File([blob], `${plate}.jpg`, { type: "image/jpeg" })];
+      }catch(collageError){
+        console.error("No se pudo armar la imagen con la placa, se comparten las fotos sueltas", collageError);
         files = [file1, file2].filter(Boolean);
       }
       const shareData = { title: `Vehículo ${plate}`, text };
@@ -10290,6 +10346,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     modeloInput.value = targetEntry.modelo || "";
 
     overlay.classList.add("show");
+    { const tb = document.getElementById("editLocTarjetaBtn"); if(tb) tb.dataset.plate = plate; }
 
     function onEnterKey(e){ if(e.key === "Enter") onSave(); }
     [placaInput, campoInput, aseguradoraInput, modeloInput].forEach(inp=> inp.addEventListener("keydown", onEnterKey));
