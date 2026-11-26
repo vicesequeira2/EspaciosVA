@@ -8377,6 +8377,35 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     });
     return n;
   }
+  // Solo admin: anula una entrega hecha por error. El vehículo vuelve a su posición de origen (o a "Sin ubicación" si ya no existe)
+  // y el registro de la entrega se elimina de Entregados.
+  async function anularEntrega(placa, ts, box){
+    if(!currentUser || currentUser.role !== "admin") return;
+    const rec = entregasCache.find(r => String(r.tsMillis || "") === String(ts) && normalizePlate(r.placa) === normalizePlate(placa));
+    if(!rec){ showToast("No se encontró ese registro de entrega.", 3500); return; }
+    const yaEsta = !!findPlate(rec.placa);
+    if(!(await confirmGrande("↩️ ¿Anular esta entrega?", `<div class="bigPlate">${escapeHtml(rec.placa)}</div><p style="font-size:1.05rem;margin:8px 0;">Se elimina el registro de entrega y ${yaEsta ? "el vehículo ya está en el inventario (no se duplica)." : "el vehículo vuelve a <b>" + escapeHtml(String(rec.zona || "")) + " " + escapeHtml(String(rec.campo || "")) + "</b> (o a Sin ubicación si ese lugar ya no existe)."}</p>`, "Sí, anular"))) return;
+    const snap = snapshotZones();
+    let destino = "";
+    if(!yaEsta && !rec.sinInventario){
+      const z = ZONES.find(x => x.label === rec.zona || x.key === rec.zona);
+      const c = z && (state.zones[z.key] || []).find(x => String(x.campo) === String(rec.campo));
+      let arr, zk;
+      if(c){ arr = c.plates; zk = z.key; destino = `${z.label} · ${c.campo}`; }
+      else { zk = SIN_UBICACION_KEY; ensureSinUbicacionConsolidada(); arr = getOrCreateCampo(SIN_UBICACION_KEY, SIN_UBICACION_CAMPO).plates; destino = "Sin ubicación"; }
+      arr.push({ plate: rec.placa, aseguradora: rec.aseguradora || "", modelo: rec.modelo || "", color: rec.color || "", ot: rec.ot || "", responsable: rec.responsable || "", circulacion: "", llave: "", lastUpdated: new Date().toISOString() });
+      pushUndo(snap, `Anular entrega ${rec.placa}`);
+      invalidateResumenRowsCache();
+      const r = await saveState(true);
+      if(r === "conflict"){ state.zones = snap; invalidateResumenRowsCache(); showToast("⚠️ Alguien más guardó al mismo tiempo: no se anuló. Probá de nuevo.", 5000); return; }
+    }
+    await modificarListaCompartida(ENTREGAS_KEY, 6000, list => { const i = list.findIndex(r => String(r.tsMillis || "") === String(ts) && normalizePlate(r.placa) === normalizePlate(placa)); if(i >= 0) list.splice(i, 1); });
+    entregasCache = entregasCache.filter(r => r !== rec);
+    try{ await appendLog(HISTORY_KEY, { ts: nowStamp(), tsMillis: Date.now(), username: currentUser.username, placa: rec.placa, desde: "🏁 Entrega anulada", hasta: destino || "Sin cambios de ubicación" }, 300); }catch(e){}
+    showToast(`↩️ Entrega de ${rec.placa} anulada${destino ? ": volvió a " + destino : ""}`, 4000);
+    try{ renderAll(); }catch(e){}
+    if(box && box.isConnected) renderEtapasInto(box);
+  }
   async function entregarVehiculo(plate, opts){
     let found = findPlate(plate);
     if(!found) return false;
@@ -8858,7 +8887,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const rows = entregasCache.slice().reverse().filter(r => !q || String(r.placa).toUpperCase().includes(q) || String(r.aseguradora || "").toUpperCase().includes(q)).slice(0, 150);
       lista = rows.length ? rows.map(r=>{
         const f = new Date(r.fecha || r.tsMillis);
-        return `<div class="etRow etDone"><div class="etPlate">${escapeHtml(r.placa)}</div><div class="etMeta">${escapeHtml([r.modelo, r.color, r.aseguradora].filter(Boolean).join(" · "))}<br><small>🏁 ${isNaN(f) ? "" : f.toLocaleDateString("es-CR", { day:"numeric", month:"short", year:"numeric" })} · entregó ${escapeHtml(r.entregadoPor || "")} · salió de ${escapeHtml(r.zona || "")} ${escapeHtml(r.campo || "")}${r.diasTotales != null ? ` · ${r.diasTotales} d en proceso` : ""}</small></div></div>`;
+        return `<div class="etRow etDone"><div class="etPlate">${escapeHtml(r.placa)}</div><div class="etMeta">${escapeHtml([r.modelo, r.color, r.aseguradora].filter(Boolean).join(" · "))}<br><small>🏁 ${isNaN(f) ? "" : f.toLocaleDateString("es-CR", { day:"numeric", month:"short", year:"numeric" })} · entregó ${escapeHtml(r.entregadoPor || "")} · salió de ${escapeHtml(r.zona || "")} ${escapeHtml(r.campo || "")}${r.diasTotales != null ? ` · ${r.diasTotales} d en proceso` : ""}</small>${currentUser && currentUser.role === "admin" ? `<br><button type="button" class="secondaryBtn etAnular" data-ts="${escapeAttrLike(String(r.tsMillis || ""))}" data-placa="${escapeAttrLike(String(r.placa || ""))}" style="padding:3px 10px;margin-top:4px;">↩️ Anular entrega</button>` : ""}</div></div>`;
       }).join("") : `<div class="historyMeta" style="padding:10px;">Todavía no hay vehículos entregados.</div>`;
     } else {
       const sub = base.filter(p => etapaSel === "sin" ? !(p.e.etapa && cuenta[p.e.etapa] !== undefined) : p.e.etapa === etapaSel)
@@ -8893,6 +8922,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       renderEtapasInto(box);
     }));
     box.querySelectorAll(".etRow[data-plate]").forEach(r => r.addEventListener("click", (ev)=>{ if(ev.target.closest(".etMove")) return; abrirFichaPlaca(r.getAttribute("data-plate")); }));
+    box.querySelectorAll(".etAnular").forEach(b => b.addEventListener("click", ev=>{ ev.stopPropagation(); anularEntrega(b.dataset.placa, b.dataset.ts, box); }));
     const s = box.querySelector("#etSearch");
     if(s) s.addEventListener("input", ()=>{ etapaBusqueda = s.value; const pos = s.selectionStart; renderEtapasInto(box); const n = box.querySelector("#etSearch"); if(n){ n.focus(); n.setSelectionRange(pos, pos); } });
     if(etapaSel === "entregados" && !entregasCache.length) cargarEntregas().then(()=>{ if(entregasCache.length && box.isConnected) renderEtapasInto(box); });
