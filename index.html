@@ -9860,7 +9860,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const quitarEm = (t)=> String(t == null ? "" : t);
       box.innerHTML = mios.map((h, i)=>{
         const tipo = h.tipo === "etapa" ? "etapa" : ((h.tipo === "ot" || h.tipo === "asesor" || h.tipo === "dato") ? "ot" : (h.tipo === "renombre" ? "renombre" : ""));
-        const etiqueta = h.nota === "deshacer" ? "↩️ deshacer" : (h.nota === "desplazado" ? "⤵️ desplazado" : (h.nota === "excel" ? "📥 por Excel" : ""));
+        const etiqueta = h.nota === "deshacer" ? "↩️ deshacer" : (h.nota === "ausente" ? "📤 ya no estaba" : h.nota === "desplazado" ? "⤵️ desplazado" : (h.nota === "excel" ? "📥 por Excel" : ""));
         return `<div class="cv2H ${tipo || "mov"}${i >= VISIBLES ? " extra" : ""}"${i >= VISIBLES ? " hidden" : ""}>
           <div class="cv2HLine">${escapeHtml(quitarEm(lineaH(h)))}${etiqueta ? ` <span class="cv2HTag">${etiqueta}</span>` : ""}</div>
           <div class="cv2HMeta">${escapeHtml(h.username || "—")} · ${escapeHtml(h.ts || "")}</div>
@@ -9878,7 +9878,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       box.innerHTML = mios.map((h, i)=>{
         const nuevo = h.desde === "Vehículo nuevo";
         const tipo = h.tipo === "etapa" ? "etapa" : ((h.tipo === "ot" || h.tipo === "asesor" || h.tipo === "dato") ? "ot" : (h.tipo === "renombre" ? "renombre" : ""));
-        const etiqueta = h.nota === "deshacer" ? "↩️ DESHACER" : (h.nota === "desplazado" ? "⤵️ DESPLAZADO" : (h.nota === "excel" ? "📥 POR EXCEL" : ""));
+        const etiqueta = h.nota === "deshacer" ? "↩️ DESHACER" : (h.nota === "ausente" ? "📤 YA NO ESTABA" : h.nota === "desplazado" ? "⤵️ DESPLAZADO" : (h.nota === "excel" ? "📥 POR EXCEL" : ""));
         let cuerpo;
         if(nuevo) cuerpo = `<div class="cvHistLine">➕ Agregado en ${escapeHtml(h.hasta)}</div>`;
         else if(tipo) cuerpo = `<div class="cvHistLine">${escapeHtml(h.desde)} → ${escapeHtml(h.hasta)}</div>`;
@@ -10459,6 +10459,37 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   // Intenta agregar `plate` al `campoLabel` de `zoneKey`. Maneja duplicados
   // preguntando si se debe mover. Devuelve true si finalmente se agregó.
   function normalizarOT(v){ return String(v == null ? "" : v).replace(/^\s*#\s*/, "").replace(/\s+/g, " ").trim().slice(0, 20); }
+  // Al agregar/mover un vehículo a un espacio que ya tiene vehículos: se pregunta cuáles ya NO están ahí. Los marcados salen del espacio
+  // (pasan a "Sin ubicación", no se borran) y queda registrado en el historial. Si todos siguen, se continúa sin cambios.
+  async function preguntarAusentes(zoneKey, campoObj, plateNueva){
+    if(!campoObj || zoneKey === SIN_UBICACION_KEY || zoneKey === TALLER_KEY) return;
+    const k = normalizePlate(plateNueva);
+    const lista = (campoObj.plates || []).filter(p => p && normalizePlate(p.plate) !== k);
+    if(!lista.length) return;
+    // Solo si el espacio ya está lleno (o sobrecargado): si hay lugar, se agrega sin preguntar.
+    if(!(campoObj.capacidad && lista.length >= campoObj.capacidad)) return;
+    const no = document.getElementById("dupModalCancel"); const no0 = no ? no.textContent : "";
+    const html = `<p style="font-size:1.05rem;margin:6px 0;">Estas placas figuran en <b>${escapeHtml(zoneInfo(zoneKey).label)} · ${escapeHtml(String(campoObj.campo))}</b>. Está lleno (${lista.length}/${campoObj.capacidad}). Marcá las que <b>ya no están</b> ahí, o dejá todas y se agrega igual:</p>` +
+      lista.map((p, i) => `<label class="ausRow" style="display:flex;gap:10px;align-items:center;padding:8px 4px;font-size:1.15rem;"><input type="checkbox" class="ausChk" data-i="${i}" style="width:22px;height:22px;"><b>${escapeHtml(p.plate)}</b><small style="color:var(--muted);">${escapeHtml([p.modelo, p.color].filter(Boolean).join(" · "))}</small></label>`).join("") +
+      `<p style="font-size:.85rem;color:var(--muted);margin:6px 0 0;">Las marcadas pasan a «Sin ubicación» (no se borran).</p>`;
+    if(no) no.textContent = "Todas siguen aquí";
+    let marcadas = [];
+    try{
+      const ok = await confirmGrande("🔎 ¿Cuál ya no está en este espacio?", html, "Quitar las marcadas");
+      if(ok){ marcadas = [...document.querySelectorAll("#dupModalMsg .ausChk:checked")].map(c => lista[+c.dataset.i]).filter(Boolean); }
+    } finally { if(no) no.textContent = no0; }
+    if(!marcadas.length) return;
+    ensureSinUbicacionConsolidada();
+    const su = getOrCreateCampo(SIN_UBICACION_KEY, SIN_UBICACION_CAMPO);
+    for(const e of marcadas){
+      const i = campoObj.plates.indexOf(e); if(i < 0) continue;
+      campoObj.plates.splice(i, 1);
+      e.lastUpdated = new Date().toISOString();
+      su.plates.push(e);
+      try{ await logUpdate(e.plate, zoneKey, campoObj.campo, SIN_UBICACION_KEY, SIN_UBICACION_CAMPO, "ausente"); }catch(er){}
+    }
+    showToast(`📤 ${marcadas.map(x => x.plate).join(", ")} pasó a Sin ubicación (ya no estaba en el espacio)`, 4500);
+  }
   async function addPlateToZone(zoneKey, campoLabel, plateRaw, aseguradoraRaw, modeloRaw, position, colorRaw, circulacionRaw, llaveRaw, referenciaRaw, otRaw){
     const plate = normalizePlate(plateRaw);
     if(!plate) return false;
@@ -10517,6 +10548,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       if(referencia === null) return false;
     }
     const campoObj = getOrCreateCampo(zoneKey, campo);
+    if(campoObj.capacidad !== 1) await preguntarAusentes(zoneKey, campoObj, plate);
     // Campos pensados para un solo vehículo (capacidad = 1): si ya tiene
     // uno y llega un vehículo DISTINTO, el que estaba se manda a "Sin
     // ubicación" en vez de quedar los dos amontonados ahí — es un campo
@@ -17717,6 +17749,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const otChanged = otNuevo !== undefined && otNuevo !== (entry.ot || "");
     if(!locationChanged && !aseguradoraChanged && !modeloChanged && !colorChanged && !circulacionChanged && !llaveChanged && !plateChanged && !otChanged) return false;
 
+    if(locationChanged && newZone !== SIN_UBICACION_KEY){ const dc = getOrCreateCampo(newZone, newCampo); if(dc.capacidad !== 1) await preguntarAusentes(newZone, dc, newPlate); }
     if(plateChanged) delete entry.qrImpresa; // el QR impreso es de la placa anterior
     entry.plate = newPlate;
     entry.aseguradora = newAseguradora;
