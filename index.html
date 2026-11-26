@@ -3178,6 +3178,11 @@
   .qrScanFrame.ok{ border-color:#5FB37A; box-shadow:0 0 0 999px rgba(0,0,0,0.38), 0 0 0 6px rgba(95,179,122,.45); }
   .qrManualRow.ayuda input{ outline:3px solid #f2c230; outline-offset:2px; }
 </style>
+<style id="sugCss">.plateSug{ position:fixed; z-index:10050; overflow:auto; background:var(--surface,#fff); color:var(--ink,#0f172a); border:1px solid var(--border,#e2e8f0); border-radius:12px; box-shadow:0 10px 28px rgba(15,23,42,.22); padding:4px; }
+.plateSug .sugItem{ display:flex; flex-direction:column; align-items:flex-start; gap:1px; width:100%; min-height:48px; padding:6px 12px; border:none; border-radius:8px; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.plateSug .sugItem b{ font-size:1.05rem; letter-spacing:.06em; } .plateSug .sugItem small{ font-size:.74rem; color:var(--muted,#64748b); }
+.plateSug .sugItem:hover, .plateSug .sugItem.on, .plateSug .sugItem:active{ background:color-mix(in srgb,var(--brand,#2563eb) 12%,transparent); }
+.sugHint{ margin:4px 2px 0; font-size:.8rem; color:var(--muted,#64748b); }</style>
 <style id="copyCss">.authCopy{ position:fixed; left:0; right:0; bottom:8px; text-align:center; font-size:.72rem; color:rgba(255,255,255,.65); padding:4px 12px; pointer-events:none; } .appCopy{ text-align:center; font-size:.7rem; color:var(--muted,#64748b); padding:16px 12px 24px; opacity:.75; }</style>
 <style id="fxCss">
 /* ===== Experiencia Automotriz del Día ===== */
@@ -6803,6 +6808,75 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     return "info";
   }
   let importantToastUntil = 0; // mientras haya un aviso importante (ej. choque al guardar) mostrado hace poco, no se deja que otro mensaje lo tape encima sin querer
+  // ---- Sugerencias de placa mientras se escribe (Entregar, CC, Taller, Etapas, Mover varios, QR manual) ----
+  // Si la placa está en el inventario, se va mostrando a medida que coincide; si no, hay que escribirla completa.
+  // Solo ayuda a escribir: elegir una sugerencia llena el campo, no ejecuta ninguna acción.
+  const SUG_SEL = "#entregaPlaca, #ccPanelPlaca, #tallerPlaca, #avaPanelPlaca, #mmPlaca, #qrManualPlate";
+  let sugBox = null, sugInput = null, sugActivo = -1, sugItems = [];
+  function sugQuitarHint(){ document.querySelectorAll(".sugHint").forEach(h => h.remove()); }
+  function sugCerrar(){ if(sugBox){ sugBox.remove(); sugBox = null; } sugInput = null; sugActivo = -1; sugItems = []; sugQuitarHint(); }
+  function sugPosicionar(){
+    if(!sugBox || !sugInput) return;
+    if(!sugInput.isConnected){ sugCerrar(); return; }
+    const r = sugInput.getBoundingClientRect(), vv = window.visualViewport, alto = vv ? vv.height : window.innerHeight, off = vv ? vv.offsetTop : 0;
+    sugBox.style.left = Math.max(6, r.left) + "px"; sugBox.style.width = Math.min(r.width, window.innerWidth - 12) + "px";
+    const abajo = alto - (r.bottom - off), arriba = r.top - off;
+    if(abajo < 190 && arriba > abajo){ sugBox.style.top = "auto"; sugBox.style.bottom = (window.innerHeight - r.top + 4) + "px"; sugBox.style.maxHeight = Math.max(120, arriba - 12) + "px"; }
+    else { sugBox.style.bottom = "auto"; sugBox.style.top = (r.bottom + 4) + "px"; sugBox.style.maxHeight = Math.max(120, abajo - 12) + "px"; }
+  }
+  function sugMostrar(inp){
+    const q = String(inp.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    sugQuitarHint();
+    if(q.length < 2){ sugCerrar(); return; }
+    let rows = [];
+    try{ rows = buildResumenRows(); }catch(e){ rows = []; }
+    const vistos = new Set(), pref = [], cont = [];
+    for(const r of rows){
+      const pc = String(r.placa || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if(!pc || vistos.has(pc)) continue;
+      const i = pc.indexOf(q);
+      if(i === 0){ vistos.add(pc); pref.push(r); } else if(i > 0){ vistos.add(pc); cont.push(r); }
+    }
+    const lista = pref.concat(cont).slice(0, 6);
+    // La placa ya está escrita completa y es la única coincidencia: no hay nada que sugerir (y no se tapa el botón de abajo).
+    if(lista.length === 1 && String(lista[0].placa).toUpperCase().replace(/[^A-Z0-9]/g, "") === q){ sugCerrar(); return; }
+    if(!lista.length){
+      sugCerrar();
+      const par = inp.parentElement, flex = par && /flex|grid/.test(getComputedStyle(par).display);
+      if(q.length >= 3 && !flex){ const h = document.createElement("div"); h.className = "sugHint"; h.textContent = "No está en el inventario: escribí la placa completa."; inp.insertAdjacentElement("afterend", h); }
+      return;
+    }
+    if(!sugBox){ sugBox = document.createElement("div"); sugBox.className = "plateSug"; sugBox.setAttribute("role", "listbox"); document.body.appendChild(sugBox);
+      sugBox.addEventListener("pointerdown", (ev)=>{ ev.preventDefault(); }); // no le quita el foco al campo
+      sugBox.addEventListener("click", (ev)=>{ const b = ev.target.closest("[data-sug]"); if(b) sugElegir(b.getAttribute("data-sug")); });
+    }
+    sugInput = inp; sugActivo = -1; sugItems = lista.map(r => r.placa);
+    sugBox.innerHTML = lista.length ? lista.map(r => `<button type="button" class="sugItem" role="option" data-sug="${escapeAttrLike(r.placa)}"><b>${highlightMatch(String(r.placa), String(inp.value))}</b><small>${escapeHtml([r.modelo, r.vehicleColor].filter(Boolean).join(" · "))}${(r.modelo || r.vehicleColor) ? " — " : ""}${escapeHtml(r.zoneLabel)} · ${escapeHtml(String(r.campo))}</small></button>`).join("")
+      : "";
+    sugPosicionar();
+  }
+  function sugElegir(placa){
+    const inp = sugInput; if(!inp) return;
+    inp.value = placa; sugCerrar();
+    try{ inp.dispatchEvent(new Event("change", { bubbles: true })); }catch(e){}
+    inp.focus();
+  }
+  document.addEventListener("input", (ev)=>{ const t = ev.target; if(t && t.matches && t.matches(SUG_SEL)) sugMostrar(t); }, true);
+  document.addEventListener("focusin", (ev)=>{ const t = ev.target; if(t && t.matches && t.matches(SUG_SEL) && String(t.value || "").length >= 2) sugMostrar(t); }, true);
+  document.addEventListener("focusout", (ev)=>{ if(sugInput && ev.target === sugInput) setTimeout(()=>{ if(document.activeElement !== sugInput) sugCerrar(); }, 120); }, true);
+  document.addEventListener("keydown", (ev)=>{
+    if(!sugBox || !sugInput || ev.target !== sugInput) return;
+    if(ev.key === "Escape"){ sugCerrar(); return; }
+    if(ev.key === "ArrowDown" || ev.key === "ArrowUp"){
+      if(!sugItems.length) return; ev.preventDefault();
+      sugActivo = (sugActivo + (ev.key === "ArrowDown" ? 1 : -1) + sugItems.length) % sugItems.length;
+      sugBox.querySelectorAll(".sugItem").forEach((b, i)=> b.classList.toggle("on", i === sugActivo));
+    } else if(ev.key === "Enter" && sugActivo >= 0){ ev.preventDefault(); ev.stopPropagation(); sugElegir(sugItems[sugActivo]); }
+  }, true);
+  window.addEventListener("resize", sugPosicionar);
+  window.addEventListener("scroll", sugPosicionar, true);
+  if(window.visualViewport) window.visualViewport.addEventListener("resize", sugPosicionar);
+
   function fxEntregasHoy(){ // cuántas entregas REALES hay registradas hoy (para hitos); si no se puede contar, 0
     try{ const hoy = new Date().toDateString(); return (entregasCache || []).filter(r => r && r.fecha && new Date(r.fecha).toDateString() === hoy).length; }catch(e){ return 0; }
   }
@@ -8109,7 +8183,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   async function logEtapa(plate, antes, despues){
     if((antes || "") === (despues || "")) return;
     await appendLog(HISTORY_KEY, { ts: nowStamp(), tsMillis: Date.now(), username: currentUser ? currentUser.username : "?", placa: plate, tipo: "etapa", desde: "🧭 " + etapaNombre(antes), hasta: "🧭 " + etapaNombre(despues) }, 300);
-    fxEv(despues === "entrega" ? "entrega" : "etapa", { plate });
+    fxEv("etapa", { plate }); // "Entrega al cliente" como etapa NO es una entrega: la entrega real la anuncia entregarVehiculo
   }
   // ¿Esta cuenta puede cambiar etapas? Admin siempre. Actualización y CC sí (salvo que el Admin lo apague).
   // Búsqueda (consulta) no, salvo que el Admin le dé el acceso.
@@ -8291,15 +8365,27 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       aviso = "Escribí quién entrega para poder registrar la entrega.";
     }
   }
+  // Quita la placa de TODOS los lugares del inventario donde aparezca (si estaba repetida, no queda ninguna copia en una posición).
+  function quitarTodasLasCopias(plate){
+    const k = normalizePlate(plate); let n = 0;
+    const limpiar = (arr)=>{ if(!Array.isArray(arr)) return; for(let i = arr.length - 1; i >= 0; i--){ if(arr[i] && normalizePlate(arr[i].plate) === k){ arr.splice(i, 1); n++; } } };
+    Object.keys(state.zones || {}).forEach(zk=>{
+      (state.zones[zk] || []).forEach(c=>{
+        limpiar(c.plates);
+        (c.areas || []).forEach(a=>{ limpiar(a.plates); (a.filas || []).forEach(fl => limpiar(fl.plates)); });
+      });
+    });
+    return n;
+  }
   async function entregarVehiculo(plate, opts){
-    const found = findPlate(plate);
+    let found = findPlate(plate);
     if(!found) return false;
-    const e = found.platesArray[found.plateIdx];
+    let e = found.platesArray[found.plateIdx];
     const u = currentUser;
     // Al elegir "Entrega al cliente" como etapa se entrega directo (forzar); el botón 🏁 pide que ya esté en esa etapa.
     const permitido = u && (u.role === "admin" || (u.role === "consulta" && puedeMoverVehiculos() && opts && opts.desdeBusqueda) || (u.role === "actualizacion" && !etapaBloqueo(e) && (e.etapa === "entrega" || (opts && opts.forzar))));
     if(!permitido){ showToast("Solo se entrega desde la etapa «Entrega al cliente» (o Admin)", 4000); return false; }
-    const campoObj = state.zones[found.zoneKey][found.campoIdx];
+    let campoObj = state.zones[found.zoneKey][found.campoIdx];
     const quien = await confirmarEntregaConQuien("🏁 ¿Entregar este vehículo al cliente?",
       `<div class="bigPlate">${escapeHtml(e.plate)}</div><div class="bigMoveBox"><small>SALE DE</small><b>${escapeHtml(zoneInfo(found.zoneKey).label)} · ${escapeHtml(String(campoObj.campo))}</b></div><div class="bigHint">Sale de las zonas y queda en el historial de entregados.</div>`,
       "Sí, entregado");
@@ -8319,6 +8405,17 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         }
       }
     }catch(err){ /* sin respuesta: se sigue con el guardado normal, que también detecta choques */ }
+    // Mientras se esperaba la confirmación, la pantalla pudo recargar los datos (otra persona guardó, tiempo real…).
+    // Se vuelve a ubicar el vehículo en los datos ACTUALES, para que lo que se quite sea lo que realmente está guardado.
+    {
+      const fr = findPlate(plate);
+      if(fr){ found = fr; e = fr.platesArray[fr.plateIdx]; campoObj = state.zones[fr.zoneKey][fr.campoIdx]; }
+      else {
+        try{ await loadState(); renderAll(); }catch(err){}
+        showToast(`⚠️ ${plate} ya no está en el inventario. No se registró otra entrega.`, 5000, true);
+        return false;
+      }
+    }
     const snap = snapshotZones();
     const ini = (e.etapas && e.etapas[0] && e.etapas[0].ts) ? new Date(e.etapas[0].ts) : null;
     const fmtRec = (ts)=>{ const d = new Date(ts); return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-CR", { day:"2-digit", month:"2-digit" }) + " " + d.toLocaleTimeString("es-CR", { hour:"2-digit", minute:"2-digit" }); };
@@ -8329,7 +8426,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       recorrido, diasTotales: (ini && !isNaN(ini.getTime())) ? Math.max(0, Math.floor((Date.now() - ini.getTime()) / 86400000)) : null,
       cc: e.cc ? e.cc.estado : ""
     };
-    removePlateEntryByRef(found.zoneKey, found.platesArray, e);
+    quitarTodasLasCopias(e.plate);
+    if(findPlate(e.plate)){ state.zones = snap; showToast("⚠️ No se pudo sacar la placa del inventario. No se registró la entrega; probá de nuevo.", 5000, true); return false; }
     pushUndo(snap, `Entregar ${e.plate} al cliente`);
     invalidateResumenRowsCache();
     const r = await saveState(true);
@@ -13079,9 +13177,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const cab = inv.shift();
       inv.sort((x, y)=> String(x[1]).localeCompare(String(y[1]), "es") || String(x[2]).localeCompare(String(y[2]), "es", { numeric: true }) || String(x[0]).localeCompare(String(y[0])));
       inv.unshift(cab);
-      const wsInv = XLSX.utils.aoa_to_sheet(inv);
-      wsInv["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 10 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 18 }];
-      wsInv["!autofilter"] = { ref: `A1:M${inv.length}` };
+      // Circulación y Llave (columnas 10 y 11) solo salen en el Excel que descarga el administrador.
+      const esAdminExcel = !!(currentUser && currentUser.role === "admin");
+      const invSalida = esAdminExcel ? inv : inv.map(r => r.filter((_, i) => i !== 10 && i !== 11));
+      const wsInv = XLSX.utils.aoa_to_sheet(invSalida);
+      const colsInv = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 10 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 18 }];
+      wsInv["!cols"] = esAdminExcel ? colsInv : colsInv.filter((_, i) => i !== 10 && i !== 11);
+      wsInv["!autofilter"] = { ref: `A1:${esAdminExcel ? "M" : "K"}${inv.length}` };
       wsInv["!freeze"] = { xSplit: 0, ySplit: 1 };
       // ---- Datos importantes: totales y conteos clave ----
       const filasInv = inv.slice(1);
@@ -13111,9 +13213,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const wsEnt = XLSX.utils.aoa_to_sheet(entRows);
       wsEnt["!cols"] = [{ wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 10 }, { wch: 18 }, { wch: 12 }, { wch: 14 }];
       if(entRows.length > 1) wsEnt["!autofilter"] = { ref: `A1:L${entRows.length}` };
-      const movs = wb.Sheets["Movimientos"];
-      wb.SheetNames = ["Inventario", "Datos importantes", "Entregados"].concat(movs ? ["Movimientos"] : []);
-      const keep = { Inventario: wsInv, "Datos importantes": wsDat, Entregados: wsEnt }; if(movs) keep.Movimientos = movs;
+      // Hojas Entregados y Movimientos: solo en el Excel que descarga el administrador.
+      const movs = esAdminExcel ? wb.Sheets["Movimientos"] : null;
+      wb.SheetNames = ["Inventario", "Datos importantes"].concat(esAdminExcel ? ["Entregados"] : []).concat(movs ? ["Movimientos"] : []);
+      const keep = { Inventario: wsInv, "Datos importantes": wsDat }; if(esAdminExcel) keep.Entregados = wsEnt; if(movs) keep.Movimientos = movs;
       wb.Sheets = keep;
     }
 
@@ -15807,6 +15910,38 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       content.querySelectorAll(".dataHealthItemBtn").forEach(b=>{
         b.addEventListener("click", ()=> goToZoneAndClose(b.getAttribute("data-zone"), overlay));
       });
+      // Vehículos que YA figuran entregados (registro en Entregados) y no se tocaron después: siguen ocupando una posición.
+      const pendientes = [];
+      try{
+        const vistos = new Set();
+        todasLasPlacas().forEach(p=>{
+          const k = normalizePlate(p.e.plate); if(vistos.has(k)) return;
+          const ultimaEntrega = entregasCache.filter(r => normalizePlate(r.placa) === k && !r.sinInventario).sort((a,b)=> (b.tsMillis||0) - (a.tsMillis||0))[0];
+          if(!ultimaEntrega) return;
+          const tocado = Math.max(new Date(p.e.lastUpdated || 0).getTime() || 0, new Date(p.e.etapaTs || 0).getTime() || 0, ...(p.e.etapas || []).map(x => new Date(x.ts || 0).getTime() || 0));
+          if(tocado && (ultimaEntrega.tsMillis || 0) + 2000 >= tocado){ vistos.add(k); pendientes.push({ p, rec: ultimaEntrega }); }
+        });
+      }catch(err){ console.error(err); }
+      if(pendientes.length){
+        content.insertAdjacentHTML("afterbegin", `<div class="dataHealthSection" id="dhEntregados"><h4>🏁 Entregados que siguen en el inventario (${pendientes.length})</h4>
+          <p class="historyMeta">Ya tienen una entrega registrada y no se modificaron después. Si ya salieron, se pueden sacar de su posición (el registro de la entrega queda en el Excel).</p>
+          ${pendientes.map(x => `<div class="historyMeta"><b>${escapeHtml(x.p.e.plate)}</b> — ${escapeHtml(x.p.zoneLabel)} · ${escapeHtml(String(x.p.campo))} · entregado ${escapeHtml(new Date(x.rec.fecha || x.rec.tsMillis).toLocaleDateString("es-CR"))}</div>`).join("")}
+          <button type="button" class="secondaryBtn" id="dhQuitarEntregados" style="width:100%;margin-top:8px;">Sacar ${pendientes.length} del inventario</button></div>`);
+        document.getElementById("dhQuitarEntregados").addEventListener("click", async ()=>{
+          if(!(await confirmUI(`¿Sacar ${pendientes.length} vehículo(s) del inventario? Ya figuran como entregados. El registro de entrega se conserva.`))) return;
+          const snap = snapshotZones();
+          let quitadas = 0;
+          pendientes.forEach(x => { quitadas += quitarTodasLasCopias(x.p.e.plate) ? 1 : 0; });
+          pushUndo(snap, `Sacar ${quitadas} entregado(s) del inventario`);
+          invalidateResumenRowsCache();
+          const r = await saveState(true);
+          if(r === "conflict"){ state.zones = snap; invalidateResumenRowsCache(); showToast("⚠️ Alguien más guardó al mismo tiempo: no se sacó nada. Probá de nuevo.", 5000); return; }
+          for(const x of pendientes){ try{ await appendLog(HISTORY_KEY, { ts: nowStamp(), tsMillis: Date.now(), username: currentUser.username, placa: x.p.e.plate, desde: `${x.p.zoneLabel} · campo ${x.p.campo}`, hasta: "🏁 Sacado del inventario (ya figuraba entregado)" }, 300); }catch(err){} }
+          showToast(`🏁 ${quitadas} vehículo(s) sacados del inventario`, 4000);
+          try{ renderAll(); }catch(err){}
+          computeAndRenderHealth();
+        });
+      }
     }
 
     computeAndRenderHealth();
